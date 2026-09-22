@@ -22,7 +22,7 @@ way and then fails quietly.
 | `03 Slack Alerts` | Renders and delivers the card, handles threading for returning visitors | Called by 01 |
 | `04 Company & Person Enrichment` | Homepage read plus gated public search; headcount and identity evidence | Called by 01 |
 | `05 AI Lead Reasoning` | Bounded LLM step: persona read on ambiguous titles, opening question, listen-fors | Called by 01 |
-| `06 Slack Actions` | Eleven rep buttons and four modals. Writes to HubSpot only on a human tap | Slack interactivity webhook |
+| `06 Slack Actions` | Twelve rep buttons and four modals. Writes to HubSpot only on a human tap | Slack interactivity webhook |
 | `07 Task Test Harness` | Replays payloads through the live webhook and reports PASS/FAIL per scan | Manual |
 | `99 Failure Handler` | Shared error workflow. Named by the eight other active workflows | n8n error trigger |
 
@@ -197,3 +197,14 @@ is read, but never write the row, invent a channel, or add a mention.
 **Everything soft-fails except the webhook.** Enrichment, AI, HubSpot and Slack all
 carry `onError: continueRegularOutput`, because a booth scanner cannot wait and a
 partial lead beats a lost one. `99` catches what survives that.
+
+**A rep can overrule the rules, and the card is replayed, not rebuilt.** A
+`needs_review` card carries all three destinations in one row - Promote to Tier 1,
+Matched, Not a fit - because a reviewer's job is to decide, not to pick from two of the
+three answers. When they do, `06` does not assemble a new Slack message. It reloads the
+decision `01` stored in `oak_deliveries.raw_json`, swaps the classification, drops the
+routing, and calls `03` with it. `03` then resolves the channel from the policy and
+attaches the buttons that classification deserves, so a lead promoted to Tier 1 arrives
+in `#booth-hot` as a full card and a lead ruled out arrives in `#booth-out-of-scope`
+with no buttons and no mention. One card builder, one channel map, one place to change
+either.
