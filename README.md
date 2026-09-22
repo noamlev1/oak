@@ -119,9 +119,22 @@ request.
 (`01`, `02`, `02A`, `03`, `04`, `05`, `06`, `07`), and edit `WEBHOOK_URL` at the top
 of `07`'s `Build Test Plan` to point at your own `01` webhook.
 
-**Slack channels** must exist and the app must be invited to each:
-`#booth-hot`, `#booth-matched`, `#booth-review`, `#competitive-intel`,
-`#booth-out-of-scope`, `#oak-revops`.
+**Slack channels** are provisioned by workflow `00`, not by hand. `Plan Slack Channels`
+reads the names out of the `notifications` block of the active `oak_policies` row and
+`Create Slack Channel` creates all six - `#booth-hot`, `#booth-matched`,
+`#booth-review`, `#competitive-intel` (private), `#booth-out-of-scope` and
+`#oak-revops` - so changing a channel in the policy changes what setup creates, with no
+workflow edit. The Slack credential needs `channels:manage` and `groups:write`. A rerun
+is clean: a channel that already exists comes back `name_taken` and is counted as
+already provisioned.
+
+**The one manual step.** Setup creates channels; it does not join them. For any of the
+six that already existed in your workspace, the Slack app is not a member and `00` will
+not tell you, because it counts `name_taken` as success. Invite the app to each
+pre-existing channel. `#competitive-intel` is private, so a member has to invite the app
+- it cannot join itself. The symptom of missing this is a `not_in_channel` error
+recorded in `oak_deliveries.slack_json` and no card in the channel. Workflow `07` fails
+the run on it, but a rep at the booth just sees nothing.
 
 ---
 
