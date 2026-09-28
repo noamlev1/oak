@@ -42,7 +42,7 @@ It also sets `has_company_identity` (a domain or a company name exists), the TTL
 
 **7. `Extract Company Signals`** (Code) - reads the HTML with regexes. Strips scripts and styles, grabs title, meta description and body text (first 20,000 characters), then:
 - **Parked-domain check** ("buy this domain", sedo, dan.com ...). A parked page yields no signals and becomes a fetch error.
-- **Competitor language**: matches the policy's `competitors.confirmed_names` (Veza, SailPoint, CyberArk ...) and `possible_keywords` ("identity governance platform", "identity security platform" ...). Any hit sets `possible_competitor: true`. This is what powers the competitor rescue in step 13.
+- **Competitor language**: matches the vendor names in the `oak_competitors` table (active rows only, read by the `Load Competitors` node, the same table 01 uses) and the policy's `possible_keywords` ("identity governance platform", "identity security platform" ...). The table is the one list of vendors: add or switch off a vendor there and both 01 and 04 follow. Aliases are not used here, because short aliases like "okta" or "oasis" appear on many customers' websites.
 - **Industry** from the title and meta only (financial services, fintech, technology, healthcare keyword maps).
 - **Identity stack** and **compliance** keywords (SSO, zero trust, SOX, HIPAA, DORA, NIS2 ...), each saved as a quoted evidence sentence.
 - **Headcount** if the page says something like "12,000 employees".
@@ -120,7 +120,7 @@ A competitor card is about their product, not one contact, and nobody pursues an
 
 **17. `Search Relevant Person`** (Brave, 3 results) - `"Full Name" Company Title identity security governance LinkedIn`. Soft-fails.
 
-**18. `Attach Person Evidence`** (Code) - keeps a result only when **both** the surname and the company name or domain appear in its title, snippet or URL, max three. Otherwise status is `no_identity_aligned_result` and the card says nothing matched both. It never guesses a biography.
+**18. `Attach Person Evidence`** (Code) - keeps a result only when it carries the visitor's **first name and surname as whole words** and either the **email or company domain** or a **distinctive company word**, max three. Generic words that many companies share (services, group, financial, technologies, security ...) do not count: "Rachel Green - TEAM Services Group" used to pass for Apex Financial Services on the word "services". Otherwise status is `no_identity_aligned_result` and no person claim is made.
 
 **19. `Sanitize Public Evidence`** (Code) - the last node, so its output is what 01 receives. Drops any company evidence with no quote, no URL, or incident language:
 ```js

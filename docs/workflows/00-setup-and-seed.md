@@ -35,7 +35,7 @@ Workflow `PeoS0NF1f7FHzEID` - "Oak GTM - 00 Setup & Seed". Draft only, never pub
    - `company_fit`: `qualified_employee_min` 1000, `review_employee_min` 500, `disqualified_employee_max` 499, target industries `financial_services`, `fintech`, `technology`, `healthcare`, disqualifiers `saas-only`, `single-cloud`, the personal email domains.
    - `personas`: `ciso`, `iam`, `compliance` (title patterns, 30 points, Oak angle, listen-fors) and `other`.
    - `relevance_signals` (24 terms, `relevance_signals_are_scored: false`).
-   - `competitors`: `confirmed_names`, `possible_keywords` (homepage language for 04), `possible_name_tokens` (company-name tokens for 01).
+   - `competitors`: `confirmed_names` (seeded, but no longer read: vendor names come from the `oak_competitors` table), `possible_keywords` (homepage language for 04), `possible_name_tokens` (company-name tokens for 01).
    - `incumbent_tools`: SailPoint, Saviynt, Omada Identity, One Identity, Okta Identity Governance, Microsoft Entra ID Governance, Ping Identity - all active, all `renewal_trigger: true`.
    - `urgency.renewal_max_months` 6.
    - `scoring`: persona 30, company size 15, industry 15, urgency 40, max 100.
