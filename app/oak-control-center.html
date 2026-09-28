@@ -716,10 +716,10 @@ window.OAK_JOURNEY = {
       business:
         'A count the visitor states at the booth is first-party evidence and can qualify them. A number scraped from a page that merely shares the company name is not, and sends the lead to review instead.',
       mechanics: [
-        'Precedence: HubSpot record, then booth-stated count, then the official company domain, then a domain-matched public result, then a name-only match.',
-        'Confidence: HubSpot 1.0, booth notes 0.9, official site 0.9, domain-matched search 0.9, name-only match 0.6.',
-        'Confidence of 0.9 or higher may promote, disqualify, award the size points, and write HubSpot.',
-        'Below 0.9 the number is shown as a sourced claim but routes as unknown.',
+        'Precedence: the HubSpot company record (read by 02A), then the booth-stated count, then the official company domain, then a domain-matched public result.',
+        'Confidence comes from the policy row: HubSpot 1.0, booth notes 0.9, official site 0.85, domain-matched search 0.7.',
+        'Strong evidence may promote, disqualify, award the size points, and write HubSpot; weaker evidence is flagged for the rep to confirm at the booth.',
+        'A count found only by company name is never counted. It appears on the card as a candidate with its link.',
       ],
       hypothesis:
         'The real failure mode is entity resolution, not arithmetic. Trust is therefore asymmetric: promoting a lead to a hot channel demands strong evidence, demoting to review demands none, and disqualifying demands strong evidence again so a wrong match cannot silently kill a real enterprise buyer.',
@@ -741,6 +741,7 @@ window.OAK_JOURNEY = {
         'Every retained claim needs a quote and a URL, or it is rejected.',
         'Unverified incident language - breach, ransomware, alleged - is stripped rather than shown.',
         'Results are cached by company domain with a TTL, never by company name.',
+        'The homepage read is free and always runs. Paid public search is gated off for out-of-scope scans, and the person search never runs for a competitor.',
       ],
       hypothesis:
         'Unsourced enrichment becomes a rumor a rep repeats at a booth. If a claim cannot be cited, showing it costs more than omitting it.',
@@ -762,6 +763,8 @@ window.OAK_JOURNEY = {
         'Any quote it uses must actually appear in the booth notes.',
         'It cannot change a channel, a competitor identity, or a size band.',
         'Prompt-injection text inside booth notes is quoted as evidence, never executed as instruction.',
+        'It runs only for tier_1, matched and needs_review. competitor_intel and out_of_scope never reach it.',
+        'A resolved title counts only above the 0.7 confidence floor, and a final deterministic gate re-checks the result.',
       ],
       hypothesis:
         'The model is worth having on language, not on policy. Constraining it to the two places language matters keeps the pipeline auditable while still making the card useful.',
@@ -769,7 +772,7 @@ window.OAK_JOURNEY = {
         'A general "analyze this lead" prompt. It produces confident prose that nobody can diff, test, or correct.',
       evidence: 'The resolved persona, the question text, and the booth quote it relied on.',
       failure:
-        'If the model is unavailable the lead still routes; it just carries a generic opening question. Known gap: today it can still raise a tier, and it must not do so while size is unverified.',
+        'If the model is unavailable the lead still routes; it just carries a generic opening question. Below the confidence floor the title stays ambiguous and the lead stays in review.',
     },
     {
       id: 'crm',
@@ -794,8 +797,28 @@ window.OAK_JOURNEY = {
       failure: 'A scan with no email skips CRM entirely and must still complete its delivery row.',
     },
     {
-      id: 'slack',
+      id: 'persistence',
       number: 9,
+      title: 'A run is finished only when the delivery says so',
+      owner: '01 Intake + oak_deliveries',
+      question: 'How do we know this actually completed?',
+      business:
+        'The webhook\'s 202 means the work was accepted. Success is the delivery row reaching complete.',
+      mechanics: [
+        'Status moves from accepted to complete once the pipeline has done its work, before 03 posts the card; the Slack receipt is added after.',
+        'Tests and the payload console assert on the delivery row, never on the 202 body.',
+        'A completed scan_id is what makes a retry safe.',
+      ],
+      hypothesis:
+        'Accepting work and doing work are different events, and conflating them is how a pipeline appears healthy while quietly dropping leads.',
+      rejected:
+        'Treating HTTP 202 as proof. It only proves the request was received.',
+      evidence: 'Delivery status, completion timestamp, and the final classification snapshot.',
+      failure: 'A scan without an email skips 02 and still reaches complete.',
+    },
+    {
+      id: 'slack',
+      number: 10,
       title: 'One card, routed by how loud it deserves to be',
       owner: '03 Slack Alerts',
       question: 'Who needs to know about this, and how urgently?',
@@ -804,7 +827,8 @@ window.OAK_JOURNEY = {
       mechanics: [
         'Channel is chosen by classification; only Tier 1 uses a mention.',
         'The card leads with the decision, then the evidence, then what to do next at the booth.',
-        'A returning visitor replies in the original thread; a tier increase escalates instead.',
+        'A returning visitor gets a reply in the first card\'s thread, broadcast back to the channel; a tier change adds an @here.',
+        'Tier 1 also DMs the HubSpot owner when that owner is mapped to a Slack user.',
         'Out-of-scope cards are deliberately plain: they exist for the record, not for action.',
       ],
       hypothesis:
@@ -816,16 +840,17 @@ window.OAK_JOURNEY = {
     },
     {
       id: 'human',
-      number: 10,
+      number: 11,
       title: 'The human corrects the machine, cheaply',
       owner: '06 Slack Actions',
       question: 'How does the person at the booth fix or advance this?',
       business:
-        'Claim it, ask why it scored that way, promote it after confirming size, reject it, add a note, snooze it, hand it to the owner, or flag a competitor - all without leaving Slack.',
+        'Twelve buttons: Claim, Why this score?, Mark met, Meeting booked, Promote to Tier 1, Matched, Not a fit, Add note, Send to owner, Snooze, Flag for intel and False alarm. Nobody leaves Slack.',
       mechanics: [
         'Every interaction verifies a Slack HMAC signature over the raw body and rejects anything older than five minutes.',
         'Claiming is conditional, so two reps cannot both own the same lead.',
-        'Promote to Tier 1 is the designed path out of review once headcount is confirmed.',
+        'A needs_review card carries a triage row: Promote to Tier 1 | Matched | Not a fit.',
+        'A reclassification reloads the stored decision from oak_deliveries.raw_json and calls 03 as a sub-workflow, so the repost lands in the right channel with that tier\'s buttons.',
         'Every action writes back to the encounter and, where relevant, to HubSpot.',
       ],
       hypothesis:
@@ -833,27 +858,7 @@ window.OAK_JOURNEY = {
       rejected:
         'Requiring a CRM login to fix a misrouted lead. It will not happen during a live event, so the correction is simply lost.',
       evidence: 'Slack user id, action, before and after state, and the result of each side effect.',
-      failure: 'Known gap: side effects must continue on error so the thread always gets one honest reply.',
-    },
-    {
-      id: 'persistence',
-      number: 11,
-      title: 'A run is finished only when the delivery says so',
-      owner: '01 Intake + oak_deliveries',
-      question: 'How do we know this actually completed?',
-      business:
-        'The webhook\'s 202 means the work was accepted. Success is the delivery row reaching complete.',
-      mechanics: [
-        'Status moves from accepted to complete once the pipeline has done its work.',
-        'Tests and the payload console assert on the delivery row, never on the 202 body.',
-        'A completed scan_id is what makes a retry safe.',
-      ],
-      hypothesis:
-        'Accepting work and doing work are different events, and conflating them is how a pipeline appears healthy while quietly dropping leads.',
-      rejected:
-        'Treating HTTP 202 as proof. It only proves the request was received.',
-      evidence: 'Delivery status, completion timestamp, and the final classification snapshot.',
-      failure: 'Known gap: scans without an email currently stop short of complete.',
+      failure: 'Side effects continue on error so the thread always gets one honest reply. Without the signing secret every button fails closed.',
     },
     {
       id: 'failure',
@@ -864,9 +869,9 @@ window.OAK_JOURNEY = {
       business:
         'An alert says which stage failed and what that means - no card was posted, or no CRM note was written - rather than just printing a stack trace.',
       mechanics: [
-        'Every workflow links to one error handler.',
+        'The eight running workflows (01, 02A, 02, 03, 04, 05, 06, 07) name 99 as their error workflow.',
         'Alerts name the stage, the scan, and the business consequence.',
-        'Operational alerts go to a RevOps channel, away from booth traffic.',
+        'Operational alerts go to #oak-revops, away from booth traffic.',
       ],
       hypothesis:
         'During a live event nobody reads stack traces. An error is only actionable if it states the consequence and who is affected.',

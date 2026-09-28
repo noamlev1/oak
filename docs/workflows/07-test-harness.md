@@ -1,6 +1,6 @@
 # 07 - Task Test Harness
 
-Workflow id `nyht2byorvoxFX2u` · 12 nodes · error workflow is 99 · read from the current draft `412f0847` (the active version `6f8f8789` differs only in node positions).
+Workflow id `nyht2byorvoxFX2u` · 12 nodes · error workflow is 99 · read from the deployed workflow on 2026-09-28 (version `430b5396`, which added the two n8n-variable switches).
 
 ## In one breath
 
@@ -11,7 +11,7 @@ Workflow id `nyht2byorvoxFX2u` · 12 nodes · error workflow is 99 · read from 
 | | |
 |---|---|
 | Trigger | `Run Task Test Suite` (Manual Trigger). Run by hand only. |
-| Input | Either scans pasted into `Paste JSON Here` (`{"reset": true, "scans": [...]}`, plus optional `gap_seconds`, `settle_seconds`), or, when `scans` is empty, the `enabled` rows of the `oak_test_payloads` Data Table. Expectations come from each row's `expect_json`, matched by `scan_id`, or an inline `expect`. |
+| Input | Either scans pasted into `Paste JSON Here` (`{"reset": true, "scans": [...]}`, plus optional `gap_seconds`, `settle_seconds`), or, when `scans` is empty, rows of the `oak_test_payloads` Data Table chosen by the n8n variable `OAK_TEST_SUITE` (unset: the `enabled` rows). Expectations come from each row's `expect_json`, matched by `scan_id`, or an inline `expect`. |
 | Output | One item from `Score Test Run`: `verdict`, `total`, `passed`, `failed`, `scans_came_from`, `slack_alerts_delivered`, `slack_failures`, a one-line `headline` per scan, and a `results` array with every check. |
 | Side effects | Real ones. Deletes this test event's rows from `oak_deliveries` and `oak_encounters` (when reset is on), then every scan runs the full pipeline: HubSpot writes, Brave and Gemini calls, Slack posts. |
 
@@ -25,20 +25,32 @@ Workflow id `nyht2byorvoxFX2u` · 12 nodes · error workflow is 99 · read from 
 
 **2. `Paste JSON Here`** (Set, raw JSON) - defaults to `{"reset": true, "scans": []}`. Put one or more scan objects in `scans` for a one-off run; they take precedence over the table. Only `reset`, `gap_seconds` and `settle_seconds` are harness controls, and they sit outside `scans`, so a scan reaches the webhook as the task payload verbatim.
 
-**3. `Load Test Payloads`** (Data Table get, `oak_test_payloads`, every row with a non-empty `payload_json`) - loads all rows, not just enabled ones: enabled rows supply the scans, every row supplies expectations by `scan_id`. Tests live in data, so adding a case is a row, not a code edit. Soft-fails and always outputs.
+**3. `Load Test Payloads`** (Data Table get, `oak_test_payloads`, every row with a non-empty `payload_json`) - loads all rows, not just enabled ones: `OAK_TEST_SUITE` decides which rows supply the scans, and every row supplies expectations by `scan_id`. Tests live in data, so adding a case is a row, not a code edit. Soft-fails and always outputs.
 
-The table holds 20 cases in suites `task` (the four leads), `returning-visitor`, `edge-cases` (personal email, invalid scan, ambiguous title, 500-999 band, no email), `caching`, `security` (prompt injection), `personas`, `triggers` (audit deadline, breach, Saviynt renewal), `competitors` and `sources`. Check before a demo: at the time of writing the four `task` rows are `enabled: false` and rows 5 to 8 (Rachel's second scan, personal email, invalid scan, ambiguous title) are enabled, so a default run does not run the four task leads, even though the canvas sticky says it does. Rachel's second scan is also meant to run with Lead 1 and `reset: false`.
+The table holds 20 cases in suites `task` (the four leads), `returning-visitor`, `edge-cases` (personal email, invalid scan, ambiguous title, 500-999 band, no email), `caching`, `security` (prompt injection), `personas`, `triggers` (audit deadline, breach, Saviynt renewal), `competitors` and `sources`. Check before a demo: at the time of writing the four `task` rows are `enabled: false` and rows 5 to 8 (Rachel's second scan, personal email, invalid scan, ambiguous title) are enabled, so a default run does not run the four task leads, even though the canvas sticky says it does. Rachel's second scan is also meant to run with Lead 1 and `reset: false`. The clean way to demo the brief is to set `OAK_TEST_SUITE=task`, which runs exactly the four leads whatever their `enabled` flag.
 
 **4. `Build Test Plan`** (Code) - turns the input into one plan item per scan.
-- **Config block at the top** (current deployed state):
+- **Config block at the top.** Two settings come from n8n variables, so neither needs a code edit:
 ```js
-const WEBHOOK_URL    = 'https://oak-noam.app.n8n.cloud/webhook/oak-event/scan';
+const WEBHOOK_URL    = String($vars.OAK_BOOTH_WEBHOOK_URL || '').trim() || 'https://oak-noam.app.n8n.cloud/webhook/oak-event/scan';
+const RUN_SUITE      = String($vars.OAK_TEST_SUITE || '').trim() || 'enabled';   // 'enabled' | 'all' | a suite name
 const GAP_MS         = 15000;
 const SETTLE_SECONDS = 90;
 const TEST_EVENT_ID  = 'oak-live-event-2026';
 const RESET_ON_MANUAL_RUN = true;
 ```
-- **Source priority:** pasted scans, else enabled table rows sorted by `sort_order`, else a built-in `FALLBACK` of the four task leads (Rachel, Hiroshi, David, Sarah) so an empty table never produces an empty run.
+- `OAK_BOOTH_WEBHOOK_URL` points the harness at another instance (staging, a second tenant); unset, it targets this instance's booth webhook.
+- **Source priority:** pasted scans first. Otherwise `RUN_SUITE` picks table rows (sorted by `sort_order`):
+```js
+if (RUN_SUITE === 'enabled') return p.row.enabled === true;
+if (RUN_SUITE === 'all') return true;
+return String(p.row.suite || 'default') === RUN_SUITE;
+```
+  - unset or `enabled`: the rows ticked `enabled` (the default run)
+  - `all`: every row, ignoring `enabled`
+  - any other value, such as `task`, `edge-cases`, `triggers`, `competitors`: that suite, ignoring `enabled`. A suite name no row carries **throws** ("OAK_TEST_SUITE is "x" but no oak_test_payloads row has that suite. Use enabled, all, or one of: ...") instead of quietly falling back to the four task leads and reporting green.
+  - Only when `enabled` (or `all`) selects nothing does it use the built-in `FALLBACK` of the four task leads (Rachel, Hiroshi, David, Sarah), so an empty table never produces an empty run.
+  - The result's `scans_came_from` says which source ran, for example `oak_test_payloads, OAK_TEST_SUITE=task`.
 - **Validation that throws** (a hard stop is better than a misleading run): invalid `payload_json` or `expect_json`, a payload that is not an object, a missing `scan_id`, and two scans in one run sharing a `scan_id`:
 ```js
 if (seen[r.payload.scan_id]) throw new Error('Two scans in this run share scan_id "' + r.payload.scan_id + '". The replay guard would drop the second one.');
@@ -46,8 +58,6 @@ if (seen[r.payload.scan_id]) throw new Error('Two scans in this run share scan_i
   01 blocks `scan_id` replays, so a duplicate would be dropped silently and the test would halve itself.
 - Strips a test-only `expect` key from pasted scans before they are sent.
 - Emits per scan: `payload`, `expect`, `label`, `suite`, `notes`, `webhook_url`, `gap_ms`, `settle_seconds`, `test_event_id`, and `reset_filter`, which is `oak-live-event-2026` when reset is on and `__no_reset__` when it is off, so the delete nodes match nothing.
-
-**Coming, not yet deployed when this was written:** two switches in the `Build Test Plan` config block are being added by another change. `WEBHOOK_URL` will be read from the n8n variable `$vars.OAK_BOOTH_WEBHOOK_URL` (so the harness can point at another instance without a code edit), and a `RUN_SUITE` setting from `$vars.OAK_TEST_SUITE` will choose what runs: `enabled` (the enabled rows, today's behaviour), `all` (every row), or a suite name such as `task`, `edge-cases`, `triggers` or `competitors`. Re-read the node before the interview to confirm the exact behaviour.
 
 ### Group: 2. Reset, then send every scan
 
@@ -82,9 +92,10 @@ For a case with `{"accepted": false}` the first two invert: the webhook must rej
 1. **Score from stored state, not the HTTP reply.** The 202 is provisional by design; `changed_after_the_202` shows where the final gate or enrichment moved a lead.
 2. **Slack delivery is an assertion, not a hope.** 03 soft-fails Slack, which is only safe because this harness fails when nothing was delivered, for example a channel the app never joined.
 3. **Tests live in a Data Table.** Add, edit or toggle a case in the n8n UI; expectations travel with the payload.
-4. **Hit the real production webhook.** It tests auth, replay protection, the async tail and the real integrations, exactly as a scanner would.
-5. **Serial with a 15 second gap and a 90 second settle.** Predictable, cache-realistic, and no race between scans of the same company.
-6. **Fail loudly on bad test data.** Duplicate `scan_id`s or malformed JSON stop the run before anything is sent.
+4. **Hit the real production webhook.** It tests auth, replay protection, the async tail and the real integrations, exactly as a scanner would. The target is an n8n variable, so the same harness can test another instance.
+5. **Suite selection is a variable, and a wrong value fails.** There is no bulk toggle for `enabled` in the Data Table UI, so `OAK_TEST_SUITE` is the switch; a mistyped suite throws rather than falling back and reporting green.
+6. **Serial with a 15 second gap and a 90 second settle.** Predictable, cache-realistic, and no race between scans of the same company.
+7. **Fail loudly on bad test data.** Duplicate `scan_id`s or malformed JSON stop the run before anything is sent.
 
 ## Likely interview questions
 
@@ -92,7 +103,7 @@ For a case with `{"accepted": false}` the first two invert: the webhook must rej
 
 **Why not assert on the webhook response?** 01 replies in about two seconds with a provisional classification and keeps working for up to a minute: enrichment, AI, the final gate, HubSpot and Slack. The truth is the `oak_deliveries` row after that. The harness reports both and flags when they differ.
 
-**How do you add a test?** Add a row to `oak_test_payloads` with `payload_json`, `expect_json`, a `suite`, a `label` and `enabled`. No workflow edit. For a one-off, paste the scan into `Paste JSON Here`.
+**How do you add a test, or run a different set?** Add a row to `oak_test_payloads` with `payload_json`, `expect_json`, a `suite`, a `label` and `enabled`. No workflow edit. To choose what runs, set the n8n variable `OAK_TEST_SUITE`: unset runs the enabled rows, `all` runs all 20, a suite name like `triggers` runs just that suite, and a typo fails loudly instead of silently running something else. For a one-off, paste the scan into `Paste JSON Here`.
 
 **How do you test a returning visitor?** Run the first scan, then run the second with `reset: false`, so the encounter row survives and 01 treats the badge as a repeat. The saved row "Rachel, second scan - new notes" is built for that, and the result shows `repeat_scan`, `scan_number` and `slack_threaded`.
 
