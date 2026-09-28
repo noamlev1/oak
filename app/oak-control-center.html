@@ -415,7 +415,7 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(4px); }
   :root:not([data-theme="dark"]) .theme-toggle .icon-moon { display: block; }
 }
 .theme-toggle:hover { color: var(--text); border-color: var(--line-strong); }
-.offline-banner { position: sticky; top: 72px; z-index: 15; display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; padding: .55rem clamp(1rem, 3vw, 3rem); border-bottom: 1px solid rgba(255, 156, 85, .3); background: color-mix(in srgb, var(--bg) 86%, var(--orange)); color: var(--orange-text); font-size: .78rem; line-height: 1.4; }
+.offline-banner { position: relative; z-index: 15; display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; padding: .55rem clamp(1rem, 3vw, 3rem); border-bottom: 1px solid rgba(255, 156, 85, .3); background: color-mix(in srgb, var(--bg) 86%, var(--orange)); color: var(--orange-text); font-size: .78rem; line-height: 1.4; }
 .offline-banner[hidden] { display: none; }
 .offline-banner [data-banner-text] { flex: 1 1 320px; }
 .banner-actions { display: flex; gap: .45rem; }
@@ -2212,7 +2212,7 @@ window.OAK_GRAPH = {
   const moveEnd = (move) => (Array.isArray(move) ? move[move.length - 1] : move.end);
 
   function errDot(n) {
-    return n.bar ? [n.x + n.w - 12, n.y + 12] : [n.x + n.w - 10, n.y + 10];
+    return n.bar ? [n.x + n.w - 12, n.y + 12] : [n.x + n.w - 10, n.y + n.h - 10];
   }
 
   function failureCurve(id) {
@@ -2445,7 +2445,7 @@ window.OAK_GRAPH = {
         title: '05 is skipped',
         happened: T('ai').detail || `${label(f.intake)} never reaches the model.`,
         decided: `${label(f.intake)} never reaches the model, and the final gate that follows 05 is skipped too: the intake decision stands.`,
-        moves: [toTrack('p05')], ticks: ['p05'], skip: ['wf05', 'gate', '01-05'], tags: { wf05: 'SKIPPED ON THIS PATH' },
+        moves: [toTrack('p05')], ticks: ['p05'], skip: ['wf05', 'gate', '01-05'], tags: { wf05: 'SKIPPED' },
       });
     } else {
       add({
@@ -2481,7 +2481,7 @@ window.OAK_GRAPH = {
         title: '02 is skipped: no email',
         happened: 'The badge carried no valid email, so there is no contact to upsert.',
         decided: 'The run continues without HubSpot and still reaches complete.',
-        moves: [toTrack('p02')], ticks: ['p02'], skip: ['wf02', '01-02'], tags: { wf02: 'SKIPPED: NO EMAIL' },
+        moves: [toTrack('p02')], ticks: ['p02'], skip: ['wf02', '01-02'], tags: { wf02: 'NO EMAIL: SKIPPED' },
       });
     }
     add({
