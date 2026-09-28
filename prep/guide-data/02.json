@@ -1,0 +1,350 @@
+{
+  "id": "02",
+  "name": "Oak GTM - 02 HubSpot Sync [sub-flow]",
+  "short": "HubSpot Sync",
+  "lane": "write",
+  "one_breath": "02 is the only place the automated pipeline writes to HubSpot. 01 calls it after the tier is settled, and only when the scan carried a valid email, because email is the only safe dedupe key. It resolves the company by domain (creating it if new), finds the contact, reads real deals and owners, upserts the contact without overwriting anything a human typed, writes the Oak properties, logs a meeting and a note, and hands back a post-write crm_context the Slack card uses.",
+  "trigger": "Execute Workflow Trigger 'When Called by Intake' (input source: passthrough), called by 01's 'Sync to HubSpot' with waitForSubWorkflow true",
+  "input": "The settled lead payload from 01 (policy removed): identity, classification, persona, score and breakdown, rule_summary, decision_reasons and decision_trace, company_enrichment, employee_resolution, evidence, AI fields, scan_count, and 02A's pre-write crm_context. Only called when email_valid is true.",
+  "output": "The same payload with crm_context replaced by the post-write version: lookup_status (complete | failed), hubspot_contact_id, hubspot_contact_url, hubspot_company_url, is_net_new, company, company_match, company_created, company_enriched, owner_id, owner_name, owner_email, owner_source, customer_status, open_deal, open_deal_count, related_deals, oak_properties_written, booth_conversation_engagement_id, booth_note_id, synced_at, warnings.",
+  "called_by": [
+    "01 Intake & Decision (node 'Sync to HubSpot', only when Can Sync Contact? is true)"
+  ],
+  "calls": [],
+  "node_count": 15,
+  "groups": [
+    {
+      "name": "Ungrouped",
+      "purpose": "The entry point: receives the settled lead payload from 01.",
+      "nodes": [
+        {
+          "step": 1,
+          "name": "When Called by Intake",
+          "type": "Execute Workflow Trigger",
+          "what": "Entry point. Input source 'passthrough', so 01's item arrives unchanged, with no declared schema. Every later node reads it with $('When Called by Intake').first().json, and Build CRM Context spreads it back out at the end.",
+          "why": "Passthrough keeps 01's call simple and lets 02 return the whole lead with only crm_context replaced.",
+          "in": "The settled payload from 01 (output of Restore Enriched Payload or Enrich Company, after Can Sync Contact? true).",
+          "out": "The same single item.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "The workflow's error workflow is 99; because 01 waits and 'Sync to HubSpot' has no continue-on-error, a hard failure inside 02 fails 01's run and leaves the ledger at 'accepted' (so a resend reruns it).",
+          "say_it": "02 is a passthrough sub-workflow: it receives the settled lead and returns it with a post-write crm_context.",
+          "next": [
+            "Find Company by Domain"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Resolve and enrich the company",
+      "purpose": "Domain is the company identity: exact lookup, create if new, and write an enriched headcount only when HubSpot has none.",
+      "nodes": [
+        {
+          "step": 2,
+          "name": "Find Company by Domain",
+          "type": "HubSpot (company searchByDomain)",
+          "what": "HubSpot company searchByDomain on the payload's company_domain, limit 1, returning name, domain, industry, numberofemployees, annualrevenue, hubspot_owner_id and lifecyclestage. This is a fresh read at write time; it does not reuse 02A's result.",
+          "why": "The company must be settled before the contact so the contact can be associated to it; reading again here avoids acting on a stale answer from minutes earlier.",
+          "in": "$('When Called by Intake').first().json.company_domain",
+          "out": "Zero or one company item.",
+          "decides": null,
+          "code": "domain: {{ $('When Called by Intake').first().json.company_domain }}",
+          "branches": [],
+          "on_failure": "retryOnFail 3 tries at 1500 ms, continueRegularOutput, alwaysOutputData: a miss or error reads as no company, which leads Resolve Company Write to plan a create.",
+          "say_it": "Company first, matched on exact domain, because the contact has to be associated to something real.",
+          "next": [
+            "Resolve Company Write"
+          ]
+        },
+        {
+          "step": 3,
+          "name": "Resolve Company Write",
+          "type": "Code",
+          "what": "Plans the company write without calling HubSpot. No company found and there is a domain or name: plan a POST create with name and domain. Company found, HubSpot has no numberofemployees, and 04 resolved a headcount from a non-HubSpot source: plan a PATCH with numberofemployees only, plus a note like 'written from booth notes at 90% confidence'. Company found and nothing to add: no_change. Nothing at all: skipped_no_identity, targeting company 0. Industry is never written.",
+          "why": "Separating the plan from the call lets one HTTP node handle create, update and no-op, and makes the 'CRM beats enrichment' rule one readable line.",
+          "in": "Trigger payload (company_domain, company_name, employee_resolution or company_enrichment.employee_resolution) and Find Company by Domain.",
+          "out": "company_method, company_url, company_body (JSON string), existing_company_id, company_action (create | update | no_change | skipped_no_identity), company_props, company_write_notes.",
+          "decides": "Whether the company is created, enriched with a headcount, left alone or skipped.",
+          "code": "if(resolved!=null&&String(er.source||'')!=='hubspot_company'&&!crmEmp){props.numberofemployees=String(resolved);...}\nif(canCreate){method='POST';url='https://api.hubapi.com/crm/v3/objects/companies';body={properties:props};action='create';}\nelse if(companyId&&hasProps){method='PATCH';...action='update';}\nelse if(companyId){action='no_change';}",
+          "branches": [],
+          "on_failure": "No error settings; the code only reads prior items, so it is unlikely to throw. A hard error would fail the sub-workflow and go to 99.",
+          "say_it": "Resolve Company Write is where 'the CRM beats enrichment' lives: a web or booth headcount is written only when HubSpot has none, and industry is never guessed onto HubSpot's enum.",
+          "next": [
+            "Create or Update Company"
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Create or Update Company",
+          "type": "HTTP Request",
+          "what": "One HTTP node whose method, URL and body all come from the plan: POST /crm/v3/objects/companies for a create, PATCH /crm/v3/objects/companies/{id} for an update. For no_change and skipped_no_identity it still sends a PATCH with an empty properties object (to company 0 when there is no id, which 404s harmlessly). The response option neverError is on.",
+          "why": "One node instead of an IF plus two nodes keeps the canvas linear and the write logic in the planner.",
+          "in": "$json.company_method, $json.company_url, $json.company_body from Resolve Company Write.",
+          "out": "HubSpot's response body; on a successful create it contains the new company id.",
+          "decides": null,
+          "code": "method: {{ $json.company_method }}  url: {{ $json.company_url }}  body: {{ $json.company_body }}",
+          "branches": [],
+          "on_failure": "retryOnFail 2 tries at 1500 ms, continueRegularOutput, alwaysOutputData. Because neverError is on, a HubSpot 4xx does not raise an error; it returns HubSpot's error body, which has no 'error' field. A failed create is still caught downstream (no id came back), but a failed update PATCH would read as success in Resolve Company Id.",
+          "say_it": "A single HTTP node executes whatever the planner decided, so create, enrich and no-op are one step on the canvas.",
+          "next": [
+            "Resolve Company Id"
+          ]
+        },
+        {
+          "step": 5,
+          "name": "Resolve Company Id",
+          "type": "Code",
+          "what": "Settles which company id the contact will be associated to: the new id from the create response, else the existing id. Flags company_created and company_updated, and turns problems into readable warnings: create returned no id ('The contact will not be associated to a company'), update errored, or no company identity on the scan.",
+          "why": "An orphaned contact is not a clean CRM; this node makes a failed company write visible on the card instead of silent.",
+          "in": "Resolve Company Write (plan) and Create or Update Company (response).",
+          "out": "company_id, company_created, company_updated, company_action, company_props_written, company_write_notes, company_warnings.",
+          "decides": "The company_id used for the contact association and deal lookup.",
+          "code": "const companyId=newId||plan.existing_company_id||'';\nconst created=Boolean(plan.company_action==='create'&&newId);\nconst updated=Boolean(plan.company_action==='update'&&!err);",
+          "branches": [],
+          "on_failure": "No error settings; reads prior outputs defensively in try/catch. Known limit: with neverError upstream, 'err' only catches transport errors, so an HTTP 4xx on an update still sets company_updated true.",
+          "say_it": "Resolve Company Id guarantees the contact is associated to a real company id, or that a warning explains why not.",
+          "next": [
+            "Find HubSpot Contact"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Resolve contact and real deals",
+      "purpose": "Contact by email, genuinely associated deals via v4, owner ids resolved to names, then a write plan that preserves human-entered fields.",
+      "nodes": [
+        {
+          "step": 6,
+          "name": "Find HubSpot Contact",
+          "type": "HubSpot (contact search)",
+          "what": "HubSpot contact search, email equals the scan email, limit 1. It reads the fields keep() compares against (email, firstname, lastname, jobtitle, company, website, lifecyclestage, hs_lead_status, hubspot_owner_id, createdate, hs_object_id) plus the rep's event fields oak_booth_status, oak_exclude_from_outreach, oak_claimed_by and oak_claimed_at.",
+          "why": "Without the existing values the upsert would overwrite a rep's corrected title or reset a claimed lead to 'scanned'.",
+          "in": "$('When Called by Intake').first().json.email",
+          "out": "Zero or one contact item with id and properties.",
+          "decides": null,
+          "code": "propertyName: email  value: {{ $('When Called by Intake').first().json.email }}",
+          "branches": [],
+          "on_failure": "retryOnFail 3 tries at 1500 ms, continueRegularOutput, alwaysOutputData. If it fails, or the search index has not yet caught up with a contact created seconds ago, it reads as a new contact: keep() then sends scanner values and lifecyclestage 'lead' / hs_lead_status 'NEW'.",
+          "say_it": "The contact is read before it is written so every human-entered value can be preserved.",
+          "next": [
+            "Get Company Deal Associations"
+          ]
+        },
+        {
+          "step": 7,
+          "name": "Get Company Deal Associations",
+          "type": "HTTP Request",
+          "what": "GET https://api.hubapi.com/crm/v4/objects/companies/{company_id}/associations/deals, using company id 0 when there is none. Returns the list of deal ids really associated to the company.",
+          "why": "It replaced a deal search on associations.company, which n8n flagged because it is a search key rather than a real property, and which can lag. A write-side view of open deals must be authoritative.",
+          "in": "$('Resolve Company Id').first().json.company_id",
+          "out": "results[] with toObjectId for each associated deal.",
+          "decides": null,
+          "code": "{{ 'https://api.hubapi.com/crm/v4/objects/companies/' + ($('Resolve Company Id').first().json.company_id || '0') + '/associations/deals' }}",
+          "branches": [],
+          "on_failure": "retryOnFail 2 tries at 1500 ms, neverError on the response, continueRegularOutput, alwaysOutputData: a bad or empty answer just means no deals.",
+          "say_it": "Deals come from the documented v4 associations endpoint, so 'open deal' means genuinely attached, not a search hit.",
+          "next": [
+            "Read Associated Deals"
+          ]
+        },
+        {
+          "step": 8,
+          "name": "Read Associated Deals",
+          "type": "HTTP Request",
+          "what": "POST https://api.hubapi.com/crm/v3/objects/deals/batch/read with up to 20 of those deal ids, asking for dealname, dealstage, pipeline, amount, closedate and hubspot_owner_id.",
+          "why": "The association call only returns ids; the stage is needed to know which deals are still open.",
+          "in": "Get Company Deal Associations results (toObjectId or id), first 20.",
+          "out": "results[] of deals with properties.",
+          "decides": null,
+          "code": "inputs: ((($('Get Company Deal Associations').first().json) || {}).results || []).slice(0, 20).map(r => ({ id: String(r.toObjectId || r.id) }))",
+          "branches": [],
+          "on_failure": "retryOnFail 2 tries at 1500 ms, neverError, continueRegularOutput, alwaysOutputData. With no ids HubSpot rejects the empty batch, which simply yields no results.",
+          "say_it": "A batch read turns the associated deal ids into stages and amounts in one call.",
+          "next": [
+            "List HubSpot Owners"
+          ]
+        },
+        {
+          "step": 9,
+          "name": "List HubSpot Owners",
+          "type": "HTTP Request",
+          "what": "GET https://api.hubapi.com/crm/v3/owners/?limit=100. One call per sync returning all owners with id, name and email.",
+          "why": "A raw owner id means nothing to a rep at a booth; this lets Build CRM Context print a person's name. On a free portal with a handful of owners, one list call beats a lookup per id.",
+          "in": "Nothing from the payload.",
+          "out": "results[] of owners (id, firstName, lastName, email).",
+          "decides": null,
+          "code": "GET https://api.hubapi.com/crm/v3/owners/?limit=100",
+          "branches": [],
+          "on_failure": "retryOnFail 2 tries at 1000 ms, neverError, continueRegularOutput, alwaysOutputData: without it the card shows no owner name but the sync continues.",
+          "say_it": "Owners are listed once per sync so the card can say who owns the lead by name.",
+          "next": [
+            "Resolve CRM Write"
+          ]
+        },
+        {
+          "step": 10,
+          "name": "Resolve CRM Write",
+          "type": "Code",
+          "what": "The heart of 02: builds the complete write plan. Contact fields go through keep() so the HubSpot value wins; company name prefers HubSpot's company name; website becomes https://<domain>. It builds 20 oak_* values, including the bare competitor enum and the one-way exclude flag, carries booth status and claim fields forward, drops closed deals, picks the owner (contact, else company, else 02A's pre-lookup owner) and derives customer_status. It also writes a meeting (title 'Oak booth scan - <name> (<classification>)', start at scanned_at, 15 minutes) and a multi-section note: OAK BOOTH ENCOUNTER, PERSON, BOOTH NOTES, COMPANY RECORD, DECISION PROVENANCE, RECOMMENDED CONVERSATION [AI synthesis, not fact], VERIFIED COMPANY CONTEXT (quotes mentioning breach, ransom, cybercriminal, attack claim or reported security incident are filtered out).",
+          "why": "Every rule about what may be written, and what must be preserved, lives in one node that can be read top to bottom; the HubSpot nodes after it only execute the plan.",
+          "in": "Trigger payload, Resolve Company Id, Find Company by Domain, Find HubSpot Contact, Read Associated Deals.",
+          "out": "source (the original payload), existing_contact_id, contact_write, oak_properties (20 keys), meeting, note_body, needs_follow_up_task:false, crm_snapshot (portal, existing contact, company, owner_id, owner_source, customer_status, related_deals, open_deal_count, company_warnings).",
+          "decides": "Every value written to HubSpot, including which human-entered values survive and the oak_competitor_status enum.",
+          "code": "const keep=(current,incoming)=>String(current==null?'':current).trim()||String(incoming==null?'':incoming).trim();\nconst competitorEnum=s.competitor?'confirmed':(['none','possible','confirmed'].indexOf(String(s.competitor_status||'none'))>=0?String(s.competitor_status||'none'):'possible');\nconst boothStatus=String(ex.oak_booth_status||'').trim()||'scanned';const exclude=String(ex.oak_exclude_from_outreach||'').toLowerCase()==='true'||Boolean(s.competitor);\nconst ownerId=contactOwner||companyOwner||pre.owner_id||'';",
+          "branches": [],
+          "on_failure": "No error settings; all lookups are filtered or wrapped in try/catch. A hard error would fail 02 and 01, sending the run to 99 with the ledger still 'accepted'.",
+          "say_it": "Resolve CRM Write builds the whole write plan in one place, and keep() is the one-line rule that a human in HubSpot always beats the scanner.",
+          "next": [
+            "Upsert Contact"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Write contact, tags and booth history",
+      "purpose": "Upsert on email so a second scan never duplicates, then the Oak properties, a meeting engagement and a readable note carrying full provenance.",
+      "nodes": [
+        {
+          "step": 11,
+          "name": "Upsert Contact",
+          "type": "HubSpot (contact upsert)",
+          "what": "HubSpot contact upsert keyed on the scan email, sending the keep()-resolved firstName, lastName, jobTitle, companyName, websiteUrl, leadStatus, lifeCycleStage and associatedCompanyId. resolveData is false, so it returns the lightweight response with vid and isNew.",
+          "why": "Upsert rather than create is the task's dedupe requirement: the same badge scanned twice updates one contact.",
+          "in": "Email from the trigger; everything else from $('Resolve CRM Write').first().json.contact_write.",
+          "out": "vid (contact id) and isNew.",
+          "decides": null,
+          "code": "email: {{ $('When Called by Intake').first().json.email }}\nassociatedCompanyId: {{ $('Resolve CRM Write').first().json.contact_write.associated_company_id }}",
+          "branches": [],
+          "on_failure": "retryOnFail 3 tries at 2000 ms, continueRegularOutput, alwaysOutputData. This is the one failure that means the lead is not in the CRM; Build CRM Context records 'Contact upsert failed' and sets lookup_status 'failed'.",
+          "say_it": "The contact is upserted on email, never created, so a returning visitor updates one record.",
+          "next": [
+            "Write Oak Properties API"
+          ]
+        },
+        {
+          "step": 12,
+          "name": "Write Oak Properties API",
+          "type": "HTTP Request",
+          "what": "PATCH https://api.hubapi.com/crm/v3/objects/contacts/{vid, else existing_contact_id} with the Oak properties. Before sending it deletes oak_rule_summary and oak_score_breakdown (not provisioned) and prepends them to oak_decision_reasons as 'Rule fired: ...' and 'Score breakdown: ...', capped at 65,000 characters, then converts booleans to the strings 'true'/'false'. That leaves 18 properties in one call.",
+          "why": "A raw PATCH surfaces HubSpot's field-level validation error, which the HubSpot node would hide. The PATCH is all-or-nothing, so visibility matters.",
+          "in": "$('Resolve CRM Write').first().json.oak_properties and the contact id from Upsert Contact.",
+          "out": "The updated contact (id, properties) or an error item.",
+          "decides": null,
+          "code": "delete p.oak_rule_summary; delete p.oak_score_breakdown; p.oak_decision_reasons = ('Rule fired: ' + rule + '\\nScore breakdown: ' + split + '\\n\\n' + (p.oak_decision_reasons || '')).slice(0, 65000);\nreturn Object.fromEntries(Object.entries(p).map(([k, v]) => [k, typeof v === 'boolean' ? String(v) : v]));",
+          "branches": [],
+          "on_failure": "retryOnFail 3 tries at 1500 ms, continueRegularOutput, alwaysOutputData. No neverError here, so a 400 becomes an error item; Build CRM Context then adds 'Oak property write failed' and oak_properties_written is false.",
+          "say_it": "All Oak tags go in one PATCH whose result is asserted, because one invalid enum value once silently dropped the tier and score with it.",
+          "next": [
+            "Log Booth Conversation"
+          ]
+        },
+        {
+          "step": 13,
+          "name": "Log Booth Conversation",
+          "type": "HubSpot (engagement: meeting)",
+          "what": "Creates a HubSpot meeting engagement associated to the contact vid, with the planned title, start and end time (15 minutes from scanned_at, formatted 'YYYY-MM-DD HH:MM:SS' in UTC) and the full note text as internal meeting notes.",
+          "why": "The booth encounter shows up on the contact timeline as a real interaction, which is what a rep scanning the timeline looks for.",
+          "in": "$('Resolve CRM Write').first().json.meeting and $('Upsert Contact').first().json.vid.",
+          "out": "The engagement (engagement.id).",
+          "decides": null,
+          "code": "title: {{ $('Resolve CRM Write').first().json.meeting.title }}\ncontactIds: {{ $('Upsert Contact').first().json.vid }}",
+          "branches": [],
+          "on_failure": "retryOnFail 3 tries at 2000 ms, continueRegularOutput, alwaysOutputData; a failure becomes the warning 'Booth conversation logging failed'.",
+          "say_it": "Every scan becomes a meeting on the HubSpot timeline, so the encounter is visible where reps already look.",
+          "next": [
+            "Create Associated Booth Note"
+          ]
+        },
+        {
+          "step": 14,
+          "name": "Create Associated Booth Note",
+          "type": "HTTP Request",
+          "what": "POST https://api.hubapi.com/crm/v3/objects/notes with hs_timestamp = scanned_at and hs_note_body = the planned note with newlines turned into <br>, associated to the contact with association type 202 (note to contact, HUBSPOT_DEFINED).",
+          "why": "A readable note carries the full provenance (rule fired, score breakdown, sources, suggested question) where anyone opening the contact will see it.",
+          "in": "Trigger scanned_at, $('Resolve CRM Write').first().json.note_body, contact id from Upsert Contact (else existing_contact_id).",
+          "out": "The note (id).",
+          "decides": null,
+          "code": "associations: [{ to: { id: String($('Upsert Contact').first().json.vid || $('Resolve CRM Write').first().json.existing_contact_id) }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 202 }] }]",
+          "branches": [],
+          "on_failure": "retryOnFail 3 tries at 1500 ms, continueRegularOutput, alwaysOutputData; a failure becomes 'Associated booth note creation failed'.",
+          "say_it": "The note is the audit trail in the CRM: what was said at the booth, which rule fired, and which claims have a source.",
+          "next": [
+            "Build CRM Context"
+          ]
+        },
+        {
+          "step": 15,
+          "name": "Build CRM Context",
+          "type": "Code",
+          "what": "Assembles what 01 gets back. It collects warnings from every step (company warnings, contact upsert failed, no contact id, Oak property write failed, meeting failed, note failed, no company matched, no owner), resolves the owner id to a name and email from the owners list, builds the contact URL (0-1) and company URL (0-2), and returns the original payload with crm_context replaced.",
+          "why": "01 and the Slack card need one post-write truth: the real contact id and link, who owns it, and what went wrong, instead of the pre-write guess from 02A.",
+          "in": "Resolve CRM Write (source payload and crm_snapshot), Upsert Contact, Write Oak Properties API, Log Booth Conversation, Create Associated Booth Note, List HubSpot Owners.",
+          "out": "{...payload, crm_context:{lookup_status, portal_id, hubspot_contact_id, hubspot_contact_url, hubspot_company_url, is_net_new, existing_contact, company, company_match, company_created, company_enriched, owner_id, owner_name, owner_email, owner_source, customer_status, open_deal, open_deal_count, related_deals, oak_properties_written, booth_conversation_engagement_id, booth_note_id, follow_up_task_engagement_id:null, synced_at, warnings}}",
+          "decides": "lookup_status (complete | failed) and oak_properties_written, both from actual responses.",
+          "code": "lookup_status:contactId&&!up.error?'complete':'failed'\noak_properties_written:!tag.error&&Boolean(tag.id||tag.properties)",
+          "branches": [],
+          "on_failure": "No error settings; every upstream result is read through a try/catch pick() helper, so failures arrive as warnings rather than exceptions.",
+          "say_it": "Build CRM Context reports what actually happened in HubSpot, from the responses, so a failed write shows on the Slack card instead of passing silently.",
+          "next": []
+        }
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Email is the contact key, domain is the company key",
+      "why": "The contact is upserted on email, never created, so a second scan of the same badge updates the same record. One company per domain keeps two people from one company on one record and lines up with the enrichment cache key."
+    },
+    {
+      "title": "A human in HubSpot beats the scanner",
+      "why": "Five free-text fields go through keep(), where the existing HubSpot value wins and the scan only fills a blank. Lifecycle stage and lead status only default for a new contact, and the rep's booth status and claim fields are read off the contact and written straight back."
+    },
+    {
+      "title": "The CRM beats enrichment, and industry is never guessed",
+      "why": "numberofemployees is written to the company only when HubSpot has none and the value did not come from HubSpot. HubSpot's industry is a fixed enumeration, so the resolved industry goes on the contact as oak_industry with oak_industry_source instead."
+    },
+    {
+      "title": "Oak properties go through a raw PATCH so failures are visible",
+      "why": "All Oak properties go in one PATCH, which is all-or-nothing. When oak_competitor_status was sent as 'confirmed: Veza', HubSpot returned 400 INVALID_OPTION and dropped the tier, persona and score too. Now the enum gets a bare value and oak_properties_written is read from the response, not assumed."
+    },
+    {
+      "title": "Deals via the v4 associations endpoint",
+      "why": "Open deals means deals genuinely attached to the company, read with GET /crm/v4/objects/companies/{id}/associations/deals then a v3 batch read, not a search that can lag. 02A accepts the looser search on the read side."
+    },
+    {
+      "title": "No invented follow-up task",
+      "why": "needs_follow_up_task is hard-coded false. The only task creator in the whole system is the Snooze button in 06, so nothing makes up an SLA nobody agreed to."
+    }
+  ],
+  "questions": [
+    {
+      "q": "How do you avoid duplicate contacts?",
+      "a": "Upsert Contact upserts on email; 01 only calls 02 when email_valid is true, so there is always a key. A second scan updates the same contact and oak_scan_count goes up from 01's scan_count. The company is keyed on exact domain the same way."
+    },
+    {
+      "q": "What if a rep already edited the contact in HubSpot?",
+      "a": "keep(current, incoming) returns the trimmed HubSpot value if there is one, else the scan value, for firstname, lastname, jobtitle, company and website. lifecyclestage and hs_lead_status keep the existing value and only default to 'lead' and 'NEW' for a brand-new contact. oak_booth_status, oak_claimed_by and oak_claimed_at are read off the contact and written back. The protection depends on Find HubSpot Contact finding the record: if that search fails or lags, keep() has nothing to compare against and the scanner values are sent."
+    },
+    {
+      "q": "Why write the Oak fields with an HTTP PATCH instead of the HubSpot node?",
+      "a": "So HubSpot's field-level validation error comes back in the response and lands in crm_context.warnings. The PATCH is all-or-nothing, so one bad value loses every Oak field, which is exactly what happened with the decorated competitor enum. Build CRM Context now asserts oak_properties_written from the response body."
+    },
+    {
+      "q": "Why 18 Oak properties when Resolve CRM Write builds 20?",
+      "a": "oak_rule_summary and oak_score_breakdown are not provisioned in the portal (00 retires them), so Write Oak Properties API deletes them from the body and prepends 'Rule fired: ...' and 'Score breakdown: ...' to oak_decision_reasons. Nothing is lost and there are fewer ways for the PATCH to fail."
+    },
+    {
+      "q": "What does the rep get out of this workflow?",
+      "a": "In Slack, via the returned crm_context: the real contact link, the company link, the owner's name instead of an id, the relationship, the open deal and any warnings. In HubSpot: a meeting on the timeline and an associated note with booth notes, the rule that fired, the score breakdown, sourced company context and the suggested question."
+    },
+    {
+      "q": "What happens when HubSpot fails mid-sync?",
+      "a": "Every call retries and continues on error, so the run always reaches Build CRM Context, which turns each failure into a warning line. lookup_status becomes 'failed' when no contact id came back or the upsert errored. 01 still stores and alerts the lead."
+    },
+    {
+      "q": "Why not create a company when there is no domain?",
+      "a": "Resolve Company Write can still create from a company name alone, but domain is the dedupe key, so a name-only create can duplicate. When there is neither a domain nor a name, it plans 'skipped_no_identity', sends a harmless PATCH to company 0 and records a warning."
+    }
+  ]
+}

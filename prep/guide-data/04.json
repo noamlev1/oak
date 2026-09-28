@@ -1,0 +1,460 @@
+{
+  "id": "04",
+  "name": "Oak GTM - 04 Company & Person Enrichment [sub-flow]",
+  "short": "Company & Person Enrichment",
+  "lane": "enrich",
+  "one_breath": "04 learns what it can, for free, about the visitor's company and the visitor, and refuses to claim anything it cannot source. 01 calls it for every classified scan; it reads the company homepage every time, adds Brave search unless the lead is out of scope, resolves headcount and industry through a confidence ladder from the policy, and hands the lead back with sourced evidence, a size band, an updated score and, where the evidence demands it, a changed classification.",
+  "trigger": "Execute Workflow Trigger 'When Called for Enrichment' (passthrough); active version bc11c626",
+  "input": "The classified lead from 01 with 02A's read-only HubSpot context, the booth-notes headcount, competitor_status, persona_reasoning_required, repeat-scan fields and any rep_override.",
+  "output": "The same lead plus company_enrichment (industry_resolution, employee_resolution, headcount_name_only_candidates), company_evidence, person_evidence, person_enrichment, company_size_band, and possibly updated classification, routing, score, score_breakdown, decision_reasons, decision_trace and notification_mode. Side effects: one upsert per domain in oak_enrichment_cache; up to three Brave searches; no CRM writes.",
+  "called_by": [
+    "01 Intake & Decision (Enrich Company)"
+  ],
+  "calls": [],
+  "node_count": 19,
+  "groups": [
+    {
+      "name": "Ungrouped",
+      "purpose": "The trigger that receives the classified lead.",
+      "nodes": [
+        {
+          "step": 1,
+          "name": "When Called for Enrichment",
+          "type": "Execute Workflow Trigger (passthrough)",
+          "what": "Entry point, called by 01's Enrich Company node for every classified scan. Passthrough, so the whole lead arrives unchanged; every later node reads the original back with $('When Called for Enrichment').first().json.",
+          "why": "04 needs the classification (for the cost gates), the CRM context from 02A (HubSpot headcount and industry outrank everything), the booth-notes headcount and any rep override.",
+          "in": "The classified lead from 01 with 02A's read-only crm_context: company_domain, company_name, full_name, job_title, email, classification, score, score_breakdown, routing, decision_reasons, decision_trace, crm_context (company.employees, company.industry), employee_count_observed (from booth notes), competitor_status, persona_reasoning_required, personal_email, repeat_scan, prior_classification, classification_changed, material_change, rep_override, rep_override_reason, rep_override_by, rep_override_at.",
+          "out": "The same object, one item.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "Nothing to fail; settings.errorWorkflow is 99, whose 04 impact line says only company intel is missing and the alert still ran.",
+          "say_it": "04 receives the classified lead plus HubSpot context and hands the same lead back, enriched and possibly reclassified.",
+          "next": [
+            "Load Company Cache"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cache Check",
+      "purpose": "Reads the per-domain cache and the active policy, then decides whether this company needs fetching at all; parked domains never count as fresh.",
+      "nodes": [
+        {
+          "step": 2,
+          "name": "Load Company Cache",
+          "type": "Data Table get (oak_enrichment_cache)",
+          "what": "Reads the cache row where company_domain equals the scan's company_domain, limit 1 (table referenced by name).",
+          "why": "One row per domain means two people from the same company at one event cost one enrichment.",
+          "in": "company_domain from the trigger.",
+          "out": "Zero or one cache row: company_domain, company_name, payload_json, evidence_json, status, source, enriched_at, expires_at.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "alwaysOutputData plus onError continueRegularOutput: a table problem means 'no cache', not a dead run.",
+          "say_it": "The cache is keyed on the domain, so a second visitor from the same company skips every company fetch.",
+          "next": [
+            "Load Active Policy"
+          ]
+        },
+        {
+          "step": 3,
+          "name": "Load Active Policy",
+          "type": "Data Table get (oak_policies)",
+          "what": "Reads the active oak_policies row (status = active, limit 1). It supplies company_cache_ttl_days (30), the employee_confidence ladder (hubspot_company 1, booth_notes 0.9, official_website 0.85, domain_matched_public_search 0.7), employee_verification_required_below (1), search_enabled, employee_search_enabled, max_results (5), target_industries, disqualifiers (saas-only, single-cloud), competitors.confirmed_names and possible_keywords, incumbent_tools, scoring points and notifications.",
+          "why": "Every threshold and confidence in 04 comes from data, so tuning enrichment is a table edit.",
+          "in": "Filter status = active.",
+          "out": "The policy row; Assess Cache parses its document_json.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "alwaysOutputData plus continueRegularOutput; if it fails, code defaults apply (TTL 30, the same confidence ladder, 500 and 1000 thresholds, 15-point scores).",
+          "say_it": "Every threshold and confidence used in enrichment is read from the policy row, not hard-coded.",
+          "next": [
+            "Assess Cache"
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Assess Cache",
+          "type": "Code",
+          "what": "Decides whether this company needs fetching. A cached row is fresh only when all three hold: status is 'complete', expires_at is in the future, and it is not rejected. It is rejected if the cached payload is a parked or for-sale site, or if it predates identity checking (evidence_identity_checked !== true). It also sets has_company_identity (a domain or a company name exists), an identity_note for a personal email with no company name, ttl_days, fetch_url = https://<domain>, and passes the parsed policy along as policy.",
+          "why": "Stops paying for the same company twice and never trusts a cache row built from a parked domain or from before results were identity-checked.",
+          "in": "Load Company Cache rows, the policy document_json ($json), and the trigger's company_domain, company_name, personal_email.",
+          "out": "{domain, company_name, has_company_identity, personal_email, identity_note, cache_fresh, cache_row_found, cache_expired, cache_rejected_reason, cached_payload, cached_evidence, ttl_days, fetch_url, policy}.",
+          "decides": "cache_fresh: whether to skip every company fetch and search.",
+          "code": "const rejected=Boolean(cachedPayload.site_quality==='parked'||parking.test(String(cachedPayload.headline||''))||cachedPayload.evidence_identity_checked!==true);\nconst notExpired=Boolean(row&&row.expires_at&&new Date(row.expires_at).getTime()>Date.now());\nconst fresh=Boolean(row&&String(row.status||'')==='complete'&&notExpired&&!rejected);",
+          "branches": [],
+          "on_failure": "No onError setting; JSON parses are in try/catch so a corrupt cache row just counts as not fresh.",
+          "say_it": "A cache row is only reused if it is complete, unexpired and was identity-checked; a parked domain never counts as fresh.",
+          "next": [
+            "Cache Fresh?"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Enrich and Store",
+      "purpose": "Free homepage read, identity-aligned Brave search, a headcount search only if size is still unknown, the confidence ladders and reclassification, then a strict person search and a final evidence sanitizer.",
+      "nodes": [
+        {
+          "step": 5,
+          "name": "Cache Fresh?",
+          "type": "IF",
+          "what": "Branches on $json.cache_fresh === true.",
+          "why": "Two visitors from one company should cost one enrichment.",
+          "in": "cache_fresh from Assess Cache.",
+          "out": "The Assess Cache item on one output.",
+          "decides": "Fetch or reuse.",
+          "code": "{{ $json.cache_fresh }} is true",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Build Enrichment Result",
+              "meaning": "Fresh cache: skip the homepage fetch and all company searches; Build Enrichment Result uses cached_payload and cached_evidence (the person search still runs later)."
+            },
+            {
+              "label": "false",
+              "goes_to": "Fetch Company Homepage",
+              "meaning": "No usable cache: do the free homepage read, then the gated searches."
+            }
+          ],
+          "on_failure": "No onError; cannot fail.",
+          "say_it": "A fresh cache row skips the whole company fetch, which is the first cost gate.",
+          "next": [
+            "Build Enrichment Result",
+            "Fetch Company Homepage"
+          ]
+        },
+        {
+          "step": 6,
+          "name": "Fetch Company Homepage",
+          "type": "HTTP Request (GET)",
+          "what": "GETs fetch_url (https://<domain>) with a browser-like user-agent 'Mozilla/5.0 (compatible; OakGTMLeadEngine/1.0)', accept text/html, 8000 ms timeout, up to 5 redirects, allowUnauthorizedCerts, response as text, and neverError so a 404 or 500 comes back as data instead of an error.",
+          "why": "The free read: no API key and no paid provider, so it runs for every lead including out_of_scope. It is also what feeds possible_competitor for the competitor rescue.",
+          "in": "fetch_url from Assess Cache.",
+          "out": "{data: <html text>} or an error item.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1500 ms apart, then continueRegularOutput with alwaysOutputData: a dead or blocking site becomes a 'partial' result with a fetch_error, never a failed run.",
+          "say_it": "The homepage read is free, so every classified lead gets it; only the paid searches are gated.",
+          "next": [
+            "Extract Company Signals"
+          ]
+        },
+        {
+          "step": 7,
+          "name": "Extract Company Signals",
+          "type": "Code",
+          "what": "Reads the HTML with regexes: strips scripts and styles, takes the title, meta description and og:description and the body text (first 20,000 chars). Then: parked-domain check (for sale, parked, buy this domain, sedo, parkingcrew, dan.com), which yields no signals and a fetch_error; competitor language: policy competitors.confirmed_names (veza, sailpoint, saviynt, cyberark ...) and possible_keywords (identity governance platform, identity security platform ...), any hit sets possible_competitor true; industry from title plus meta only (financial_services, fintech, technology, healthcare keyword maps); identity_stack keywords (identity governance, access management, sso, zero trust, privileged access, non-human identities ...); compliance keywords (sox, hipaa, pci dss, iso 27001, soc 2, gdpr, dora, nis2); a headcount like '12,000 employees'; policy disqualifiers (saas-only, single-cloud). Each hit becomes an evidence item with a quoted sentence (max 12). status is 'complete' only if the page was really fetched and not parked, otherwise 'partial'.",
+          "why": "Turns a free page into sourced signals. 'partial' is never served from cache later, so a failed fetch is retried next time.",
+          "in": "Fetch Company Homepage output (data or error), Assess Cache (policy, domain, fetch_url, ttl_days), trigger company_name.",
+          "out": "{payload:{company_name (from <title>), domain, headline, site_quality (usable|parked|unavailable), industries, industry_match, employees_observed, identity_signals, compliance_signals, disqualifier_signals, possible_competitor, competitor_terms, fetched, fetch_url}, evidence[], status, source, fetch_error, expires_at (now + TTL), company_name, domain}.",
+          "decides": "possible_competitor, site headcount, site industry, disqualifier signals.",
+          "code": "const possibleHit=parked?[]:possibleKeywords.filter(k=>k&&has(lower,k));\nconst empMatch=parked?null:corpus.match(/([0-9][0-9,]{1,8})\\+?\\s*(?:employees|people|team members)/i);\nconst fetched=Boolean(html&&!raw.error&&!parked);\nconst status=fetched?'complete':'partial';\n// payload: possible_competitor:confirmedHit.length>0||possibleHit.length>0",
+          "branches": [],
+          "on_failure": "No onError setting; the parsing is regex-only and guarded, so a bad page yields empty signals rather than a throw.",
+          "say_it": "The homepage is parsed for competitor language, industry, identity and compliance signals and a headcount, and a parked domain is detected and ignored.",
+          "next": [
+            "Search Enabled?"
+          ]
+        },
+        {
+          "step": 8,
+          "name": "Search Enabled?",
+          "type": "IF",
+          "what": "The paid-search gate. True only when the policy's enrichment.search_enabled is not false AND the scan has a company identity AND the classification from 01 is not out_of_scope.",
+          "why": "Nobody will pursue an out-of-scope lead, so a Brave credit on it is waste. A personal email with no company name has nothing to search for. The free homepage read has already run either way.",
+          "in": "Assess Cache (policy, has_company_identity) and the trigger's classification.",
+          "out": "The Extract Company Signals item on one output.",
+          "decides": "Whether to spend a Brave search.",
+          "code": "$('Assess Cache').first().json.policy?.enrichment?.search_enabled !== false && $('Assess Cache').first().json.has_company_identity === true\n$('When Called for Enrichment').first().json.classification !== 'out_of_scope'",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Search Company Web",
+              "meaning": "Search is on, there is a company to search for, and the lead is in play."
+            },
+            {
+              "label": "false",
+              "goes_to": "Extract Search Signals",
+              "meaning": "Skip Brave; Extract Search Signals works with site data only (and will likely record 'Company search did not run.' as a search_error, which surfaces as a warning)."
+            }
+          ],
+          "on_failure": "No onError; cannot fail.",
+          "say_it": "The paid search only runs when the policy allows it, there is a company to look up, and the lead is not out of scope.",
+          "next": [
+            "Search Company Web",
+            "Extract Search Signals"
+          ]
+        },
+        {
+          "step": 9,
+          "name": "Search Company Web",
+          "type": "Brave Search",
+          "what": "Brave web and news search, 5 results, country US, English, safesearch moderate, freshness past year (py). Query: '<company name> identity governance access management compliance audit company employees'. The company name is $json.company_name from Extract Company Signals, which is the homepage <title> text before '|' or '-', falling back to the domain.",
+          "why": "Global public context: news, identity programme and compliance signals, and possibly a headcount on the company's own domain. Precise if asked: the expression has a competitor variant ('product launch AI agents non-human identity funding acquisition leadership') chosen by $json.classification === 'competitor_intel', but $json here is Extract Company Signals' output, which has no classification, so the variant never fires and competitors get the identity query too. The fix is to read the trigger's classification.",
+          "in": "company_name from Extract Company Signals, domain from Assess Cache.",
+          "out": "Brave response (web.results[] with title, url, description, age) or an error item.",
+          "decides": null,
+          "code": "$json.classification === 'competitor_intel' ? (... ' company overview product launch AI agents non-human identity funding acquisition leadership') : (($json.company_name || $('Assess Cache').first().json.domain) + ' identity governance access management compliance audit company employees')",
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, then onError continueRegularOutput with alwaysOutputData: if Brave is down the lead still gets site-only enrichment and a warning.",
+          "say_it": "One Brave search for public identity and compliance context, running on n8n gateway credits, so it costs nothing extra.",
+          "next": [
+            "Extract Search Signals"
+          ]
+        },
+        {
+          "step": 10,
+          "name": "Extract Search Signals",
+          "type": "Code",
+          "what": "Turns search hits into evidence with identity alignment as the gate. Up to 10 raw results; a result is kept only if its host equals or is a subdomain of the resolved domain (domainMatch) or its normalized text contains the full company name of 4+ chars (nameMatch); max 5 kept, the rest discarded and counted. Headcount may only come from a domain-matched result (regex also accepts '12k staff', range 10 to 5,000,000), and only if the homepage gave none and employee_search_enabled is not false. News signals from aligned results: breach_reported, audit_pressure, identity_program, growth_event, ai_adoption. Industry from aligned results. Sets employees_source: official_website if the homepage had a number, else domain_matched_public_search, else not_established. Stamps evidence_identity_checked: true so the cache row is trusted next time.",
+          "why": "A name match is not entity resolution: 'Apex Financial Services' returns a 29-person advisory, a 1,000-person fintech and a 19,379-person group. Only the company's own domain may set the headcount.",
+          "in": "Search Company Web (by name, may not have run), Extract Company Signals (by name), Assess Cache (domain, policy), trigger company_name.",
+          "out": "The site item extended: payload gains industries, industry_match, industry_sources {official_site, public_search}, employees_observed, employees_source, employees_evidence_url, search_results (aligned), discarded_unaligned_results, name_only_results_barred_from_headcount, domain_matched_result_count, news_signals, search_result_count, search_provider, evidence_identity_checked:true; evidence (max 20); source (public_website+brave_search); search_error.",
+          "decides": "Which public results count, and whether public search produced a headcount.",
+          "code": "const domainMatch=Boolean(domain&&(host===domain||host.endsWith('.'+domain)));\nconst nameMatch=Boolean(companyName&&companyName.length>=4&&text.includes(companyName));\nconst domainAligned=scored.filter(function(a){return a.domainMatch;}).map(function(a){return a.row;});\nconst employeesSource=siteEmployees!==null?'official_website':(searchEmployees!==null?'domain_matched_public_search':'not_established');",
+          "branches": [],
+          "on_failure": "No onError setting; the Brave read is in try/catch. On the skipped-search path it records a search_error ('Company search did not run.') instead of throwing.",
+          "say_it": "Every search result must match the company's domain or full name, and a headcount may only come from the company's own domain.",
+          "next": [
+            "Need Headcount Search?"
+          ]
+        },
+        {
+          "step": 11,
+          "name": "Need Headcount Search?",
+          "type": "IF",
+          "what": "Pays for a second search only if no public source has a headcount yet (payload.employees_observed == null), search is enabled in the policy, the scan has a company identity, and the lead is not out_of_scope.",
+          "why": "The identity-flavoured query pulls vendor articles that rarely quote a headcount. Honest caveat from the node note: the HubSpot employee count is not checked at this gate (it is applied later in Build Enrichment Result), so a company already sized in the CRM can still spend this credit.",
+          "in": "Extract Search Signals payload; Assess Cache policy; trigger classification.",
+          "out": "The Extract Search Signals item on one output.",
+          "decides": "Whether to spend a second Brave search on headcount.",
+          "code": "$json.payload?.employees_observed == null && $('Assess Cache').first().json.policy?.enrichment?.search_enabled !== false && $('Assess Cache').first().json.has_company_identity === true\n$('When Called for Enrichment').first().json.classification !== 'out_of_scope'",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Search Company Headcount",
+              "meaning": "Size still unknown from public sources and the lead is in play: run the headcount query."
+            },
+            {
+              "label": "false",
+              "goes_to": "Add Name-Only Size Candidates",
+              "meaning": "Size already found, search disabled, no identity or out of scope: go straight on."
+            }
+          ],
+          "on_failure": "No onError; cannot fail.",
+          "say_it": "The headcount search is a second, conditional credit: only when the site and first search found no size.",
+          "next": [
+            "Search Company Headcount",
+            "Add Name-Only Size Candidates"
+          ]
+        },
+        {
+          "step": 12,
+          "name": "Search Company Headcount",
+          "type": "Brave Search",
+          "what": "Brave web search, 8 results, US, English, moderate safesearch. Query: '<company_name from the scan, or domain> company number of employees headcount'.",
+          "why": "A plain company-profile query finds headcount pages the identity query misses.",
+          "in": "The trigger's company_name (the scan's own name, not the <title>), Assess Cache domain.",
+          "out": "Brave response or an error item.",
+          "decides": null,
+          "code": "($('When Called for Enrichment').first().json.company_name || $('Assess Cache').first().json.domain) + ' company number of employees headcount'",
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, then onError continueRegularOutput with alwaysOutputData: if Brave is down the lead still gets site-only enrichment and a warning.",
+          "say_it": "A second, plain search asks only for headcount when nothing else found it.",
+          "next": [
+            "Add Name-Only Size Candidates"
+          ]
+        },
+        {
+          "step": 13,
+          "name": "Add Name-Only Size Candidates",
+          "type": "Code",
+          "what": "Collects results from both Brave company searches and keeps name-only matches that quote a headcount as labelled candidates, max 3. Tokens are the company name minus generic words (financial, services, group, bank, capital, holdings ...), so 'Apex Financial Services' must match on 'apex'; every token must appear. Results on the company's own domain are skipped (that is already a real source). Counts are read from '19,379 employees', 'Employees: 19,379', 'employs over 19,379' or '10,001+ employees'. Each candidate is {employees, name_in_source, quote, url, match_basis:'company_name_only'} and goes to payload.headcount_name_only_candidates, never to employees_observed.",
+          "why": "When size is unresolved a rep still benefits from seeing plausible candidates, but a name-only match must never move the score or tier. 03 shows them as 'Companies matching this name ... Not counted in the score - confirm which one at the booth.'",
+          "in": "Extract Search Signals (by name, because on the headcount path $input is the Brave response), Search Company Web and Search Company Headcount (by name), Assess Cache domain, trigger company_name.",
+          "out": "Extract Search Signals' item with payload.headcount_name_only_candidates, headcount_name_only_tokens, headcount_search_pool.",
+          "decides": "Which name-only headcounts are shown as candidates (never scored).",
+          "code": "const tokens=norm(s.company_name||'').split(' ').filter(function(t){return t.length>2&&GENERIC.indexOf(t)<0;});\nif(domain&&(host===domain||host.endsWith('.'+domain)))continue;\nif(!tokens.every(function(t){return text.indexOf(t)>=0;}))continue;\ncandidates.push({employees:hit.n,name_in_source:strip(r.title).slice(0,120),quote:strip(hit.quote).slice(0,160),url:r.url,match_basis:'company_name_only'});",
+          "branches": [],
+          "on_failure": "No onError setting; each Brave read is in try/catch so a missing search yields no candidates.",
+          "say_it": "Name-only headcounts are shown to the rep as labelled candidates but can never change the score or the tier.",
+          "next": [
+            "Write Company Cache"
+          ]
+        },
+        {
+          "step": 14,
+          "name": "Write Company Cache",
+          "type": "Data Table upsert (oak_enrichment_cache)",
+          "what": "Upserts one row per company_domain with company_name, enriched_at, expires_at (now plus TTL, 30 days), source, payload_json, evidence_json and status.",
+          "why": "The next visitor from this company within 30 days reuses it. A 'partial' row is stored but Assess Cache never treats it as fresh.",
+          "in": "Add Name-Only Size Candidates output; domain from Assess Cache.",
+          "out": "The upserted row (Build Enrichment Result reads the enrichment by node name, not from this output).",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "alwaysOutputData plus continueRegularOutput: a cache write failure never blocks the lead.",
+          "say_it": "The result is cached per domain with a 30-day TTL, so enrichment is paid for once per company per event.",
+          "next": [
+            "Build Enrichment Result"
+          ]
+        },
+        {
+          "step": 15,
+          "name": "Build Enrichment Result",
+          "type": "Code",
+          "what": "Where enrichment becomes decisions; both the cache-hit and fresh paths land here. (1) Industry ladder: HubSpot company industry mapped to a target (confidence 1), else official site (0.9), else public search (0.7), else unknown; these three confidences are in code. (2) Headcount ladder, first hit wins, confidences from policy employee_confidence: HubSpot 1.0, booth notes 0.9, official website 0.85, domain-matched search 0.7, else not_established. Anything below employee_verification_required_below (1) is needs_verification. (3) Size band from qualified_employee_min 1000 and review_employee_min 500. (4) Competitor rescue first, then size and disqualifier rules, then the 500-999 review band. (5) Score: +15 size for 1,000+ and +15 industry for a target industry (never for out_of_scope or competitor_intel), each add is max(points - current, 0), capped at 100. (6) Incumbent tools from notes and sourced evidence (SailPoint, Saviynt, Omada ...). (7) Rep override on a re-scan when 05 will be skipped. (8) notification_mode: first_scan, repeat_thread, or repeat_escalation if the classification changed.",
+          "why": "Keeps every size and industry claim tied to a source and a confidence, and applies the same size rules 01's final gate applies, on the paths where that gate does not run. Booth notes beat the website because the visitor is first-party, present and can confirm, and the decision is a coarse band; they sit below HubSpot because they are the one source with no URL.",
+          "in": "Trigger lead, Assess Cache (policy, cache), and by name Add Name-Only Size Candidates, else Extract Search Signals, else Extract Company Signals.",
+          "out": "The lead plus classification, competitor_status, routing, score, score_breakdown, decision_reasons, decision_trace, company_size_band, employee_resolution {employees, source, confidence, evidence_url, needs_verification, verification_note}, company_enrichment (with industry_resolution), company_evidence, incumbent_tools_detected, reclassified_by_enrichment, classification_changed, material_change, notification_mode, enrichment_cache_hit, enrichment_status, enrichment_source, enrichment_warnings, enriched_at.",
+          "decides": "Headcount and its confidence, size band, and possibly a new classification (needs_review via competitor rescue or the 500-999 band, out_of_scope for under 500 or a disqualifier, or the rep override).",
+          "code": "if(crmEmp!==null){empVal=crmEmp;empSrc='hubspot_company';empConf=Number(empCfg.hubspot_company||1);}else if(scannerEmp!==null){empVal=scannerEmp;empSrc='booth_notes';empConf=Number(empCfg.booth_notes||0.9);}else if(pubEmp!==null&&pubIsOfficial){empVal=pubEmp;empSrc='official_website';empConf=Number(empCfg.official_website||0.85);...}else if(pubEmp!==null){empVal=pubEmp;empSrc=pubSrc||'domain_matched_public_search';empConf=Number(empCfg[empSrc]||0.7);...}\nif(enrichment.possible_competitor===true&&competitorStatus!=='confirmed'&&classification!=='competitor_intel'){competitorStatus='possible';classification='needs_review';...}\nif((sizeOut||disq.length)&&classification!=='competitor_intel'&&competitorStatus!=='possible'){classification='out_of_scope';...}",
+          "branches": [],
+          "on_failure": "No onError setting; upstream reads are in try/catch and it adds warnings ('Official website enrichment was incomplete', 'Public search was unavailable', 'Company enrichment did not run.') instead of failing.",
+          "say_it": "Build Enrichment Result runs the headcount ladder, HubSpot 1.0, booth notes 0.9, official site 0.85, domain-matched search 0.7, and applies the competitor rescue before the size rule so a small competitor is seen by a human.",
+          "next": [
+            "Person Search Worth It?"
+          ]
+        },
+        {
+          "step": 16,
+          "name": "Person Search Worth It?",
+          "type": "IF",
+          "what": "True when the post-enrichment classification is neither competitor_intel nor out_of_scope. Runs on the cache-hit path too: the cache saves company searches, not the person search.",
+          "why": "A competitor card is about their product, not one contact, and nobody pursues an out-of-scope lead. Precise if asked: the policy has enrichment.person_search_enabled (true today) but this gate does not read it.",
+          "in": "classification from Build Enrichment Result.",
+          "out": "The Build Enrichment Result item on one output.",
+          "decides": "Whether to spend the person search.",
+          "code": "{{ $json.classification }} notEquals 'competitor_intel' AND {{ $json.classification }} notEquals 'out_of_scope'",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Search Relevant Person",
+              "meaning": "tier_1, matched or needs_review: look for a public profile."
+            },
+            {
+              "label": "false",
+              "goes_to": "Attach Person Evidence",
+              "meaning": "Competitor or out of scope: skip the search; Attach Person Evidence records it as unavailable."
+            }
+          ],
+          "on_failure": "No onError; cannot fail.",
+          "say_it": "The person search is skipped for competitors and out-of-scope leads, the third cost gate.",
+          "next": [
+            "Search Relevant Person",
+            "Attach Person Evidence"
+          ]
+        },
+        {
+          "step": 17,
+          "name": "Search Relevant Person",
+          "type": "Brave Search",
+          "what": "Brave web search, 3 results, US, English. Query: '\"<full name>\" <company> <job title> identity security governance LinkedIn'.",
+          "why": "A verified public profile line helps the rep open the conversation.",
+          "in": "full_name, company_name or company_domain, job_title from Build Enrichment Result.",
+          "out": "Brave response or an error item.",
+          "decides": null,
+          "code": "'\"' + ($json.full_name || '') + '\" ' + ($json.company_name || $json.company_domain || '') + ' ' + ($json.job_title || '') + ' identity security governance LinkedIn'",
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, then onError continueRegularOutput with alwaysOutputData: if Brave is down the lead still gets site-only enrichment and a warning.",
+          "say_it": "One narrow person search, and nothing from it is used until it passes an identity check.",
+          "next": [
+            "Attach Person Evidence"
+          ]
+        },
+        {
+          "step": 18,
+          "name": "Attach Person Evidence",
+          "type": "Code",
+          "what": "Keeps a result only when BOTH the surname (last name part longer than 2 chars) AND the company (domain stem or a company token longer than 3 chars) appear in its title, snippet or URL; max 3. Status is verified_search_results, no_identity_aligned_result (results but none matched both) or unavailable. On the skipped path it likely records 'Person search did not run. No person-level claim was made.' as a warning.",
+          "why": "It never guesses a biography: a namesake at another company is worse than nothing in front of a prospect.",
+          "in": "Build Enrichment Result (by name) and Search Relevant Person (by name, may not have run).",
+          "out": "The lead plus person_enrichment {status, explanation, query_identity, results, search_result_count, verified_result_count}, person_evidence[] (type person_public_profile, quote, url, identity_check 'surname_and_company'), enrichment_warnings.",
+          "decides": "Which person results are trusted.",
+          "code": "const nameOk=surname&&text.includes(surname);const companyOk=(domain&&text.includes(domain.split('.')[0]))||companyTokens.some(t=>text.includes(t));return nameOk&&companyOk;",
+          "branches": [],
+          "on_failure": "No onError setting; the Brave read is in try/catch.",
+          "say_it": "A person result is kept only if it names both the surname and the company; otherwise the card says nothing matched.",
+          "next": [
+            "Sanitize Public Evidence"
+          ]
+        },
+        {
+          "step": 19,
+          "name": "Sanitize Public Evidence",
+          "type": "Code",
+          "what": "The last node, so its output is what 01 receives. For company evidence: homepage evidence without a URL gets the official fetch_url attached; anything with no quote is rejected (missing_quote), anything matching the unsafe incident regex is rejected (public_incident_claim_not_allowed), anything still without a URL is rejected (missing_source_url). Person evidence without url or quote is dropped. Reports evidence_review {company_retained, company_rejected, person_retained, rejected_reasons} and unsafe_company_evidence_rejected.",
+          "why": "An unverified allegation in front of a prospect is a liability. Public incident claims never reach Slack or Gemini as booth facts; urgency from a breach only counts when the visitor said it at the booth.",
+          "in": "The lead from Attach Person Evidence.",
+          "out": "The final enriched lead returned to 01, with cleaned company_evidence and person_evidence.",
+          "decides": "Which public evidence is allowed to reach Slack and the model.",
+          "code": "const unsafe=/\\b(breach|breached|ransom|cybercriminal|attack(?:er)? claims?|alleged|unconfirmed|data leak|customer data exposed|security incident)\\b/i;\nif(!e.url&&e.source==='public_website'&&official)e.url=official;",
+          "branches": [],
+          "on_failure": "No onError setting; pure filtering code.",
+          "say_it": "Breach and allegation language from public sources is stripped before it can reach Slack or the model; only quoted, sourced evidence survives.",
+          "next": []
+        }
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Zero cost by design",
+      "why": "The company homepage plus Brave through n8n gateway credits, no paid provider. It all sits behind one sub-workflow, so swapping in Clearbit later is one node; routing and scoring do not change."
+    },
+    {
+      "title": "The free read runs for everyone, paid searches do not",
+      "why": "Search Enabled? and Need Headcount Search? both require classification !== 'out_of_scope', the headcount search only runs when no public size was found, the person search skips competitors and out of scope, and a fresh cache row skips all company fetching. Worst case three Brave calls per scan."
+    },
+    {
+      "title": "A near-name match is worse than no answer",
+      "why": "Headcount only from a domain-matched source. Name-only matches are shown as labelled candidates and never written to employees_observed, so they cannot move the score or the tier."
+    },
+    {
+      "title": "Every source carries its own confidence, from the policy",
+      "why": "HubSpot 1.0, booth notes 0.9, official website 0.85, domain-matched search 0.7, read from employee_confidence. Anything below 1.0 is flagged so the card says 'confirm at the booth' instead of stating a guess as fact."
+    },
+    {
+      "title": "Unknown size never disqualifies",
+      "why": "Only a known size under 500 or a disqualifier moves a lead out of scope. An unknown size becomes a question on the card."
+    },
+    {
+      "title": "Competitor language outranks the size rule",
+      "why": "A size gate asks the wrong question about a competitor. A homepage hit sets competitor_status possible and routes to needs_review before the size rule, which is then suppressed, so a small identity vendor is seen by a human instead of filed away."
+    }
+  ],
+  "questions": [
+    {
+      "q": "Where does headcount come from, and what if sources disagree?",
+      "a": "First hit wins down a ladder: HubSpot company record 1.0, what the visitor said at the booth 0.9, the company's own website 0.85, domain-matched public search 0.7. The confidences are the policy's employee_confidence block. Anything under 1.0 is needs_verification, and the card asks the rep to confirm. It is first-hit, not a vote, because the decision is a coarse band and the higher rung is more trustworthy."
+    },
+    {
+      "q": "Why do booth notes beat the company website?",
+      "a": "The visitor is first-party, present, and can be asked to confirm, while an About page can carry a stale or global figure. The decision is only which side of 500 or 1,000 the company sits, and a rough human answer lands on the right side more reliably. Booth notes stay below HubSpot because they are the one source with no URL."
+    },
+    {
+      "q": "How do you control enrichment cost?",
+      "a": "Four gates: a fresh 30-day cache row per domain skips every company fetch; Search Enabled? and Need Headcount Search? both exclude out_of_scope and need a company identity; the headcount search runs only if no public size was found; the person search skips competitors and out of scope. The homepage read is free and runs for all."
+    },
+    {
+      "q": "How do you avoid attaching the wrong company's data?",
+      "a": "Every search result must match the resolved domain or the full company name; headcount must come from the company's own domain. Name-only hits with a headcount become labelled candidates that cannot change the score. Person results need the surname plus the company. 'Apex Financial Services' returns three different companies from 29 to 19,379 people, which is exactly why."
+    },
+    {
+      "q": "What is the competitor rescue?",
+      "a": "If the free homepage read finds a confirmed competitor name or platform language from the policy (for example 'identity security platform'), Build Enrichment Result sets competitor_status to possible and classification to needs_review before the size rule runs, and suppresses the size and disqualifier rule. Otherwise a 200-person identity vendor would be filed as out of scope and nobody would notice a competitor walked into the booth."
+    },
+    {
+      "q": "What happens when Brave or the website is down?",
+      "a": "Every external node retries and continues on error. The lead is still classified, scored and alerted, with warnings like 'Public search was unavailable'. A failed homepage fetch is cached as 'partial', which Assess Cache never treats as fresh, so the next scan tries again."
+    },
+    {
+      "q": "Is there anything in 04 you would fix?",
+      "a": "Two honest items. Search Company Web's competitor query variant reads $json.classification, but $json there is Extract Company Signals' output, which has no classification, so competitors get the identity query; it should read the trigger's classification. And Need Headcount Search? cannot see the HubSpot headcount, so a company already sized in the CRM can still spend one Brave credit; Person Search Worth It? also ignores the policy's person_search_enabled flag."
+    }
+  ]
+}

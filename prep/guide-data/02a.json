@@ -1,0 +1,177 @@
+{
+  "id": "02A",
+  "name": "Oak GTM - 02A CRM Context [sub-flow]",
+  "short": "CRM Context",
+  "lane": "enrich",
+  "one_breath": "02A is the read-only half of the HubSpot pair. 01 calls it for every classified scan right after the provisional 202, before enrichment and AI, and it asks HubSpot what it already knows about the company, the person and their open deals. It hands the same lead payload back with one crm_context object (relationship, owner, open deals, contact URL) and never changes a CRM record.",
+  "trigger": "Execute Workflow Trigger 'When Called for CRM Context' (input source: passthrough), called by 01's 'Read CRM Context' node with waitForSubWorkflow true",
+  "input": "The full lead payload from 01 after 'Prepare CRM Handoff' (the policy object removed). 02A only uses two fields from it: company_domain and email.",
+  "output": "The same payload spread back unchanged plus crm_context: lookup_status, portal_id, hubspot_contact_id, hubspot_contact_url, is_net_new, existing_contact, company (id, name, domain, industry, employees, annual_revenue, owner_id), company_match (domain_exact | not_found_by_domain), owner_id, owner_source (contact | company | none), customer_status (net_new | known_prospect | open_opportunity | customer), open_deal, open_deal_count, related_deals, warnings. No writes anywhere.",
+  "called_by": [
+    "01 Intake & Decision (node 'Read CRM Context')"
+  ],
+  "calls": [],
+  "node_count": 6,
+  "groups": [
+    {
+      "name": "Ungrouped",
+      "purpose": "The entry point: receives the lead payload from 01.",
+      "nodes": [
+        {
+          "step": 1,
+          "name": "When Called for CRM Context",
+          "type": "Execute Workflow Trigger",
+          "what": "Entry point of the sub-workflow. Input source is 'passthrough', so whatever item 01 sends arrives unchanged as one item, with no declared input schema. Every later node reads it by name with $('When Called for CRM Context').first().json.",
+          "why": "Passthrough means 01 does not have to map fields one by one, and the full lead payload can be spread straight back out at the end.",
+          "in": "The lead payload from 01's 'Read CRM Context' node (output of Prepare CRM Handoff: everything except the policy object).",
+          "out": "The same single item, untouched.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "A trigger does not fail on its own. The workflow's error workflow is 99, and because 01 waits for this sub-workflow, a hard error here would also fail 01's 'Read CRM Context' step.",
+          "say_it": "02A is a passthrough sub-workflow: 01 hands it the whole lead and gets the same lead back with a crm_context object added.",
+          "next": [
+            "Read HubSpot Portal"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Read CRM Context",
+      "purpose": "Reads portal, company, contact, owner and open-deal context before AI synthesis. No CRM records are changed.",
+      "nodes": [
+        {
+          "step": 2,
+          "name": "Read HubSpot Portal",
+          "type": "HTTP Request",
+          "what": "GET https://api.hubapi.com/integrations/v1/me using the HubSpot OAuth2 credential. The response carries portalId, the HubSpot account number. It is the first call so the portal id is available when the contact URL is built.",
+          "why": "Without the portal id, a record link cannot be built when HubSpot does not return one, and the Slack card's 'Open in HubSpot' link would point nowhere.",
+          "in": "Nothing from the payload; only the HubSpot credential (hubspotOAuth2Api 'HubSpot account').",
+          "out": "portalId (plus other account metadata).",
+          "decides": null,
+          "code": "GET https://api.hubapi.com/integrations/v1/me",
+          "branches": [],
+          "on_failure": "retryOnFail with maxTries 3 and 1500 ms between tries, then onError continueRegularOutput plus alwaysOutputData: the run continues with an error item and portal_id simply ends up null.",
+          "say_it": "The first call only fetches the portal id, so every HubSpot link the rep clicks opens the right account.",
+          "next": [
+            "Find Company by Domain"
+          ]
+        },
+        {
+          "step": 3,
+          "name": "Find Company by Domain",
+          "type": "HubSpot (company searchByDomain)",
+          "what": "HubSpot node, resource company, operation searchByDomain, limit 1, on the payload's company_domain (empty string if missing). It asks for name, domain, industry, numberofemployees, annualrevenue, hubspot_owner_id and lifecyclestage. Domain is the company identity in this system, so this is an exact domain match, not a fuzzy name search.",
+          "why": "A HubSpot headcount is the record of truth in 04 (confidence 1.0) and a HubSpot industry is resolved first, so this lookup directly changes the size band and score downstream.",
+          "in": "$('When Called for CRM Context').first().json.company_domain",
+          "out": "Zero or one company item with companyId/id and properties.",
+          "decides": null,
+          "code": "domain: {{ $('When Called for CRM Context').first().json.company_domain || '' }}",
+          "branches": [],
+          "on_failure": "retryOnFail 3 tries at 1500 ms, continueRegularOutput and alwaysOutputData: a miss or an error produces an item with no id, which Build CRM Context reads as company not found.",
+          "say_it": "Company is matched on exact domain, because domain is the one company key the whole system agrees on.",
+          "next": [
+            "Find Contact by Email"
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Find Contact by Email",
+          "type": "HubSpot (contact search)",
+          "what": "HubSpot contact search, limit 1, one filter: email equals the scan email. If the scan has no valid email it searches for the sentinel '__missing_email__', which safely matches nothing. It returns email, firstname, lastname, jobtitle, company, lifecyclestage, hs_lead_status, hubspot_owner_id, createdate and hs_object_id.",
+          "why": "The contact's lifecycle stage is what decides customer vs prospect, and the contact owner is the preferred owner. Without it the card could not say 'already a customer' or name who owns the relationship.",
+          "in": "$('When Called for CRM Context').first().json.email",
+          "out": "Zero or one contact item with id and properties.",
+          "decides": null,
+          "code": "value: {{ $('When Called for CRM Context').first().json.email || '__missing_email__' }}",
+          "branches": [],
+          "on_failure": "retryOnFail 3 tries at 1500 ms, continueRegularOutput and alwaysOutputData, so a failed search reads as no contact (net_new).",
+          "say_it": "The contact lookup is email-exact, and a missing email searches a sentinel value so it can never accidentally match someone.",
+          "next": [
+            "Find Deals by Company"
+          ]
+        },
+        {
+          "step": 5,
+          "name": "Find Deals by Company",
+          "type": "HubSpot (deal search)",
+          "what": "HubSpot deal search, up to 10 results, filter associations.company equals the company id from Find Company by Domain, sorted by createdate DESCENDING. With no company it searches '__no_company__', which finds nothing. It returns dealname, dealstage, pipeline, amount, closedate and hubspot_owner_id.",
+          "why": "An open deal changes the conversation (the rep should not pitch a live opportunity from scratch) and is shown on the card and given to the AI prompt.",
+          "in": "$('Find Company by Domain').first().json.companyId or .id",
+          "out": "Up to 10 deal items, newest first.",
+          "decides": null,
+          "code": "value: {{ $('Find Company by Domain').first().json.companyId || $('Find Company by Domain').first().json.id || '__no_company__' }}",
+          "branches": [],
+          "on_failure": "retryOnFail 3 tries at 1500 ms, continueRegularOutput and alwaysOutputData. The associations.company filter is index-backed, so a deal created seconds ago can be missed; that is accepted on the read side (02 uses the v4 associations endpoint instead).",
+          "say_it": "Deals are read with a cheap search here because this is context for the AI, not a write; the write side uses the authoritative associations API.",
+          "next": [
+            "Build CRM Context"
+          ]
+        },
+        {
+          "step": 6,
+          "name": "Build CRM Context",
+          "type": "Code",
+          "what": "Collects the four lookups and derives what downstream actually branches on. It keeps only items with a real id, takes the first company and the first contact, drops deals whose stage is closedwon or closedlost, picks owner_id from the contact owner falling back to the company owner, and maps the contact's lifecycle stage to customer_status. It builds the contact URL (the one HubSpot returned, else app.hubspot.com/contacts/<portal>/record/0-1/<id>) and returns the original payload plus one crm_context object.",
+          "why": "Downstream nodes should not have to understand four raw HubSpot responses. One normalised object is what 04 (HubSpot headcount first), 05 (prompt context), 02 (owner fallback) and 03 (card) read.",
+          "in": "The trigger payload, Read HubSpot Portal, Find Company by Domain, Find Contact by Email, Find Deals by Company (all read by node name).",
+          "out": "{...payload, crm_context:{lookup_status:'complete', portal_id, hubspot_contact_id, hubspot_contact_url, is_net_new, existing_contact, company, company_match, owner_id, owner_source, customer_status, open_deal, open_deal_count, related_deals, warnings:[]}}",
+          "decides": "customer_status (net_new | customer | open_opportunity | known_prospect), owner_id and owner_source (contact | company | none), and which deals count as open.",
+          "code": "const closed=['closedwon','closedlost'];\nconst openDeals=deals.filter(d=>!closed.includes(String((d.properties&&d.properties.dealstage)||'').toLowerCase()));\nconst ownerId=contactOwner||companyOwner||'';\nconst customerStatus=!contact?'net_new':lifecycle==='customer'?'customer':lifecycle==='opportunity'?'open_opportunity':'known_prospect';",
+          "branches": [],
+          "on_failure": "No retry or continue settings; every lookup is read through a try/catch helper or filtered for an id, so it is hard to make it throw. Note: lookup_status is always 'complete' and warnings always [], so a HubSpot outage is indistinguishable from a genuinely net_new person here.",
+          "say_it": "Build CRM Context turns four raw HubSpot answers into the three facts the rest of the system branches on: relationship, owner and open deals.",
+          "next": []
+        }
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Read before you reason",
+      "why": "An existing owner, an open deal or a customer relationship changes the booth conversation more than any public fact, so the CRM is read before 04 resolves headcount (HubSpot headcount wins at confidence 1.0) and before 05 writes the opening question."
+    },
+    {
+      "title": "Reads and writes live in different workflows",
+      "why": "02A only issues one GET and three searches; every automated write is in 02, after the decision. A lookup path that cannot mutate a record is the easiest way to keep trust in the automation."
+    },
+    {
+      "title": "Reading the CRM is never gated",
+      "why": "A HubSpot read costs nothing, so even an out_of_scope or competitor scan gets it. The cost gates live in 04 (paid Brave search) and 05 (Gemini)."
+    },
+    {
+      "title": "Looser read, strict write",
+      "why": "Deals come from a deal search filtered on associations.company, which is index-backed and can miss a deal created seconds ago. That is acceptable for AI context; 02 uses the authoritative v4 associations endpoint because a write must not be wrong."
+    },
+    {
+      "title": "Every lookup soft-fails independently",
+      "why": "All four HubSpot calls retry 3 times at 1.5s, continue on error and always output data, and Build CRM Context filters every result for a real id. A failed or empty lookup simply reads as not found, so HubSpot trouble never stops the booth pipeline."
+    }
+  ],
+  "questions": [
+    {
+      "q": "Why a separate read workflow instead of reading inside 02?",
+      "a": "02 runs at the very end, after AI. Enrichment (04) needs a HubSpot headcount and industry to rank sources, and the AI (05) needs the owner, relationship and open deal to write a sensible question, so the CRM has to be read earlier. Splitting it out also makes it structurally impossible for the lookup path to change a record."
+    },
+    {
+      "q": "How do you decide customer vs prospect?",
+      "a": "From the contact's lifecycle stage in Build CRM Context: no contact is net_new, lifecyclestage 'customer' is customer, 'opportunity' is open_opportunity, anything else is known_prospect. Owner is the contact owner, else the company owner, and owner_source records which one answered."
+    },
+    {
+      "q": "What happens if HubSpot has no record?",
+      "a": "That is the normal net_new outcome, not an error. company_match is not_found_by_domain, owner_source is none, open_deal_count is 0, and 02 creates the company and contact later if the scan has a valid email."
+    },
+    {
+      "q": "What happens if HubSpot is down?",
+      "a": "Each call retries three times 1.5 seconds apart and then continues with an error item. Build CRM Context ignores anything without an id, so the run continues. The honest caveat: lookup_status is hard-coded to 'complete' and warnings to [], so an outage currently looks exactly like a net_new person; 02 re-reads the contact itself before writing, so the CRM write is not affected."
+    },
+    {
+      "q": "Why read the portal id at all?",
+      "a": "So the Slack card's HubSpot link opens the right portal. When HubSpot does not return a contact URL, Build CRM Context builds https://app.hubspot.com/contacts/<portalId>/record/0-1/<contactId>."
+    },
+    {
+      "q": "Why is the deal search acceptable here when 02 does it differently?",
+      "a": "The associations.company search is index-backed, so a deal created moments ago can be missed. On the read side that only thins the AI's context. On the write side 02 uses GET /crm/v4/objects/companies/{id}/associations/deals plus a batch read, which is authoritative."
+    }
+  ]
+}
