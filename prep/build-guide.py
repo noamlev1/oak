@@ -121,6 +121,8 @@ def validate(doc, fname, rep):
             nw = f"{gw} '{g['name']}' nodes[{ni}]"
             if isinstance(n, dict) and isinstance(n.get("name"), str):
                 nw = f"{where} node '{n['name']}'"
+            if isinstance(n, dict):
+                nodes.append(n)  # counted even when invalid, so node_count errors stay accurate
             if not check_fields(n, NODE_REQUIRED, nw, rep):
                 continue
             for bi, b in enumerate(n["branches"]):
@@ -128,17 +130,16 @@ def validate(doc, fname, rep):
             for x in n["next"]:
                 if not isinstance(x, str):
                     rep.err(nw, f"'next' entries must be strings, got {x!r}")
-            nodes.append(n)
 
     if len(nodes) != doc["node_count"]:
         rep.err(where, f"node_count is {doc['node_count']} but groups hold {len(nodes)} nodes")
 
-    names = [n["name"] for n in nodes]
+    names = [n.get("name") for n in nodes if isinstance(n.get("name"), str)]
     dup_names = sorted({x for x in names if names.count(x) > 1})
     if dup_names:
         rep.err(where, f"node names appear more than once: {dup_names}")
 
-    steps = [n["step"] for n in nodes]
+    steps = [n.get("step") for n in nodes if isinstance(n.get("step"), int) and not isinstance(n.get("step"), bool)]
     dup_steps = sorted({s for s in steps if steps.count(s) > 1})
     if dup_steps:
         rep.err(where, f"duplicate step numbers: {dup_steps}")
@@ -149,6 +150,8 @@ def validate(doc, fname, rep):
 
     known = set(names)
     for n in nodes:
+        if not isinstance(n.get("branches"), list) or not isinstance(n.get("next"), list):
+            continue
         for b in n["branches"]:
             if isinstance(b, dict) and b.get("goes_to") not in known:
                 rep.warn(where, f"node '{n['name']}' branch '{b.get('label')}' goes to "

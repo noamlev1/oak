@@ -156,8 +156,9 @@ button, select, input { font: inherit; color: inherit; }
 .brand-mark {
   display: inline-grid;
   place-items: center;
-  width: 30px;
+  min-width: 34px;
   height: 30px;
+  padding: 0 6px;
   border-radius: 5px;
   background: var(--ink);
   color: var(--bg);
@@ -798,7 +799,8 @@ mark { background: var(--cue); color: var(--cue-ink); border-radius: 2px; paddin
   :root { --rail-w: 38px; --gutter: 16px; }
   .brand-sub, .kbd, .tbtn .lbl-long { display: none; }
   .bar-in { gap: 8px; }
-  .pick { flex: 1 1 auto; }
+  .pick { flex: 1 1 0; width: 0; }
+  .spacer { display: none; }
   .tbtn { padding: 0 10px; }
   .card { padding: 14px 14px; }
   .n-name { font-size: 18.5px; }
@@ -825,7 +827,7 @@ mark { background: var(--cue); color: var(--cue-ink); border-radius: 2px; paddin
       <span class="lbl-long">Search</span><span class="kbd">/</span>
     </button>
     <button id="talk" class="tbtn" type="button" aria-pressed="false" title="Collapse every node to its name and the line to say (T)">
-      <span class="switch" aria-hidden="true"></span><span class="lbl-short">Talk</span><span class="lbl-long">&nbsp;track</span>
+      <span class="switch" aria-hidden="true"></span><span class="lbl-short">Talk<span class="lbl-long"> track</span></span>
     </button>
   </div>
 </header>
@@ -882,22 +884,22 @@ mark { background: var(--cue); color: var(--cue-ink); border-radius: 2px; paddin
     "99": { short: "Failure Handler", lane: "ops", blurb: "Error workflow for eight workflows. Turns a failure into a plain-language Slack report in #oak-revops." }
   };
   var EXT = {
-    scanner: { label: ["Booth scanner"] },
+    scanner: { label: ["Booth scanner", "POST /scan"] },
     slack: { label: ["Slack buttons"] },
     app: { label: ["Control Center", "app"] }
   };
   // Real call edges. n = order in which 01 calls its sub-flows.
   var EDGES = [
-    { from: "scanner", to: "01", kind: "ext", label: "POST /oak-event/scan" },
-    { from: "07", to: "01", kind: "ext", label: "replays test scans" },
+    { from: "scanner", to: "01", kind: "ext", inText: "the booth scanner (POST /oak-event/scan)" },
+    { from: "07", to: "01", kind: "ext", inText: "07, which replays test scans", outText: "01's booth webhook from outside, with test payloads" },
     { from: "01", to: "02A", kind: "call", n: 1 },
     { from: "01", to: "04", kind: "call", n: 2 },
     { from: "01", to: "05", kind: "call", n: 3 },
     { from: "01", to: "02", kind: "call", n: 4 },
     { from: "01", to: "03", kind: "call", n: 5 },
-    { from: "slack", to: "06", kind: "ext", label: "button clicks" },
-    { from: "06", to: "03", kind: "call", label: "on reclassify" },
-    { from: "08", to: "app", kind: "serve", label: "serves" }
+    { from: "slack", to: "06", kind: "ext", inText: "rep button clicks in Slack" },
+    { from: "06", to: "03", kind: "call", outText: "03, to repost the card on reclassification" },
+    { from: "08", to: "app", kind: "serve", outText: "the Control Center app" }
   ];
   var FAILS = ["01", "02", "02A", "03", "04", "05", "06", "07"];
 
@@ -1022,11 +1024,10 @@ mark { background: var(--cue); color: var(--cue-ink); border-radius: 2px; paddin
   };
   var BADGE = { "01>02A": [600, 108], "01>04": [770, 108], "01>05": [940, 108], "01>02": [364, 206], "01>03": [516, 206] };
   var LABELS = {
-    "scanner>01": [339, 48, "middle", "POST /scan"],
     "07>01": [270, 424, "start", "replays test scans"],
     "slack>06": [414, 360, "middle", "clicks"],
     "06>03": [532, 326, "start", "calls 03 on reclassify"],
-    "08>app": [874, 464, "middle", "serves"]
+    "08>app": [874, 500, "middle", "serves"]
   };
   function wrapName(s, max) {
     var words = String(s).split(/\s+/), lines = [""];
@@ -1100,16 +1101,22 @@ mark { background: var(--cue); color: var(--cue-ink); border-radius: 2px; paddin
     return s + "</svg>";
   }
   function edgeText(id) {
-    var into = [], out = [];
+    var into = [], calls = [], drives = [], serves = [];
     EDGES.forEach(function (e) {
-      if (e.to === id) into.push(e.from === "07" ? "07 (replays test scans)" : edgeName(e.from) + (e.from === "slack" ? " (rep clicks)" : ""));
-      if (e.from === id) out.push(e.to === "app" ? "the Control Center app" : e.to + (e.label ? " " + e.label.replace(/^calls 03 /, "") : ""));
+      if (e.to === id) into.push(e.inText || edgeName(e.from));
+      if (e.from === id) {
+        if (e.kind === "serve") serves.push(e.outText || edgeName(e.to));
+        else if (e.kind === "ext") drives.push(e.outText || e.to);
+        else calls.push(e.outText || e.to);
+      }
     });
-    var r = [];
     if (id === "99") into.push("failures from " + FAILS.join(", "));
-    if (into.length) r.push("<span><b>From</b>" + esc(into.join(", ")) + "</span>");
-    if (id === "01") r.push("<span><b>Calls</b>" + esc("02A, 04, 05, 02, 03 in that order") + "</span>");
-    else if (out.length) r.push("<span><b>" + (id === "08" ? "Serves" : "Calls") + "</b>" + esc(out.join(", ")) + "</span>");
+    var r = [];
+    function add(k, list) { if (list.length) r.push("<span><b>" + k + "</b>" + esc(list.join(", ")) + "</span>"); }
+    add("From", into);
+    add("Calls", id === "01" ? ["02A, 04, 05, 02, 03 in that order"] : calls);
+    add("Drives", drives);
+    add("Serves", serves);
     if (FAILS.indexOf(id) >= 0) r.push("<span><b>On error</b>reports to 99</span>");
     if (id === "00") r.push("<span><b>Runs</b>by hand, from its draft</span>");
     return r.join("");

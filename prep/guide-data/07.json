@@ -1,0 +1,284 @@
+{
+  "id": "07",
+  "name": "Oak GTM - 07 Task Test Harness",
+  "short": "Task Test Harness",
+  "lane": "ops",
+  "one_breath": "07 is a one-click harness that proves the pipeline works instead of asking anyone to trust it. You press Execute; it POSTs booth scans to 01's live production webhook exactly as a badge scanner would, waits for the asynchronous tail, then reads what was actually stored and returns one PASS/FAIL row per scan plus an overall verdict.",
+  "trigger": "Manual Trigger 'Run Task Test Suite' (run by hand in the editor); active version 6d8a6cc5",
+  "input": "Either scans pasted into Paste JSON Here ({\"reset\": true, \"scans\": [...]} plus optional gap_seconds and settle_seconds), or rows of oak_test_payloads selected by the n8n variable OAK_TEST_SUITE (unset or 'enabled' = enabled rows, 'all' = every row, or a suite name). The target URL comes from OAK_BOOTH_WEBHOOK_URL, defaulting to this instance's booth webhook. Expectations come from each row's expect_json, matched by scan_id, or an inline expect.",
+  "output": "One item from Score Test Run: verdict, total, passed, failed, scans_came_from, slack_alerts_delivered, slack_failures, a headline per scan and a results array with every check. Side effects are real: it deletes this test event's rows in oak_deliveries and oak_encounters when reset is on, and every scan runs the full pipeline (HubSpot writes, Brave and Gemini calls, Slack posts).",
+  "called_by": [
+    "A person pressing Execute workflow in n8n"
+  ],
+  "calls": [
+    "01 (over HTTP, via the booth webhook, not as a sub-workflow)"
+  ],
+  "node_count": 11,
+  "groups": [
+    {
+      "name": "Ungrouped",
+      "purpose": "The manual trigger.",
+      "nodes": [
+        {
+          "step": 1,
+          "name": "Run Task Test Suite",
+          "type": "Manual Trigger",
+          "what": "The only trigger: you press Execute workflow in the n8n editor. Nothing calls 07 and nothing in the pipeline depends on it.",
+          "why": "A demo that needs a second tool (Postman, curl) is a demo that breaks. One click runs the whole suite. Because it is a manual run, 99 never fires for it (error workflows only run for production executions), even though 07 names 99 in its settings.",
+          "in": "Nothing.",
+          "out": "One empty item.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "Nothing to fail.",
+          "say_it": "07 is a one-click harness: press Execute and it replays test scans through the live pipeline and scores them.",
+          "next": [
+            "Paste JSON Here"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Pick the scans to run",
+      "purpose": "A pasted one-off scan, or oak_test_payloads rows chosen by OAK_TEST_SUITE (the enabled rows by default), validated into one plan item per scan.",
+      "nodes": [
+        {
+          "step": 2,
+          "name": "Paste JSON Here",
+          "type": "Set (raw JSON)",
+          "what": "Emits the JSON typed into the node. Default: {\"reset\": true, \"scans\": []}. Put one or more scan objects in scans for a one-off run; they take precedence over the table and over OAK_TEST_SUITE. Harness controls sit outside scans: reset (boolean), gap_seconds and settle_seconds. An optional expect object on a scan gives it PASS/FAIL expectations and is stripped before sending.",
+          "why": "Lets you test any payload without touching code or the table, while a scan still reaches the webhook as the task payload verbatim.",
+          "in": "Nothing (static JSON).",
+          "out": "{reset, scans[], optional gap_seconds, settle_seconds}.",
+          "decides": null,
+          "code": "{\n  \"reset\": true,\n  \"scans\": []\n}",
+          "branches": [],
+          "on_failure": "No settings; invalid JSON in the node would stop the run at this node.",
+          "say_it": "Paste any scan here for a one-off test; leave it empty to run the saved cases.",
+          "next": [
+            "Load Test Payloads"
+          ]
+        },
+        {
+          "step": 3,
+          "name": "Load Test Payloads",
+          "type": "Data Table get (oak_test_payloads)",
+          "what": "Loads every row of oak_test_payloads that has a non-empty payload_json (return all), not only enabled ones: the rows OAK_TEST_SUITE selects supply the scans, and every row supplies expectations by scan_id. Each row has suite, label, enabled, sort_order, payload_json, expect_json, notes. At the time of reading the table holds 63 rows across the suites task, returning-visitor, edge-cases, caching, security, personas, triggers, competitors, sources, validation, boundaries and replay, and only rows 5 to 8 are enabled (Rachel's second scan, personal email, invalid scan, ambiguous title); the four task leads are enabled: false.",
+          "why": "Tests live in data: adding a case is a row, not a code edit, and the expectation travels with the payload. Check before a demo: the canvas sticky says the enabled rows are the four task leads, but in the table they are not, so either enable them or set OAK_TEST_SUITE=task.",
+          "in": "Filter payload_json isNotEmpty.",
+          "out": "One item per test row.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "alwaysOutputData plus onError continueRegularOutput: a table failure yields no rows and Build Test Plan falls back to its built-in four task leads.",
+          "say_it": "Test cases live in a Data Table, so adding a test is adding a row.",
+          "next": [
+            "Build Test Plan"
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Build Test Plan",
+          "type": "Code",
+          "what": "Turns the input into one plan item per scan. Config at the top: WEBHOOK_URL from the n8n variable OAK_BOOTH_WEBHOOK_URL, defaulting to https://oak-noam.app.n8n.cloud/webhook/oak-event/scan; RUN_SUITE from OAK_TEST_SUITE, defaulting to 'enabled'; GAP_MS 15000; SETTLE_SECONDS 90; TEST_EVENT_ID 'oak-live-event-2026'; RESET_ON_MANUAL_RUN true. Every row is parsed and validated (throws on invalid payload_json or expect_json, a non-object payload, or a missing scan_id), and expectations, labels and notes are indexed by scan_id. Source priority: pasted scans; else the table rows RUN_SUITE selects ('enabled' = rows with enabled true, 'all' = every row, anything else = rows whose suite equals it); a suite name no row carries throws instead of falling back; else, only when 'enabled' or 'all' select nothing, the built-in FALLBACK of the four task leads (Rachel evt_9901, Hiroshi evt_9902, David evt_9903, Sarah evt_9904). It strips a test-only expect from pasted scans, and throws if two scans in the run share a scan_id. gap_seconds and settle_seconds in the pasted JSON override the defaults; reset overrides RESET_ON_MANUAL_RUN.",
+          "why": "A hard stop is better than a misleading run. 01 blocks scan_id replays, so a duplicate would be silently dropped and the test would halve itself; a mistyped suite must not quietly run the four task leads and report green. The two variables let the harness point at another instance or run a whole suite without toggling rows or editing code.",
+          "in": "All Load Test Payloads rows ($input), Paste JSON Here (by name), $vars.OAK_BOOTH_WEBHOOK_URL, $vars.OAK_TEST_SUITE.",
+          "out": "One item per scan: {lead (1-based), suite, label, notes, expect, payload, scan_id, email, source (paste_json_here | data_table | 'oak_test_payloads, OAK_TEST_SUITE=<x>' | fallback), webhook_url, reset_before_run, reset_filter ('oak-live-event-2026' when reset is on, '__no_reset__' when off, so the delete nodes match nothing), test_event_id, gap_ms, settle_seconds}.",
+          "decides": "Which scans run, against which URL, with which expectations, and whether to reset first.",
+          "code": "const WEBHOOK_URL    = String($vars.OAK_BOOTH_WEBHOOK_URL || '').trim() || 'https://oak-noam.app.n8n.cloud/webhook/oak-event/scan';\nconst RUN_SUITE      = String($vars.OAK_TEST_SUITE || '').trim() || 'enabled';   // 'enabled' | 'all' | a suite name\nif (RUN_SUITE === 'enabled') return p.row.enabled === true;\nif (RUN_SUITE === 'all') return true;\nreturn String(p.row.suite || 'default') === RUN_SUITE;\nif (seen[r.payload.scan_id]) throw new Error('Two scans in this run share scan_id \"' + r.payload.scan_id + '\". The replay guard would drop the second one.');",
+          "branches": [],
+          "on_failure": "No onError setting, on purpose: every validation failure throws with a named reason (bad JSON, missing scan_id, duplicate scan_id, unknown OAK_TEST_SUITE) and the run stops before anything is sent.",
+          "say_it": "Build Test Plan picks the scans, from pasted JSON, the suite named in OAK_TEST_SUITE, or the enabled rows, validates them, and refuses to run duplicates or a mistyped suite.",
+          "next": [
+            "Clear Test Event Scans"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Reset, then send every scan",
+      "purpose": "Clears only this test event, then POSTs each scan to the live production webhook one at a time with a gap between them.",
+      "nodes": [
+        {
+          "step": 5,
+          "name": "Clear Test Event Scans",
+          "type": "Data Table delete (oak_deliveries)",
+          "what": "Executes once and deletes oak_deliveries rows where event_id equals reset_filter: 'oak-live-event-2026' when reset is on, '__no_reset__' (matches nothing) when off.",
+          "why": "oak_deliveries is also 01's replay ledger: without clearing it, re-sending the same scan_ids would be answered duplicate_ignored. Caveat: oak-live-event-2026 is also the event_id 01 gives a real scan that arrives without one, so during a live event you would give the harness its own event_id or run with reset false.",
+          "in": "reset_filter from the first plan item.",
+          "out": "Deleted row ids (not test items).",
+          "decides": null,
+          "code": "filters: event_id = {{ $json.reset_filter }}   (executeOnce: true)",
+          "branches": [],
+          "on_failure": "alwaysOutputData plus continueRegularOutput: a failed delete does not stop the run (though duplicate scans would then be ignored by 01 and fail their checks).",
+          "say_it": "The reset only deletes rows tagged with the test event id, so the same scan_ids can be replayed past the duplicate guard.",
+          "next": [
+            "Clear Test Event Encounters"
+          ]
+        },
+        {
+          "step": 6,
+          "name": "Clear Test Event Encounters",
+          "type": "Data Table delete (oak_encounters)",
+          "what": "Executes once and deletes oak_encounters rows with the same event_id filter, read from Build Test Plan.",
+          "why": "Removes returning-visitor state (thread anchors, claims, rep overrides) so every scan starts as a first scan. reset: false is how you deliberately test a returning visitor.",
+          "in": "reset_filter from Build Test Plan.",
+          "out": "Deleted row ids.",
+          "decides": null,
+          "code": "filters: event_id = {{ $('Build Test Plan').first().json.reset_filter }}   (executeOnce: true)",
+          "branches": [],
+          "on_failure": "alwaysOutputData plus continueRegularOutput.",
+          "say_it": "Clearing encounters makes each visitor new again; keeping them is how you test a returning visitor.",
+          "next": [
+            "Resume Test Plan"
+          ]
+        },
+        {
+          "step": 7,
+          "name": "Resume Test Plan",
+          "type": "Code",
+          "what": "Re-emits every plan item from Build Test Plan.",
+          "why": "The delete nodes output deleted row ids, not test items, so the plan has to be read back by name before sending.",
+          "in": "Build Test Plan (by name).",
+          "out": "The plan items again.",
+          "decides": null,
+          "code": "return $('Build Test Plan').all().map(function (i) { return { json: i.json }; });",
+          "branches": [],
+          "on_failure": "No onError setting; trivial code.",
+          "say_it": "After the reset we pick the test plan back up, because the delete nodes replace the items.",
+          "next": [
+            "POST Booth Scan"
+          ]
+        },
+        {
+          "step": 8,
+          "name": "POST Booth Scan",
+          "type": "HTTP Request (POST to 01's webhook)",
+          "what": "POSTs each plan item's payload as JSON to webhook_url with the header x-oak-webhook-secret = $vars.OAK_WEBHOOK_SECRET (which 01 verifies). Batching: 1 item per batch with batchInterval gap_ms (15,000 ms by default), so scans go one at a time. fullResponse and neverError keep the status code and a 400 or 401 as data to score; response parsed as JSON; 30,000 ms timeout.",
+          "why": "It hits the real production webhook exactly as a scanner would, so auth, replay protection, the async tail and every integration are exercised. Serial with a gap means scans do not race and a second person from the same company genuinely hits the enrichment cache the first one wrote.",
+          "in": "payload, webhook_url, gap_ms per plan item.",
+          "out": "One item per scan: {statusCode, headers, body} where body is 01's provisional reply (accepted, status, provisional_classification ...).",
+          "decides": null,
+          "code": "headerParameters: [{ name: 'x-oak-webhook-secret', value: '={{ $vars.OAK_WEBHOOK_SECRET || \\'\\' }}' }]\nbatching: { batch: { batchSize: 1, batchInterval: '={{ $json.gap_ms }}' } }, response: { fullResponse: true, neverError: true }",
+          "branches": [],
+          "on_failure": "alwaysOutputData plus onError continueRegularOutput and no retry: a network failure becomes an item without accepted: true, which the scorer marks FAIL.",
+          "say_it": "Each scan is POSTed to the live booth webhook one at a time, 15 seconds apart, with the shared secret, exactly like a real scanner.",
+          "next": [
+            "Wait for Pipelines to Finish"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Wait, read and score",
+      "purpose": "Waits for the async tail, reads the stored decisions rather than the webhook reply, and reports one PASS/FAIL row per scan.",
+      "nodes": [
+        {
+          "step": 9,
+          "name": "Wait for Pipelines to Finish",
+          "type": "Wait",
+          "what": "Executes once and waits settle_seconds (90 by default; the unit is the Wait node's default, seconds).",
+          "why": "01 answers the scanner with a provisional 202 in about two seconds and then runs enrichment, AI, the final gate, HubSpot and Slack. Scoring before that tail finishes would score the wrong thing.",
+          "in": "settle_seconds from Build Test Plan.",
+          "out": "The items pass through after the wait.",
+          "decides": null,
+          "code": "amount: '={{ $('Build Test Plan').first().json.settle_seconds }}'   (executeOnce: true)",
+          "branches": [],
+          "on_failure": "No onError setting; a Wait does not fail.",
+          "say_it": "The harness waits 90 seconds for 01's asynchronous tail before it reads anything.",
+          "next": [
+            "Read Final Decisions"
+          ]
+        },
+        {
+          "step": 10,
+          "name": "Read Final Decisions",
+          "type": "Data Table get (oak_deliveries)",
+          "what": "Executes once and reads every oak_deliveries row where event_id equals test_event_id (return all).",
+          "why": "The stored row is the truth: raw_json is the final decision after the deterministic gate, slack_json is 03's delivery receipt, status says whether the pipeline completed. The HTTP reply was sent before the final gate ran.",
+          "in": "test_event_id from Build Test Plan.",
+          "out": "The delivery rows (scan_id, classification, score, status, raw_json, slack_json ...).",
+          "decides": null,
+          "code": "filters: event_id = {{ $('Build Test Plan').first().json.test_event_id }}   (returnAll: true, executeOnce: true)",
+          "branches": [],
+          "on_failure": "alwaysOutputData plus continueRegularOutput: a failed read means every accepted scan fails 'a decision row was stored', which is the honest result.",
+          "say_it": "We score from what was stored after the pipeline finished, not from the webhook's provisional answer.",
+          "next": [
+            "Score Test Run"
+          ]
+        },
+        {
+          "step": 11,
+          "name": "Score Test Run",
+          "type": "Code",
+          "what": "Matches each plan item to its POST response by index and to its stored row by scan_id, parses raw_json and slack_json, and runs checks. For a scan expected to be accepted: 1) webhook accepted it (body.accepted === true); 2) a decision row exists in oak_deliveries; 3) the row reached status 'complete' within the settle wait (separates 'still running' from 'died after the 202'); 4) when the stored decision names a channel, Slack actually delivered (receipt present, delivered_count > 0 and failed_count === 0); 5) only if expected: classification (stored row), persona, and channel (raw.routing.channel). For {\"accepted\": false} the first two invert: the webhook must reject it and no row may exist. Each result reports lead, suite, label, verdict, answered_to_scanner vs stored_after_pipeline, changed_after_the_202, persona, score, rule_summary, slack_channel, slack_delivered, slack_errors, slack_threaded, hubspot_contact_id, company_created, headcount with source and confidence, enrichment_cache_hit, repeat_scan, scan_number, checks and failures. The summary adds scans_came_from, verdict, total, passed, failed, reset_first, enrichment_reused_from_cache, slack_alerts_delivered, slack_failures and a one-line headline per scan.",
+          "why": "Matching the classification is the last check, not the only one. Slack delivery is an assertion, not a hope: 03 soft-fails Slack, which is only safe because this harness fails when nothing was delivered (for example a channel the app never joined).",
+          "in": "Build Test Plan, POST Booth Scan, Read Final Decisions (all by name).",
+          "out": "One summary item: {ran_at, scans_came_from, verdict, total, passed, failed, reset_first, enrichment_reused_from_cache, slack_alerts_delivered, slack_failures, headline[], results[]}.",
+          "decides": "PASS or FAIL per scan and overall.",
+          "code": "checks.push({ check: 'webhook accepted the scan', pass: Boolean(body && body.accepted === true), ... });\ncheck: 'the delivery ledger reached status complete', pass: deliveryStatus === 'complete',\npass: slackReceipt ? (slackDelivered > 0 && slackFailed === 0) : false,\nif (p.expect.classification) checks.push({ check: 'classification is ' + p.expect.classification, pass: stored === p.expect.classification, got: stored || 'none' });",
+          "branches": [],
+          "on_failure": "No onError setting; JSON parses are in try/catch, so a malformed row just fails its checks.",
+          "say_it": "Score Test Run fails a scan unless it was accepted, stored, completed, delivered to Slack, and landed on the expected classification, persona and channel.",
+          "next": []
+        }
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Score from stored state, not the HTTP reply",
+      "why": "01's 202 is provisional by design; the truth is the oak_deliveries row after the final gate. The harness reports both and flags changed_after_the_202."
+    },
+    {
+      "title": "Slack delivery is an assertion",
+      "why": "03 soft-fails Slack so a Slack outage cannot lose a lead. That is only safe because 07 fails a scan when the receipt shows nothing delivered or any failure."
+    },
+    {
+      "title": "Tests live in a Data Table",
+      "why": "Add, edit or toggle a case in the n8n Data Tables UI; the expectation travels with the payload. OAK_TEST_SUITE picks a whole suite without toggling rows."
+    },
+    {
+      "title": "Hit the real production webhook",
+      "why": "It tests auth (x-oak-webhook-secret), replay protection, the async tail and the real integrations exactly as a scanner would. OAK_BOOTH_WEBHOOK_URL can point it at another instance."
+    },
+    {
+      "title": "Serial with a 15 s gap and a 90 s settle",
+      "why": "Predictable, cache-realistic (a second scan from the same company hits the cache), and no race between scans of the same person. Both are overridable per run."
+    },
+    {
+      "title": "Fail loudly on bad test data",
+      "why": "Invalid JSON, a missing scan_id, a duplicate scan_id or an unknown suite name throws before anything is sent, because a test that silently halves itself or reports green on the wrong cases is worse than no test."
+    }
+  ],
+  "questions": [
+    {
+      "q": "How do you know the system works?",
+      "a": "I run 07. It replays saved cases through the live webhook, waits for the async work, then checks from the stored rows that each scan was accepted, completed, delivered to Slack, and landed on the expected classification, persona and channel. The four task leads are expected at Rachel tier_1 / #booth-hot, Hiroshi matched / #booth-matched, David out_of_scope / #booth-out-of-scope, Sarah competitor_intel / #competitive-intel."
+    },
+    {
+      "q": "How do you choose what runs?",
+      "a": "Three levels. Pasted scans in Paste JSON Here win. Otherwise the n8n variable OAK_TEST_SUITE decides: unset or 'enabled' runs rows with enabled true, 'all' runs every row, and any other value runs that suite, for example task, triggers, competitors or boundaries, and throws if no row has it. Only if 'enabled' or 'all' select nothing does the built-in fallback of the four task leads run."
+    },
+    {
+      "q": "Why not assert on the webhook response?",
+      "a": "01 replies in about two seconds with a provisional classification, then keeps working: enrichment, AI, the final deterministic gate, HubSpot and Slack. The truth is the oak_deliveries row after that. The harness reports answered_to_scanner and stored_after_pipeline and flags changed_after_the_202 when they differ, and it checks the ledger reached status complete."
+    },
+    {
+      "q": "How do you add a test?",
+      "a": "Add a row to oak_test_payloads with payload_json, expect_json, a suite, a label, sort_order and enabled. No workflow edit. For a one-off, paste the scan into Paste JSON Here with an optional inline expect."
+    },
+    {
+      "q": "How do you test a returning visitor?",
+      "a": "Run the first scan, then the second with reset false, so the encounter row survives and 01 treats the badge as a repeat; the result shows repeat_scan, scan_number and slack_threaded. The returning-visitor suite has self-contained pairs for this. Careful with 'Rachel, second scan': it is enabled on its own today, and after a reset it runs as a first scan whose notes carry no renewal trigger, so its tier_1 expectation will most likely fail unless Lead 1 runs first with reset off."
+    },
+    {
+      "q": "What is the reset, and is it safe?",
+      "a": "It deletes oak_deliveries and oak_encounters rows whose event_id is oak-live-event-2026, so the same scan_ids can be replayed past the duplicate guard and every visitor looks new. With reset false the filter becomes '__no_reset__' and matches nothing. Be precise: oak-live-event-2026 is also the default event_id 01 assigns a real scan that arrives without one, so during a live event you would give the harness its own event id or turn reset off."
+    },
+    {
+      "q": "What would you check right before a demo?",
+      "a": "Which rows are enabled. At the time of reading only rows 5 to 8 are enabled (Rachel's second scan, personal email, invalid scan, ambiguous title) and the four task leads are disabled, even though the canvas sticky says a default run is the four task leads. Setting OAK_TEST_SUITE to task runs exactly those four without touching the table."
+    }
+  ]
+}

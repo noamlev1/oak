@@ -1,0 +1,876 @@
+{
+  "id": "01",
+  "name": "Oak GTM - 01 Intake & Decision",
+  "short": "Intake & Decision",
+  "lane": "intake",
+  "one_breath": "01 is the orchestrator behind the booth webhook. It checks the secret, validates the scan, blocks a replayed scan_id, classifies the lead with first-match-wins rules read from the active policy row, writes the encounter and ledger rows and answers the scanner with a provisional 202 in about two seconds. It then keeps running: 02A reads HubSpot, 04 enriches, 05 does bounded AI synthesis, a final deterministic gate settles the tier, 02 writes HubSpot, 03 posts the Slack card, and the settled decision is stored in oak_deliveries and oak_encounters, which is the authoritative answer, not the HTTP reply.",
+  "trigger": "Webhook POST https://oak-noam.app.n8n.cloud/webhook/oak-event/scan (node 'Receive Booth Scan', response mode 'Using Respond to Webhook node', CORS allowed origins *)",
+  "input": "JSON body: scan_id, first_name, last_name, email, job_title, company_name, optional company_domain, scanned_at, notes_from_booth, optional event_id (default 'oak-live-event-2026'). Header x-oak-webhook-secret must equal the n8n variable OAK_WEBHOOK_SECRET when that variable is set.",
+  "output": "HTTP: 401 unauthorized, 400 invalid (errors: scan_id / person_identity), 200 duplicate_ignored, or 202 accepted with provisional_* fields. Durable: one oak_deliveries row per scan_id (status accepted, then complete; raw_json = full final payload without policy; slack_json = Slack receipt) and one oak_encounters row per event_person_key (scan_count, scan_history_json, last_classification, last_payload_json and more). Side effects through sub-workflows: HubSpot company, contact, Oak properties, meeting and note (02); Slack card or thread reply (03).",
+  "called_by": [
+    "Booth scanner app (POST to the webhook)",
+    "07 Task Test Harness (replays oak_test_payloads through the same live webhook)"
+  ],
+  "calls": [
+    "02A",
+    "04",
+    "05",
+    "02",
+    "03"
+  ],
+  "node_count": 40,
+  "groups": [
+    {
+      "name": "Ungrouped",
+      "purpose": "The booth webhook itself: receives the POST and hands it on without replying.",
+      "nodes": [
+        {
+          "step": 1,
+          "name": "Receive Booth Scan",
+          "type": "Webhook",
+          "what": "Webhook node listening for POST on path oak-event/scan, with response mode 'Using Respond to Webhook node' and allowed origins '*'. It emits one item with headers, params, query and body. It does not answer the caller itself; one of four Respond to Webhook nodes later does (401, 400, 200 or 202).",
+          "why": "Response mode 'Respond to Webhook node' is what lets 01 answer the scanner early with a 202 and keep working afterwards; the default 'when last node finishes' would make the scanner wait for enrichment and AI.",
+          "in": "The HTTP POST from the scanner app or 07.",
+          "out": "One item: { headers, params, query, body }.",
+          "decides": null,
+          "code": "httpMethod: POST  path: oak-event/scan  responseMode: responseNode  allowedOrigins: *",
+          "branches": [],
+          "on_failure": "No node settings. If the workflow later ends without reaching a Respond node, the caller does not get a designed JSON reply (see Load Active Policy).",
+          "say_it": "The webhook deliberately does not reply itself, so the workflow can answer the rep in two seconds and keep working.",
+          "next": [
+            "Normalize Scan"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Accept the scan",
+      "purpose": "Normalize, check the secret header, reject a scan with no identity, block a replayed scan_id, and load the active ICP policy.",
+      "nodes": [
+        {
+          "step": 2,
+          "name": "Normalize Scan",
+          "type": "Code",
+          "what": "Runs once per item and turns the raw request into one clean lead object. It reads the secret header against the n8n variable OAK_WEBHOOK_SECRET (auth enforced only if the variable is set), lowercases the email and validates it with a simple x@y.z regex, and takes company_domain from the scanner (stripping http(s)://, www. and paths) or infers it from a non-personal email domain. It builds a company name from the domain when none was sent ('apex-finance.com' becomes 'Apex Finance'), builds event_person_key = event_id|email (or event_id|scan:<scan_id> without a valid email), hashes the lowercased notes with FNV-1a into notes_hash, lists soft gaps in data_quality.missing_fields, and marks the scan invalid only if scan_id is missing or there is no email, no first name, no last name and no company.",
+          "why": "Every later node reads one normalized shape, and the only two hard rejections are decided in one place. Personal domains (gmail.com, outlook.com and seven others) are never treated as a company.",
+          "in": "$json.headers['x-oak-webhook-secret'], $json.body (or the item itself), n8n variable OAK_WEBHOOK_SECRET.",
+          "out": "scan_id, event_id, event_person_key, first_name, last_name, full_name, email ('' if invalid), email_valid, email_domain, personal_email, company_domain, company_domain_source (scanner | email_domain | unknown), job_title, company_name, company_name_source, scanned_at (now if missing), notes_from_booth, notes_hash, auth_ok, auth_mode (enforced | open_no_secret_configured), valid, validation_errors, data_quality {missing_fields, complete, can_sync_contact, can_enrich_company}, normalized_at.",
+          "decides": "auth_ok, valid (with reason codes scan_id / person_identity), the company domain and event_person_key.",
+          "code": "const authOk=expectedSecret?(suppliedSecret===expectedSecret):true;\nconst inferredDomain=!suppliedDomain&&emailValid&&personal.indexOf(emailDomain)<0?emailDomain:'';\nevent_person_key:eventId+'|'+(emailValid?email:('scan:'+scanId))\nif(!scanId)fatal.push('scan_id');\nif(!emailValid&&!first&&!last&&!companyName)fatal.push('person_identity');",
+          "branches": [],
+          "on_failure": "No error settings on the node. A code exception would fail the execution before any reply (99 is the error workflow). Note the side effect of the key rule: a scan with no valid email gets a per-scan key, so it can never be recognised as a returning visitor.",
+          "say_it": "Normalize Scan is the single place that decides auth, validity and identity, so every other node can trust the shape of the lead.",
+          "next": [
+            "Authorized?"
+          ]
+        },
+        {
+          "step": 3,
+          "name": "Authorized?",
+          "type": "IF",
+          "what": "IF on auth_ok is true (boolean, strict). When OAK_WEBHOOK_SECRET is set, only a matching x-oak-webhook-secret header passes; when it is not set, every scan passes and auth_mode says open_no_secret_configured.",
+          "why": "Auth is computed in code rather than with the webhook's built-in auth so it can return a clean JSON 401 body and so enforcement can be switched on by setting a variable, with no redeploy.",
+          "in": "auth_ok from Normalize Scan.",
+          "out": "The same item on the true or false output.",
+          "decides": "Whether the request is allowed in.",
+          "code": "leftValue: {{ $json.auth_ok }}  operator: boolean true",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Valid Scan?",
+              "meaning": "Secret matches (or none is configured): continue to validation."
+            },
+            {
+              "label": "false",
+              "goes_to": "Respond Unauthorized",
+              "meaning": "Missing or wrong secret: reply 401 and stop. Nothing is stored, enriched or alerted."
+            }
+          ],
+          "on_failure": "An IF on a boolean does not realistically fail.",
+          "say_it": "Auth runs first and fails closed with a 401 as soon as a secret is configured.",
+          "next": [
+            "Valid Scan?",
+            "Respond Unauthorized"
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Respond Unauthorized",
+          "type": "Respond to Webhook",
+          "what": "Replies HTTP 401 with JSON { accepted:false, status:'unauthorized', scan_id, message:'Missing or incorrect x-oak-webhook-secret header.' }. It is a dead end: no node follows it.",
+          "why": "A clear, machine-readable rejection lets the scanner app show the rep what is wrong instead of a generic error.",
+          "in": "scan_id from the item.",
+          "out": "The HTTP response to the caller.",
+          "decides": null,
+          "code": "responseCode: 401  body: { accepted: false, status: 'unauthorized', scan_id: $json.scan_id || null, message: 'Missing or incorrect x-oak-webhook-secret header.' }",
+          "branches": [],
+          "on_failure": "No settings; the run simply ends after replying.",
+          "say_it": "An unauthorised scan gets a 401 and touches nothing.",
+          "next": []
+        },
+        {
+          "step": 5,
+          "name": "Valid Scan?",
+          "type": "IF",
+          "what": "IF on valid is true (boolean, strict). valid is false only when scan_id is missing or the scan has no email, no first name, no last name and no company at all.",
+          "why": "The only hard stop in the pipeline. Everything else (missing title, missing notes, personal email) is a soft gap that still produces an alert.",
+          "in": "valid from Normalize Scan.",
+          "out": "The item on the true or false output.",
+          "decides": "Whether the scan is usable at all.",
+          "code": "leftValue: {{ $json.valid }}  operator: boolean true",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Find Existing Scan",
+              "meaning": "Usable scan: check whether this scan_id was already processed."
+            },
+            {
+              "label": "false",
+              "goes_to": "Build Invalid Response",
+              "meaning": "No scan_id or no identity at all: reply 400 with the reason codes. Nothing is written."
+            }
+          ],
+          "on_failure": "An IF on a boolean does not realistically fail.",
+          "say_it": "Only two things block a scan: no scan_id, or no way at all to tell who the person is.",
+          "next": [
+            "Find Existing Scan",
+            "Build Invalid Response"
+          ]
+        },
+        {
+          "step": 6,
+          "name": "Build Invalid Response",
+          "type": "Code",
+          "what": "Builds the 400 body: { accepted:false, status:'invalid', scan_id, errors: validation_errors }, where errors holds the codes 'scan_id' and/or 'person_identity'.",
+          "why": "The reason codes let the scanner app tell the rep exactly what is missing. status 'invalid' exists only in this reply; no ledger row is written.",
+          "in": "scan_id and validation_errors from Normalize Scan.",
+          "out": "The response body item.",
+          "decides": null,
+          "code": "return{json:{accepted:false,status:'invalid',scan_id:$json.scan_id||null,errors:$json.validation_errors||[]}};",
+          "branches": [],
+          "on_failure": "No settings; trivial code.",
+          "say_it": "An invalid scan gets reason codes back and leaves no trace in the ledger.",
+          "next": [
+            "Respond Invalid"
+          ]
+        },
+        {
+          "step": 7,
+          "name": "Respond Invalid",
+          "type": "Respond to Webhook",
+          "what": "Replies HTTP 400 with the body built by Build Invalid Response. Dead end.",
+          "why": "Separates the invalid path cleanly from the accepted path.",
+          "in": "$json from Build Invalid Response.",
+          "out": "The HTTP response.",
+          "decides": null,
+          "code": "responseCode: 400  responseBody: {{ $json }}",
+          "branches": [],
+          "on_failure": "No settings; the run ends after replying.",
+          "say_it": "A 400 with reason codes, and the run stops.",
+          "next": []
+        },
+        {
+          "step": 8,
+          "name": "Find Existing Scan",
+          "type": "Data Table get",
+          "what": "Reads oak_deliveries (selected by name) where scan_id equals this scan's scan_id, limit 1.",
+          "why": "The ledger row's status is the replay guard: 'complete' means this exact scan already ran end to end.",
+          "in": "$('Normalize Scan').item.json.scan_id",
+          "out": "The ledger row if one exists, otherwise one empty item.",
+          "decides": null,
+          "code": "filters: scan_id = {{ $('Normalize Scan').item.json.scan_id }}  limit: 1",
+          "branches": [],
+          "on_failure": "alwaysOutputData is on, so 'no row' still emits an empty item and the flow continues; there is no continue-on-error, so a Data Table outage fails the run before any reply.",
+          "say_it": "Replay protection is a single ledger lookup on scan_id.",
+          "next": [
+            "Duplicate Delivery?"
+          ]
+        },
+        {
+          "step": 9,
+          "name": "Duplicate Delivery?",
+          "type": "IF",
+          "what": "IF the ledger row's status equals 'complete' (string, strict; missing status is treated as '').",
+          "why": "Blocks exact replays without blocking recovery: only a scan that finished end to end is a duplicate, while one stuck at 'accepted' runs again.",
+          "in": "$json.status from Find Existing Scan.",
+          "out": "The item on the true or false output.",
+          "decides": "Duplicate (ignore) vs new or retry (process).",
+          "code": "leftValue: {{ $json.status ?? '' }}  operator: string equals  rightValue: complete",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Build Duplicate Response",
+              "meaning": "This scan_id already completed: reply 200 duplicate_ignored; no CRM write, no Slack post."
+            },
+            {
+              "label": "false",
+              "goes_to": "Load Active Policy",
+              "meaning": "New scan, or a scan that died mid-pipeline (still 'accepted'): process it."
+            }
+          ],
+          "on_failure": "An IF on a string does not realistically fail.",
+          "say_it": "Only a completed scan_id is a duplicate, so re-sending a half-finished scan is the recovery path.",
+          "next": [
+            "Build Duplicate Response",
+            "Load Active Policy"
+          ]
+        },
+        {
+          "step": 10,
+          "name": "Build Duplicate Response",
+          "type": "Code",
+          "what": "Builds { accepted:true, status:'duplicate_ignored', scan_id, message } explaining that the scan was already processed end to end, that nothing will be written or posted, and that a scan that failed mid-pipeline is not marked complete so re-sending it is safe.",
+          "why": "The scanner gets a success-shaped answer (the scan is known) while the system guarantees no double CRM write and no double Slack card.",
+          "in": "$('Normalize Scan').item.json.scan_id",
+          "out": "The response body item.",
+          "decides": null,
+          "code": "return{json:{accepted:true,status:'duplicate_ignored',scan_id:s.scan_id,message:'This scan_id was already processed end to end. ...'}};",
+          "branches": [],
+          "on_failure": "No settings; trivial code.",
+          "say_it": "A duplicate is acknowledged, not rejected, and nothing downstream runs.",
+          "next": [
+            "Respond Duplicate"
+          ]
+        },
+        {
+          "step": 11,
+          "name": "Respond Duplicate",
+          "type": "Respond to Webhook",
+          "what": "Replies HTTP 200 with the duplicate body. Dead end.",
+          "why": "Idempotent webhook behaviour: the same request twice gives a clean answer and no side effects.",
+          "in": "$json from Build Duplicate Response.",
+          "out": "The HTTP response.",
+          "decides": null,
+          "code": "responseCode: 200  responseBody: {{ $json }}",
+          "branches": [],
+          "on_failure": "No settings; the run ends after replying.",
+          "say_it": "A replayed scan gets 200 duplicate_ignored and the run stops.",
+          "next": []
+        },
+        {
+          "step": 12,
+          "name": "Load Active Policy",
+          "type": "Data Table get",
+          "what": "Reads oak_policies (by name) where status = 'active', limit 1. The row's document_json (currently oak-event-v5) holds every persona, threshold, trigger, channel and weight Evaluate ICP Policy uses.",
+          "why": "This is what makes the ICP data instead of code: a row edit changes the next scan's behaviour with no deploy.",
+          "in": "Runs once for the single item coming from Duplicate Delivery? (false).",
+          "out": "One policy row: version, status, document_json, activated_at.",
+          "decides": null,
+          "code": "filters: status = active  limit: 1",
+          "branches": [],
+          "on_failure": "No alwaysOutputData and no continue-on-error. KNOWN BUG: if no row has status 'active', this node returns zero items, so Load Competitors and everything after it never run. Nothing is written, no Respond node is reached (the scanner does not get the designed 202 body), and because the execution does not error, 99 is not triggered. It stalls silently. A row whose document_json is invalid JSON does not stall; Evaluate ICP Policy falls back to an empty policy.",
+          "say_it": "One row lookup loads the whole ICP; the known weakness is that an empty policy table stalls the run silently instead of failing loudly.",
+          "next": [
+            "Load Competitors"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Classify and spot returning visitors",
+      "purpose": "First routing decision, in deterministic code against the policy table: competitor, persona, size band, trigger, score. Later stages can move it.",
+      "nodes": [
+        {
+          "step": 13,
+          "name": "Load Competitors",
+          "type": "Data Table get",
+          "what": "Reads every row of oak_competitors (by name) where active is true, returnAll. Today that is 17 rows, each with name, domains_json, aliases_json, category and verification_status.",
+          "why": "The competitor register is data: add a row and the next scan honours it with no workflow edit.",
+          "in": "Runs once for the policy item from Load Active Policy.",
+          "out": "One item per active competitor row.",
+          "decides": null,
+          "code": "filters: active isTrue  returnAll: true",
+          "branches": [],
+          "on_failure": "continueRegularOutput and alwaysOutputData. If the read fails the output is an error item with no name, which Evaluate ICP Policy filters out, so the scan is classified with no competitor check at all (silently).",
+          "say_it": "Competitors are rows, not code, so the register grows without a deploy.",
+          "next": [
+            "Evaluate ICP Policy"
+          ]
+        },
+        {
+          "step": 14,
+          "name": "Evaluate ICP Policy",
+          "type": "Code",
+          "what": "The first routing decision, all deterministic, against the parsed policy. (1) Competitor: for each active row, exact match of company_domain against domains_json, or a whole-word match of the company name against the row name or an alias; the first hit sets competitor with matched_on domain | company_name. (2) Possible competitor: if no confirmed hit, a whole-word match of the company name against policy possible_name_tokens ('identity security', 'identity governance', 'access governance', 'identity platform', 'privileged access', 'non-human identity', 'machine identity', 'identity fabric', 'identity management', 'access management'). (3) Persona: walks ciso, iam, compliance in order; the first whose title_patterns is a substring of the lowercased title wins, else 'other'. (4) Relevance signals: policy relevance_signals found in title or notes, recorded but never scored. (5) Headcount from notes with a number followed by employees/people/staff/seats/users: >=1000 qualified_1000_plus, >=500 review_500_999, below disqualified_under_500, none unknown. (6) Disqualifiers 'saas-only' / 'single-cloud' as substrings of the notes. (7) Incumbents: whole-word match in the notes against the 7 active incumbent tools and aliases. (8) Tier 1 triggers quoted from the notes: incumbent_renewal (a renewal-in-N-months phrase with N <= renewal_max_months 6 AND a matched incumbent with renewal_trigger; a renewal with no matched tool is logged as unverified_renewal and does not trigger), identity_breach ('identity breach', 'security breach', 'breached'), audit_deadline (audit within 30 characters of deadline/due/active, deadline then audit, or sox within 25 characters of deadline/due/active). Then the cascade picks the classification, the score is computed, and every rule that fired adds a readable reason and a {code, detail, source} trace entry.",
+          "why": "This is the product: a reproducible, explainable classification that any row edit in the policy changes. Doing it before the 202 means the scanner gets a meaningful provisional answer.",
+          "in": "$('Normalize Scan').first().json, $('Load Active Policy').first().json.document_json, $('Load Competitors').all().",
+          "out": "{...scan, policy_version, policy (the whole document, removed later), persona, persona_source (rule_title_match | none_from_rules), persona_status (competitor | matched | matched_fit_review | matched_but_disqualified | ambiguous | irrelevant), persona_angle, listen_for, relevance_signals, urgency_evidence, employee_count_observed, company_size_band, renewal_months_observed, incumbent_tools_detected, competitor, competitor_status (confirmed | possible | none), classification, intelligence_required (true for all five), persona_reasoning_required (true only for tier_1 / matched / needs_review), score, score_breakdown {persona, company_size, industry:0, urgency, total, max}, decision_reasons, decision_trace, rule_summary, decision_basis, routing {channel, owner_dm, mention}, notes_untrusted:true, injection_suspected, competitor_dont_say}",
+          "decides": "classification (competitor_intel | needs_review | out_of_scope | tier_1 | matched), persona, the provisional score, routing, and the two flags that gate the sub-workflows.",
+          "code": "if(competitor){classification='competitor_intel';personaStatus='competitor';}else if(possibleNameHit){classification='needs_review';}else if(outBySize||dqHits.length){classification='out_of_scope';personaStatus=targetPersona?'matched_but_disqualified':'irrelevant';}else if(targetPersona&&reviewBySize){classification='needs_review';personaStatus='matched_fit_review';}else if(targetPersona){classification=urgency.length?'tier_1':'matched';personaStatus='matched';}else if(relevanceSignals.length){classification='needs_review';personaStatus='ambiguous';}\nif(renewalTool&&months!==null&&months<=maxMonths)urgency.push({type:'incumbent_renewal',tool:renewalTool.name,value:months,quote:rawNotes.slice(0,400),source:'scanner'});\nconst personaPoints=targetPersona?Number(sc.persona_points||30):0;\nconst sizePoints=sizeBand==='qualified_1000_plus'?Number(sc.company_size_points||15):0;\nconst urgencyPoints=urgency.length?Number(sc.urgency_points||40):0;\npersona_reasoning_required:classification!=='competitor_intel'&&['tier_1','matched','needs_review'].includes(classification)",
+          "branches": [],
+          "on_failure": "No error settings. The policy parse is in try/catch: invalid document_json silently becomes an empty policy (no personas, no channels), so nearly everything would classify out_of_scope with an empty channel. Details worth knowing: the urgency 'quote' is the first 400 characters of the notes, not the exact phrase; a possible-name hit leaves persona_status 'irrelevant' even for a CISO title; the One Identity alias 'identity manager' is generic, so notes saying 'our identity manager' count as that incumbent.",
+          "say_it": "Evaluate ICP Policy is a first-match-wins ladder read from the policy row: competitor, possible competitor, hard disqualifier, 500-999 review, persona plus quoted trigger for Tier 1, persona alone for matched, context-only for review, else out of scope.",
+          "next": [
+            "Load Prior Encounter"
+          ]
+        },
+        {
+          "step": 15,
+          "name": "Load Prior Encounter",
+          "type": "Data Table get",
+          "what": "Reads oak_encounters (by name) where event_person_key equals this scan's key, limit 1.",
+          "why": "The encounter row is how the system knows this person was already scanned at this event, and it carries the rep's earlier decisions (override, exclude) forward.",
+          "in": "$('Evaluate ICP Policy').item.json.event_person_key",
+          "out": "The prior encounter row, or one empty item.",
+          "decides": null,
+          "code": "filters: event_person_key = {{ $('Evaluate ICP Policy').item.json.event_person_key }}  limit: 1",
+          "branches": [],
+          "on_failure": "alwaysOutputData, so 'first scan' is an empty item and the flow continues; no continue-on-error, so a Data Table outage fails the run before the reply.",
+          "say_it": "The person key is event plus email, so the same badge at the same event finds its history.",
+          "next": [
+            "Build Visitor Context"
+          ]
+        },
+        {
+          "step": 16,
+          "name": "Build Visitor Context",
+          "type": "Code",
+          "what": "Returning-visitor logic. scan_count = prior count + 1 and repeat_scan = count > 1. classification_changed compares the prior last_classification with today's provisional classification; notes_changed compares notes hashes. notification_mode is first_scan, repeat_thread (same tier: reply in the first card's thread) or repeat_escalation (tier changed). It appends this scan to scan_history (kept to the last 20; an older row with only notes_from_booth is converted into a one-entry history), and carries previous_slack_channel / previous_slack_ts and previous_notes_from_booth for 03. It also reads the rep's earlier decisions from the row: rep_override (override_classification), rep_override_reason (downgrade_reason), rep_override_by / _at (last_action_by / _at) and rep_excluded_from_outreach.",
+          "why": "A returning visitor must be alerted in the thread of the first card with what they said last time, and a rep's Not a fit or Promote on the first scan must be honoured on the second. This node gathers all of that before the tier is settled.",
+          "in": "$('Evaluate ICP Policy').first().json and the prior encounter row ($json).",
+          "out": "{...evaluated lead, repeat_scan, scan_count, prior_classification, rep_override, rep_override_reason, rep_override_by, rep_override_at, rep_excluded_from_outreach, classification_changed, notes_changed, material_change, notification_mode, repeat_reason, repeat_indicator ('RETURNING VISITOR - scan #n'), previous_scan, previous_notes_from_booth, scan_history, scan_history_json, previous_slack_channel, previous_slack_ts, first_scanned_at}",
+          "decides": "notification_mode (first_scan | repeat_thread | repeat_escalation) and the rep override that the final gate applies.",
+          "code": "const n=Number((prior&&prior.scan_count)||0)+1;\nconst classChanged=Boolean(repeat&&prior.last_classification&&prior.last_classification!==d.classification);\nconst mode=repeat?(classChanged?'repeat_escalation':'repeat_thread'):'first_scan';\nrep_override:(prior&&prior.override_classification)||null",
+          "branches": [],
+          "on_failure": "No error settings; JSON parsing of history is in try/catch. Two subtleties: the prior row's last_classification is the FINAL tier of the last scan, compared with this scan's PROVISIONAL tier (04 recomputes the mode against its own result later); and there is no check that this scan_id is already in scan_history, so re-sending a scan stuck at 'accepted' finds its own row and is counted as a returning visitor (scan #2).",
+          "say_it": "Build Visitor Context is where 'same person, new scan' becomes a thread reply with what they said last time, and where a rep's earlier call is picked up for the final gate.",
+          "next": [
+            "Load Company Cache"
+          ]
+        },
+        {
+          "step": 17,
+          "name": "Load Company Cache",
+          "type": "Data Table get",
+          "what": "Reads oak_enrichment_cache (by name) where company_domain equals this scan's domain, limit 1.",
+          "why": "Two people from one company should not pay for enrichment twice, and a fresh cache row can flag a possible competitor before the 202.",
+          "in": "$('Build Visitor Context').item.json.company_domain",
+          "out": "The cache row, or one empty item.",
+          "decides": null,
+          "code": "filters: company_domain = {{ $('Build Visitor Context').item.json.company_domain }}  limit: 1",
+          "branches": [],
+          "on_failure": "alwaysOutputData, so a miss continues; no continue-on-error.",
+          "say_it": "The enrichment cache is keyed on domain, the same key the CRM uses for companies.",
+          "next": [
+            "Build Alert Package"
+          ]
+        },
+        {
+          "step": 18,
+          "name": "Build Alert Package",
+          "type": "Code",
+          "what": "Uses the cache row only if status is 'complete' and expires_at is in the future (the 30-day TTL written by 04), parsing payload_json and evidence_json. If that cached homepage read flagged possible_competitor and the lead is not a confirmed competitor, not competitor_intel and not out_of_scope, it sets competitor_status 'possible', moves the lead to needs_review, routes it to the review channel with no mention, and adds a reason. It then sets crm_context to a 'pending' placeholder and builds the alert object: headline (repeat indicator, or CLASSIFICATION - name), who, why_now (all reasons joined), what_to_do (competitor: the policy's don't-say line plus 'Capture what they ask about and route to competitive intelligence'; out_of_scope: 'Qualify politely, keep the CRM record, and do not escalate to sales'; otherwise 'Qualify the environment first. Position: ' plus the persona angle), score, evidence and routing.",
+          "why": "It lets the 202 reflect what the system already knows about the company, and gives 01 an early possible-competitor catch for a company scanned before.",
+          "in": "$('Build Visitor Context').first().json and the cache row ($json).",
+          "out": "{...visitor lead, classification, competitor_status, routing, decision_reasons, enrichment_cache_hit, needs_company_enrichment, company_enrichment, company_evidence, crm_context:{lookup_status:'pending', ...}, alert:{headline, who, why_now, what_to_do, score, score_breakdown, crm_context, evidence, repeat_scan, scan_count, delivery_mode, routing}}",
+          "decides": "Whether a cached possible-competitor signal moves the lead to needs_review before the 202.",
+          "code": "const fresh=Boolean(c&&c.expires_at&&new Date(c.expires_at).getTime()>Date.now()&&String(c.status||'')==='complete');\nif(competitorStatus!=='confirmed'&&enrichment.possible_competitor===true&&classification!=='out_of_scope'&&classification!=='competitor_intel'){\n  competitorStatus='possible';\n  classification='needs_review';",
+          "branches": [],
+          "on_failure": "No error settings; JSON parsing is in try/catch. Two details: this promotion updates classification and reasons but not rule_summary or decision_trace, so the 202's provisional_rule_summary can still read 'Matched: ...'; and 04 applies a stricter freshness test to the same cache row (it also rejects parked or unverified evidence), so enrichment_cache_hit here is only a preview. The actual fetch-skipping happens inside 04.",
+          "say_it": "Build Alert Package turns the classification into a rep-ready alert and lets a fresh cache row flag a possible competitor before the scanner even gets its answer.",
+          "next": [
+            "Upsert Encounter"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Record and answer the scanner",
+      "purpose": "Writes the encounter and ledger rows, then answers the scanner in about two seconds with a decision marked provisional.",
+      "nodes": [
+        {
+          "step": 19,
+          "name": "Upsert Encounter",
+          "type": "Data Table upsert",
+          "what": "Upserts oak_encounters on event_person_key, writing identity (event_id, email, full_name, job_title, company_name, company_domain, notes_from_booth), scan_count, first_scanned_at, last_scanned_at, last_notes_hash, last_classification (the provisional tier), scan_history_json, updated_at, and last_slack_channel / last_slack_ts carried from the prior row (or '').",
+          "why": "The returning-visitor count and history must be durable before anything slow happens. Rep fields (override_classification, claim fields, booth_status) are not in the mapping, so a re-scan never erases what a rep did.",
+          "in": "$('Build Alert Package').item.json fields.",
+          "out": "The upserted encounter row.",
+          "decides": null,
+          "code": "filters: event_person_key = {{ $('Build Alert Package').item.json.event_person_key }}\nlast_classification: {{ $('Build Alert Package').item.json.classification }}\nlast_slack_ts: {{ $('Build Alert Package').item.json.previous_slack_ts ?? '' }}",
+          "branches": [],
+          "on_failure": "No error settings: a Data Table failure fails the run before the 202 is sent (99 reports it).",
+          "say_it": "The encounter is recorded before the reply, and it deliberately never touches the fields a rep owns.",
+          "next": [
+            "Upsert Scan Ledger"
+          ]
+        },
+        {
+          "step": 20,
+          "name": "Upsert Scan Ledger",
+          "type": "Data Table upsert",
+          "what": "Upserts oak_deliveries on scan_id with status 'accepted', the provisional classification and score, policy_version, identity fields, notes_hash, created_at, and a first raw_json containing the normalized scanner input plus the provisional decision (classification, persona, size band, score, breakdown, rule summary, reasons, trace), crm_context, company_enrichment and company_evidence.",
+          "why": "'accepted' is what makes a mid-pipeline failure retryable (Duplicate Delivery? only blocks 'complete'), and the row exists before the scanner hears back.",
+          "in": "$('Build Alert Package').item.json and $('Normalize Scan').first().json.",
+          "out": "The upserted ledger row.",
+          "decides": null,
+          "code": "filters: scan_id = {{ $('Build Alert Package').item.json.scan_id }}\nstatus: accepted",
+          "branches": [],
+          "on_failure": "No error settings: a failure stops the run before the reply. On a retry of the same scan_id this overwrites the row, including created_at.",
+          "say_it": "Every scan is in the ledger as 'accepted' before the scanner gets its answer, which is what makes a crashed scan recoverable.",
+          "next": [
+            "Build Accepted Response"
+          ]
+        },
+        {
+          "step": 21,
+          "name": "Build Accepted Response",
+          "type": "Code",
+          "what": "Builds the 202 body: accepted true, status 'accepted', scan_id, event_id, a note that the decision fields are provisional and that the stored decision in oak_deliveries is authoritative, then provisional_classification, provisional_persona, provisional_score, provisional_score_breakdown, provisional_rule_summary, provisional_routing, company_size_band, repeat_scan, scan_count, notification_mode, injection_suspected, enrichment_cache_hit, needs_company_enrichment, policy_version, alert_preview, and the downstream step list.",
+          "why": "Naming every decision field 'provisional_' is how the API is honest that enrichment, AI and the final gate may still move the tier.",
+          "in": "$('Build Alert Package').first().json",
+          "out": "The 202 response body.",
+          "decides": null,
+          "code": "note:'Decision fields below are provisional. Enrichment, AI synthesis and the final deterministic gate run after this reply; the stored decision in oak_deliveries is authoritative.'",
+          "branches": [],
+          "on_failure": "No settings; it only reads one item.",
+          "say_it": "The reply is explicitly provisional, and it tells the caller where the authoritative answer will be.",
+          "next": [
+            "Respond Accepted"
+          ]
+        },
+        {
+          "step": 22,
+          "name": "Respond Accepted",
+          "type": "Respond to Webhook",
+          "what": "Replies HTTP 202 with the accepted body, about two seconds after the scan arrived. Unlike the other Respond nodes it has an output, so the workflow keeps running into the expensive work.",
+          "why": "This is the whole 'answer first, think later' design: the rep is not kept waiting on web fetches, HubSpot and an LLM.",
+          "in": "$json from Build Accepted Response.",
+          "out": "The HTTP response, and the same item passed on to Prepare CRM Handoff.",
+          "decides": null,
+          "code": "responseCode: 202  responseBody: {{ $json }}",
+          "branches": [],
+          "on_failure": "No settings. Everything after this node happens after the scanner already has its answer, so later failures never reach the scanner; they reach 99 and the ledger.",
+          "say_it": "The 202 goes out here and the workflow keeps going, so the booth never waits for enrichment or AI.",
+          "next": [
+            "Prepare CRM Handoff"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Buy intelligence, then settle the tier",
+      "purpose": "Every classified scan is enriched. The gates here pick which calls cost money, not which leads get looked at; the final gate settles the tier.",
+      "nodes": [
+        {
+          "step": 23,
+          "name": "Prepare CRM Handoff",
+          "type": "Code",
+          "what": "Takes the Build Alert Package item and removes the policy object, passing everything else on.",
+          "why": "The policy document would otherwise be copied through every sub-workflow hop and into stored payloads; 04 and 05 load the policy themselves, and the final gate reloads it with Load Gate Policy.",
+          "in": "$('Build Alert Package').first().json",
+          "out": "The lead payload without policy.",
+          "decides": null,
+          "code": "const {policy,...payload}=p;\nreturn[{json:payload}];",
+          "branches": [],
+          "on_failure": "No settings; trivial code.",
+          "say_it": "The policy is stripped before the sub-workflow hops so it is not copied through every call and every stored row.",
+          "next": [
+            "Needs Intelligence?"
+          ]
+        },
+        {
+          "step": 24,
+          "name": "Needs Intelligence?",
+          "type": "IF",
+          "what": "IF intelligence_required is true (boolean, strict). Evaluate ICP Policy sets it true for all five classifications, so every classified scan takes the true branch.",
+          "why": "Competitor detection must not depend on lead fit: even an out_of_scope scan gets the CRM read and the free homepage read. The false branch is a safety net for a scan that arrives unclassified; no current classification takes it.",
+          "in": "intelligence_required",
+          "out": "The item on the true or false output.",
+          "decides": "Whether to buy CRM context and enrichment (always yes today).",
+          "code": "leftValue: {{ $json.intelligence_required }}  operator: boolean true",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Read CRM Context",
+              "meaning": "Every classified scan: read HubSpot, then enrich."
+            },
+            {
+              "label": "false",
+              "goes_to": "Can Sync Contact?",
+              "meaning": "Safety net only; skips 02A, 04, 05 and the gate and goes straight to the email gate."
+            }
+          ],
+          "on_failure": "An IF on a boolean does not realistically fail.",
+          "say_it": "Every lead gets looked at; the gates only decide what costs money.",
+          "next": [
+            "Read CRM Context",
+            "Can Sync Contact?"
+          ]
+        },
+        {
+          "step": 25,
+          "name": "Read CRM Context",
+          "type": "Execute Sub-workflow (02A)",
+          "what": "Calls 02A 'Oak GTM - 02A CRM Context [sub-flow]' (xnl1bav7McaQIwXC) with the whole item and waits for it. 02A reads the HubSpot portal, company by domain, contact by email and open deals, and returns the payload with crm_context filled in (relationship, owner, open deals, contact URL).",
+          "why": "The CRM is the record of truth: a HubSpot headcount outranks every other source in 04, and the owner and open deal shape the AI's opening question, so the CRM must be read before either runs.",
+          "in": "The payload from Prepare CRM Handoff.",
+          "out": "The payload with crm_context (lookup_status 'complete').",
+          "decides": null,
+          "code": "workflowId: xnl1bav7McaQIwXC  waitForSubWorkflow: true",
+          "branches": [],
+          "on_failure": "No continue-on-error in 01. 02A soft-fails every HubSpot call internally, so in practice it returns; a hard error would stop 01 after the 202, go to 99, and leave the ledger 'accepted' for a retry.",
+          "say_it": "The CRM is read before anything is enriched or reasoned about, so HubSpot's facts outrank the web and the AI.",
+          "next": [
+            "Enrich Company"
+          ]
+        },
+        {
+          "step": 26,
+          "name": "Enrich Company",
+          "type": "Execute Sub-workflow (04)",
+          "what": "Calls 04 'Company & Person Enrichment' (K9MaVwjIoBmZ0oS9) and waits. 04 reuses the cache or reads the homepage (always free), adds paid Brave search unless the scan is out_of_scope, skips person search for competitors, resolves headcount (HubSpot 1.0, booth notes 0.9, official site 0.85, domain-matched search 0.7) and industry, recomputes the size band, can flag a possible competitor (to needs_review), can downgrade on size or a public-site disqualifier, adds size and industry points (never for out_of_scope or competitor_intel), and recomputes notification_mode. It does NOT change persona_reasoning_required.",
+          "why": "Headcount and industry are the facts the booth notes usually lack, and the homepage read is how a small competitor that is not in the table still gets caught.",
+          "in": "The payload with crm_context from 02A.",
+          "out": "The payload with company_enrichment, employee_resolution, company_size_band, possibly a new classification / competitor_status / routing, updated score and breakdown, enrichment_cache_hit and warnings.",
+          "decides": "The resolved size band and, for competitor and out_of_scope leads, effectively the final classification (it also applies the rep override for leads that skip the gate).",
+          "code": "workflowId: K9MaVwjIoBmZ0oS9  waitForSubWorkflow: true",
+          "branches": [],
+          "on_failure": "No continue-on-error in 01; 04's external calls soft-fail internally. A hard error stops 01 after the 202 (99 reports, ledger stays 'accepted').",
+          "say_it": "Enrichment always does the free homepage read, even for bad-fit leads, because that is how an unlisted competitor gets caught.",
+          "next": [
+            "Needs AI Synthesis?"
+          ]
+        },
+        {
+          "step": 27,
+          "name": "Needs AI Synthesis?",
+          "type": "IF",
+          "what": "IF persona_reasoning_required is true (boolean, strict). That flag was set by Evaluate ICP Policy and nothing recomputes it: true for tier_1, matched and needs_review as classified before enrichment, false for competitor_intel and out_of_scope.",
+          "why": "This is the spend gate on Gemini: competitors and out-of-scope leads never cost an LLM call.",
+          "in": "persona_reasoning_required (01's pre-enrichment verdict).",
+          "out": "The item on the true or false output.",
+          "decides": "Whether Gemini runs and whether the final gate runs.",
+          "code": "leftValue: {{ $json.persona_reasoning_required }}  operator: boolean true",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Reason with AI",
+              "meaning": "01 called it tier_1, matched or needs_review: call 05, then the final deterministic gate."
+            },
+            {
+              "label": "false",
+              "goes_to": "Can Sync Contact?",
+              "meaning": "01 called it competitor_intel or out_of_scope: skip AI and the final gate; 04 had the last deterministic word."
+            }
+          ],
+          "on_failure": "An IF on a boolean does not realistically fail. Because the flag is 01's pre-enrichment verdict, a lead 04 demotes to out_of_scope still goes through AI (and pays for it), and a lead 01 called out_of_scope that 04 moves to needs_review (possible competitor from the homepage) skips AI and the gate, so 04's needs_review stands.",
+          "say_it": "Gemini is only paid for leads the rules thought worth a conversation; competitors and out-of-scope scans skip it.",
+          "next": [
+            "Reason with AI",
+            "Can Sync Contact?"
+          ]
+        },
+        {
+          "step": 28,
+          "name": "Reason with AI",
+          "type": "Execute Sub-workflow (05)",
+          "what": "Calls 05 'AI Lead Reasoning' (McoAVyLN6lxqmLeO) and waits. 05 skips Gemini entirely if injection_suspected. Otherwise Gemini (temperature 0, strict JSON) writes the opening question, why it matters, a booth action and listen-fors, and a guard clamps every field. It can change the tier only when persona_status is 'ambiguous': at confidence >= 0.7 a target persona moves the lead to matched (or tier_1 if 01 already quoted an urgency trigger) and adds persona points; confidently 'other' moves it to out_of_scope; below 0.7 it stays needs_review. It may also fill an unknown industry from a supplied URL above 0.7 and add industry points. A clear title rule is never overridden.",
+          "why": "Language understanding earns its place only for ambiguous titles and for writing a grounded question; everything else stays deterministic.",
+          "in": "The enriched payload from 04.",
+          "out": "The payload with persona / persona_source, possibly a new classification and routing, updated score, opening_question, recommended_action, why_this_matters, listen_for, public_context, ai {status, model, prompt_version}, ai_warnings, ai_changed_classification.",
+          "decides": "Persona for an ambiguous title (and the tier that follows), plus the conversation content.",
+          "code": "workflowId: McoAVyLN6lxqmLeO  waitForSubWorkflow: true",
+          "branches": [],
+          "on_failure": "onError continueRegularOutput plus alwaysOutputData, the only sub-workflow call in 01 that continues on error. If 05 hard-fails, the output is an error item with no lead fields: the gate then runs on an almost empty object, Persist Final Classification writes with an empty key, and Restore Enriched Payload falls back to the Enrich Company output, so the lead continues on its post-04 decision without the final gate.",
+          "say_it": "The AI can only resolve an ambiguous title above 0.7 confidence, and a failure there falls back to the deterministic result instead of stopping the lead.",
+          "next": [
+            "Load Gate Policy"
+          ]
+        },
+        {
+          "step": 29,
+          "name": "Load Gate Policy",
+          "type": "Data Table get",
+          "what": "Reads the active oak_policies row again (status = active, limit 1).",
+          "why": "Prepare CRM Handoff removed the policy from the payload, so without this reload the gate would route with its hard-coded fallback channels.",
+          "in": "Runs once for the item from Reason with AI.",
+          "out": "The active policy row.",
+          "decides": null,
+          "code": "filters: status = active  limit: 1",
+          "branches": [],
+          "on_failure": "continueRegularOutput and alwaysOutputData (unlike Load Active Policy). If it returns nothing, the gate falls back to x.policy, which was removed, so it routes with hard-coded channel names (booth-hot, booth-matched, booth-review, competitive-intel, booth-out-of-scope).",
+          "say_it": "The final gate reloads the policy so its routing comes from data, not hard-coded fallbacks.",
+          "next": [
+            "Enforce Final Deterministic Gates"
+          ]
+        },
+        {
+          "step": 30,
+          "name": "Enforce Final Deterministic Gates",
+          "type": "Code",
+          "what": "Runs after AI so the rules always outrank the model. Cascade: confirmed competitor -> competitor_intel; else size band disqualified_under_500 -> out_of_scope; else review_500_999 (and not out_of_scope) -> needs_review with the reason 'Final deterministic gate kept the lead in review because 500-999 employees is below the qualified 1,000+ threshold'; else out_of_scope stays out_of_scope; else the tier stands and is routed from the policy (mention only for tiers in mention_tiers). For a target persona with unknown size it adds a confirm-at-booth reason and appends '(headcount to confirm)' to the rule summary. It drops any reason starting 'null employees'. Then the rep override from 06 is applied last: same as the gate's answer, note that the rep agreed; different and not contradicted, the rep wins (routed to the override's channel, mention off, trace rep_override_honoured); different and a source at confidence >= 0.9 puts the company at 1,000+, the lead goes to needs_review with 'Conflict: rep marked this ..., but N employees from <source> qualifies the company' (trace rep_override_contradicted). Finally it stamps decision_basis with final_deterministic_gate true, gate_policy_version and the override flags.",
+          "why": "Whatever the model said, confirmed competitor, size band and a rep's decision are re-applied from a freshly loaded policy, so a tier is always explainable by a rule.",
+          "in": "$('Reason with AI').first().json, $('Load Gate Policy').first().json.document_json.",
+          "out": "{...lead, classification, routing, decision_reasons, decision_trace, rule_summary, decision_basis:{..., final_deterministic_gate:true, gate_policy_version, unknown_size_requires_review:false, unknown_size_confirm_at_booth, rep_override_applied, rep_override_value, rep_override_contradicted}}",
+          "decides": "The settled classification and routing for tier_1 / matched / needs_review leads, including whether a rep override stands.",
+          "code": "if(x.competitor_status==='confirmed'&&x.competitor){ classification='competitor_intel'; ... }\nelse if(x.company_size_band==='disqualified_under_500'){ classification='out_of_scope'; ... }\nelse if(x.company_size_band==='review_500_999'&&classification!=='out_of_scope'){ classification='needs_review'; ... }\nelse if(classification==='out_of_scope'){ route('out_of_scope','booth-out-of-scope'); ... }\nelse { route(classification, ...); }\nconst contradicted=Number(er.confidence||0)>=0.9&&String(x.company_size_band||'')==='qualified_1000_plus';",
+          "branches": [],
+          "on_failure": "No error settings. KNOWN BUGS, verified in the code: (1) it only checks competitor_status 'confirmed', so a name-token 'possible competitor' with a small stated headcount (seed test 17, 'Northgate Identity Governance', 60 people) is demoted to out_of_scope by the size rule even though 01 and 04 deliberately kept it in review; (2) the 'confirmed 1,000+ contradicts the rep' rule does not look at which override it is, so it also fires on Promote to Tier 1 (tier_1) and Matched overrides, where 1,000+ actually supports the rep, and sends them to needs_review with a nonsensical 'Conflict' rule; (3) it never re-checks a 'possible' competitor after AI (nor a saas-only / single-cloud disqualifier that 04 found on the public site), so if 04 flagged either on an ambiguous-title lead and 05 then confidently resolved the persona, 05 sets matched or tier_1 and the gate lets it stand. Also: an honoured override always sets mention false, so a Promote to Tier 1 on a re-scan posts to booth-hot without @here.",
+          "say_it": "The final gate runs after the AI and re-applies competitor, size band and the rep's own decision, so the model can describe a lead but never overrule a rule.",
+          "next": [
+            "Persist Final Classification"
+          ]
+        },
+        {
+          "step": 31,
+          "name": "Persist Final Classification",
+          "type": "Data Table upsert",
+          "what": "Upserts oak_encounters on event_person_key with the settled last_classification, last_score, last_score_breakdown, last_decision_reasons, last_rule_summary, identity fields, hubspot_contact_id, source_json (which source supplied name, title, company, domain, notes, CRM, public company and person data), person_evidence_json, company_evidence_json, crm_context_json and last_payload_json (the whole payload without policy).",
+          "why": "AI or the gate may have moved the tier after the 202; this makes the encounter's durable classification match what HubSpot and Slack are about to receive.",
+          "in": "$json from Enforce Final Deterministic Gates.",
+          "out": "The upserted encounter row.",
+          "decides": null,
+          "code": "filters: event_person_key = {{ $json.event_person_key }}\nlast_classification: {{ $json.classification }}\nlast_payload_json: {{ JSON.stringify(Object.fromEntries(Object.entries($json).filter(([k]) => k !== 'policy'))) }}",
+          "branches": [],
+          "on_failure": "No error settings: a failure stops the run (99 reports it) with the ledger still 'accepted', so a resend retries. Only the AI path reaches this node; competitor and out_of_scope leads are persisted later by Persist Complete Encounter.",
+          "say_it": "The settled tier is written back to the encounter as soon as the gate decides it.",
+          "next": [
+            "Restore Enriched Payload"
+          ]
+        },
+        {
+          "step": 32,
+          "name": "Restore Enriched Payload",
+          "type": "Code",
+          "what": "Returns the gate's output if it has a scan_id, otherwise the Enrich Company output.",
+          "why": "The item coming in is a Data Table write result, not the lead. And if 05 hard-failed, the gate ran on an empty error item, so falling back to the post-04 payload keeps the lead intact.",
+          "in": "$('Enforce Final Deterministic Gates').first().json, $('Enrich Company').first().json",
+          "out": "The lead payload.",
+          "decides": "Which payload continues: the gated one, or the post-04 one if the gate had nothing real to work on.",
+          "code": "return[{json:(ai&&ai.scan_id)?ai:enriched}];",
+          "branches": [],
+          "on_failure": "No settings; simple selection.",
+          "say_it": "Restore Enriched Payload puts the lead back on the wire after the Data Table write, with a safe fallback if the AI step failed.",
+          "next": [
+            "Can Sync Contact?"
+          ]
+        },
+        {
+          "step": 33,
+          "name": "Can Sync Contact?",
+          "type": "IF",
+          "what": "IF email_valid is true (boolean, strict). Three arrows land here: Needs Intelligence? false, Needs AI Synthesis? false (competitor_intel and out_of_scope leads, carrying the 04 output) and Restore Enriched Payload.",
+          "why": "Email is the only safe dedupe key for a HubSpot contact; without one, 02 would have to guess and could duplicate.",
+          "in": "email_valid",
+          "out": "The item on the true or false output.",
+          "decides": "Whether HubSpot is written.",
+          "code": "leftValue: {{ $json.email_valid }}  operator: boolean true",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Sync to HubSpot",
+              "meaning": "Valid email: write HubSpot through 02."
+            },
+            {
+              "label": "false",
+              "goes_to": "Settle Final Payload",
+              "meaning": "No valid email: skip the CRM write; intelligence, storage and Slack still happen."
+            }
+          ],
+          "on_failure": "An IF on a boolean does not realistically fail.",
+          "say_it": "No email means no CRM write, but the lead is still classified, stored and alerted.",
+          "next": [
+            "Sync to HubSpot",
+            "Settle Final Payload"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Write the CRM",
+      "purpose": "Runs only when the scan carried an email, because email is the only safe dedupe key. Workflow 02 is the single automated writer to HubSpot.",
+      "nodes": [
+        {
+          "step": 34,
+          "name": "Sync to HubSpot",
+          "type": "Execute Sub-workflow (02)",
+          "what": "Calls 02 'HubSpot Sync' (WQ2s5hFfpaE8P45o) with the settled payload and waits. 02 finds or creates the company by domain, upserts the contact on email while keeping human-typed values, writes the Oak properties in one PATCH, logs a meeting and an associated note, and returns the payload with a post-write crm_context (real contact id and URL, company URL, owner name, open deals, warnings).",
+          "why": "One automated writer means one place to reason about what the CRM can contain, and it runs after the tier is settled so HubSpot never stores a provisional decision.",
+          "in": "The settled payload (Can Sync Contact? true).",
+          "out": "The payload with crm_context replaced by 02's post-write version.",
+          "decides": null,
+          "code": "workflowId: WQ2s5hFfpaE8P45o  waitForSubWorkflow: true",
+          "branches": [],
+          "on_failure": "No continue-on-error in 01. 02 soft-fails each HubSpot call internally and reports warnings; a hard error stops 01, 99 reports it, and the ledger stays 'accepted' so a resend retries.",
+          "say_it": "HubSpot is written once, by one sub-workflow, after the decision is final.",
+          "next": [
+            "Settle Final Payload"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Settle and persist the record",
+      "purpose": "Both sides of the email gate meet here, so the delivery ledger reaches complete even for a scan that never produced a CRM write.",
+      "nodes": [
+        {
+          "step": 35,
+          "name": "Settle Final Payload",
+          "type": "Code",
+          "what": "The meeting point for both branches of Can Sync Contact?. It picks the richest package that has a scan_id: the Sync to HubSpot output if 02 ran, else the incoming item, else Restore Enriched Payload, else the incoming item as-is.",
+          "why": "Before this node, a scan without an email skipped the two persist-complete writes along with 02, so its ledger row stayed 'accepted' forever (seed test 19 now asserts it reaches 'complete').",
+          "in": "$('Sync to HubSpot') (if it ran), $input, $('Restore Enriched Payload').",
+          "out": "The final lead package.",
+          "decides": "Which payload is the final record.",
+          "code": "try { const s = $('Sync to HubSpot').first().json; if (s && s.scan_id) pkg = s; } catch (e) { pkg = null; }\nif (!pkg) { const i = $input.first().json; if (i && i.scan_id) pkg = i; }\nif (!pkg) { try { const r = $('Restore Enriched Payload').first().json; if (r && r.scan_id) pkg = r; } catch (e) { pkg = null; } }",
+          "branches": [],
+          "on_failure": "No settings; every lookup is in try/catch.",
+          "say_it": "Settle Final Payload makes sure a scan without an email still reaches 'complete' in the ledger.",
+          "next": [
+            "Persist Complete Encounter"
+          ]
+        },
+        {
+          "step": 36,
+          "name": "Persist Complete Encounter",
+          "type": "Data Table update",
+          "what": "Updates oak_encounters where event_person_key matches, writing the final identity, last_classification, last_score, breakdown, reasons, rule summary, hubspot_contact_id, source_json, evidence JSON, crm_context_json and last_payload_json (without policy).",
+          "why": "This is the durable final snapshot of the person used for audit, for the next scan's comparison, and for 06's button actions. It is the only final write for competitor and out_of_scope leads, which skip Persist Final Classification.",
+          "in": "$json from Settle Final Payload.",
+          "out": "The updated row (or an empty item).",
+          "decides": null,
+          "code": "filters: event_person_key = {{ $json.event_person_key }}\nlast_classification: {{ $json.classification }}",
+          "branches": [],
+          "on_failure": "continueRegularOutput and alwaysOutputData: a failed write does not stop the ledger update or the Slack post.",
+          "say_it": "The encounter row ends each scan holding the final decision and the whole payload.",
+          "next": [
+            "Persist Complete Delivery"
+          ]
+        },
+        {
+          "step": 37,
+          "name": "Persist Complete Delivery",
+          "type": "Data Table update",
+          "what": "Updates oak_deliveries where scan_id matches (read from Settle Final Payload, because the incoming item is a Data Table result), setting the final classification, score, raw_json (the full settled payload without policy) and status 'complete'.",
+          "why": "From this moment a replay of the scan_id is a duplicate, and raw_json is the complete decision record that 06 reloads when a rep reclassifies.",
+          "in": "$('Settle Final Payload').first().json",
+          "out": "The updated row (or an empty item).",
+          "decides": "That the scan is complete (replays are now ignored).",
+          "code": "filters: scan_id = {{ $('Settle Final Payload').first().json.scan_id }}\nstatus: complete",
+          "branches": [],
+          "on_failure": "continueRegularOutput and alwaysOutputData. Note the ordering: 'complete' is set BEFORE Notify Slack runs, so if the Slack sub-workflow later fails hard, re-sending the scan returns duplicate_ignored and will not repost the card.",
+          "say_it": "Marking the ledger complete is the moment the scan becomes replay-proof.",
+          "next": [
+            "Restore Complete Package"
+          ]
+        },
+        {
+          "step": 38,
+          "name": "Restore Complete Package",
+          "type": "Code",
+          "what": "Re-emits the Settle Final Payload item.",
+          "why": "The item coming in is the Data Table write result; 03 needs the lead object.",
+          "in": "$('Settle Final Payload').first().json",
+          "out": "The final lead package.",
+          "decides": null,
+          "code": "return[{json:$('Settle Final Payload').first().json}];",
+          "branches": [],
+          "on_failure": "No settings; trivial.",
+          "say_it": "A one-line node that puts the lead back on the wire for Slack.",
+          "next": [
+            "Notify Slack"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Alert the booth",
+      "purpose": "Post the card, or reply in the returning visitor's thread, then record what Slack actually did so a failed post cannot pass silently.",
+      "nodes": [
+        {
+          "step": 39,
+          "name": "Notify Slack",
+          "type": "Execute Sub-workflow (03)",
+          "what": "Calls 03 'Slack Alerts' (gyCxnkoGkh3OJpz5) with the final package and waits. 03 posts the card to the routed channel or replies in the returning visitor's thread; tier_1 gets @here and the owner DM, out_of_scope goes quietly to booth-out-of-scope with no buttons. It returns a delivery receipt.",
+          "why": "The alert is the product for the rep; it goes last so it carries the settled tier and the real HubSpot link and owner.",
+          "in": "The final package from Restore Complete Package.",
+          "out": "03's delivery receipt (targets tried, Slack answers, errors) including scan_id.",
+          "decides": null,
+          "code": "workflowId: gyCxnkoGkh3OJpz5  waitForSubWorkflow: true",
+          "branches": [],
+          "on_failure": "No continue-on-error in 01. 03 soft-fails Slack calls internally into the receipt; a hard error would reach 99, and since the ledger is already 'complete' a resend would not repost.",
+          "say_it": "Slack is the last step, so the card always shows the settled tier and the real CRM link.",
+          "next": [
+            "Persist Slack Delivery"
+          ]
+        },
+        {
+          "step": 40,
+          "name": "Persist Slack Delivery",
+          "type": "Data Table update",
+          "what": "Updates oak_deliveries where scan_id matches, writing slack_json = the stringified receipt from 03.",
+          "why": "Slack failures are deliberately non-fatal, which is only acceptable because this receipt is stored and the 07 harness asserts on it.",
+          "in": "$json from Notify Slack (its scan_id and the whole receipt).",
+          "out": "The updated row. Last node; nothing follows.",
+          "decides": null,
+          "code": "filters: scan_id = {{ $json.scan_id }}\nslack_json: {{ JSON.stringify($json) }}",
+          "branches": [],
+          "on_failure": "continueRegularOutput and alwaysOutputData; if 03's receipt has no scan_id the update matches nothing.",
+          "say_it": "What Slack actually did is stored next to the decision, so a failed post is visible and testable.",
+          "next": []
+        }
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Answer 202 before enrichment",
+      "why": "A rep is standing in front of the visitor and a scanner cannot wait 20 seconds for web fetches and an LLM. The encounter and ledger rows are written first, then the reply goes out marked provisional, and oak_deliveries holds the authoritative decision once the run completes."
+    },
+    {
+      "title": "Rules decide, the model describes",
+      "why": "Every tier and channel is deterministic code against the policy. 05 can only move a tier when persona_status is 'ambiguous' and its confidence is at least 0.7, and cannot invent urgency; the final gate then re-applies confirmed competitor, size band and rep override from a freshly loaded policy."
+    },
+    {
+      "title": "First-match-wins cascade with competitor on top",
+      "why": "Competitor beats everything so a competitor employee with a CISO title can never reach #booth-hot, and the possible-competitor name token sits above the size rule because calling a small competitor 'too small' is the expensive mistake."
+    },
+    {
+      "title": "Replay blocks only completed scans",
+      "why": "A scan_id whose ledger row is 'complete' gets 200 duplicate_ignored. One still at 'accepted' (it died mid-pipeline) runs again on purpose, so a resend is the recovery path. A new scan_id for the same event_person_key is a returning visitor, always alerted, in the original card's thread."
+    },
+    {
+      "title": "Unknown headcount never demotes",
+      "why": "The ICP disqualifies companies known to be under 500. An unknown size keeps the tier, awards no size points, and becomes a '(headcount to confirm)' question for the rep."
+    },
+    {
+      "title": "Gate the spend, not the attention",
+      "why": "intelligence_required is true for all five classifications, so every scan gets the free CRM read and homepage read and a small competitor is still caught. Only Gemini (skipped for competitor_intel and out_of_scope) and paid search (skipped for out_of_scope, inside 04) are gated."
+    }
+  ],
+  "questions": [
+    {
+      "q": "Walk me through what happens when a scan comes in.",
+      "a": "Normalize Scan cleans the body, checks the secret, infers the company domain from a work email, builds event_person_key and hashes the notes. Authorized?, Valid Scan? and Duplicate Delivery? can each answer early (401, 400, 200). Otherwise it loads the active policy and competitors, Evaluate ICP Policy classifies with the first-match cascade, Build Visitor Context detects a returning visitor, Build Alert Package applies a fresh cache row, the encounter and ledger rows are upserted, and Respond Accepted returns 202. Then 02A, 04, 05, the final gate, 02 (if there is an email) and 03 run, and the ledger is marked complete."
+    },
+    {
+      "q": "What is the classification order and why?",
+      "a": "Confirmed competitor, then a possible-competitor token in the company name, then known under 500 or saas-only / single-cloud, then target persona at 500-999 to review, then persona plus a quoted Tier 1 trigger to tier_1, persona alone to matched, identity or compliance context without a persona to needs_review, and everything else out_of_scope. Competitor first so a competitor never lands in #booth-hot; the name token above size because mistaking a competitor for a small bad fit is costly."
+    },
+    {
+      "q": "How is the score computed and does it route anything?",
+      "a": "Persona 30 if the title matches a target persona, company size 15 only when the notes put the company at 1,000+, urgency 40 if any Tier 1 trigger was quoted, industry 0 at this stage; 04 and 05 add size and industry later, capped at scoring.max 100. The score explains the decision but never routes it: Rachel is tier_1 at 70 because persona plus a quoted SailPoint renewal is the rule, not because 70 crossed a threshold."
+    },
+    {
+      "q": "How do the four task leads come out?",
+      "a": "Rachel Green, CISO, 'SailPoint, renewal coming up in 5 months': ciso persona plus incumbent_renewal (5 <= 6) gives tier_1, #booth-hot with @here, 70 with headcount to confirm. Hiroshi Tanaka, 'Lead Identity Infrastructure Architect': the 'identity infrastructure' pattern gives iam, no trigger, so matched at 30; the NHI and API-key pain is evidence, not points. David Miller: '80 employees' and 'SaaS-only' give out_of_scope to #booth-out-of-scope. Sarah Connor: veza.com is a domain in oak_competitors, so competitor_intel to #competitive-intel."
+    },
+    {
+      "q": "What stops the LLM from promoting a bad lead?",
+      "a": "05 only runs for tier_1, matched and needs_review, only changes a tier when persona_status is 'ambiguous', needs 0.7 confidence, and can only reach tier_1 if 01 already quoted an urgency trigger. It is skipped entirely if injection is suspected. Then Enforce Final Deterministic Gates re-applies confirmed competitor, size band and rep override from a reloaded policy. Honest caveat: that gate does not re-check a 'possible' competitor or a public-site disqualifier found by 04, so an ambiguous-title lead 04 moved to review or out of scope can be moved back by a confident AI persona."
+    },
+    {
+      "q": "Duplicate vs returning visitor?",
+      "a": "Duplicate: same scan_id whose ledger row is 'complete'; 200 duplicate_ignored, nothing else runs. Returning visitor: same event_person_key (event_id|email) with a new scan_id; scan_count goes up, notification_mode is repeat_thread or repeat_escalation if the tier changed, and 03 replies in the first card's thread showing what they said last time. Caveat: re-sending a scan_id still at 'accepted' also finds its own encounter row, so the retry is counted as scan #2."
+    },
+    {
+      "q": "What if a sub-workflow fails?",
+      "a": "The scanner already has its 202. Inside each sub-workflow external calls retry and continue, so most failures become warnings. In 01 only Reason with AI continues on error; a hard failure in 02A, 04, 02, Persist Final Classification or 03 stops the run, 99 reports it to #oak-revops, and because the ledger is still 'accepted' (before Persist Complete Delivery), re-sending the scan reruns it. The exception is Notify Slack: it runs after the ledger is marked complete, so a hard Slack failure cannot be retried by re-sending."
+    },
+    {
+      "q": "Why is email the gate for the HubSpot write?",
+      "a": "Email is the only safe dedupe key for a contact. Without one, Can Sync Contact? skips 02, but the scan is still classified, enriched, stored and alerted, and Settle Final Payload makes sure the ledger still reaches 'complete'."
+    }
+  ]
+}

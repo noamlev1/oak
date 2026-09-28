@@ -1,0 +1,120 @@
+{
+  "id": "99",
+  "name": "Oak GTM - 99 Failure Handler",
+  "short": "Failure Handler",
+  "lane": "ops",
+  "one_breath": "99 is the shared error workflow: nothing calls it directly, but the eight other active Oak workflows name it in settings.errorWorkflow, so n8n runs it whenever one of them fails in production. It turns a raw error into a plain-language Slack post in #oak-revops: which stage broke, what that costs the event, the likely cause, and a link to the failed execution.",
+  "trigger": "Error Trigger 'When an Oak Workflow Fails' (production executions of 01, 02, 02A, 03, 04, 05, 06, 07); active version 61065589",
+  "input": "n8n's error payload: workflow name and id, execution id and url, the error message and the failed node name.",
+  "output": "One Slack message in #oak-revops, plus a structured item (stage, failed_node, error_message, execution_url, likely_cause, reported_at) visible in the execution.",
+  "called_by": [
+    "n8n error handling for 01, 02, 02A, 03, 04, 05, 06, 07 (settings.errorWorkflow)"
+  ],
+  "calls": [],
+  "node_count": 3,
+  "groups": [
+    {
+      "name": "Ungrouped",
+      "purpose": "Receive the failure, explain it for a person on the show floor, and post it to #oak-revops.",
+      "nodes": [
+        {
+          "step": 1,
+          "name": "When an Oak Workflow Fails",
+          "type": "Error Trigger",
+          "what": "Fires with n8n's error payload whenever a workflow that names 99 in settings.errorWorkflow fails in a production execution. Eight workflows do: 01, 02, 02A, 03, 04, 05, 06 and 07. Manual test runs never reach it, and n8n does not run an error workflow for its own failure (no loop).",
+          "why": "Nothing calls 99 directly; this is how a failure anywhere becomes visible to a human instead of sitting in the execution list.",
+          "in": "n8n's error payload: workflow {id, name}, execution {id, url, error {message, node {name}}, lastNodeExecuted}.",
+          "out": "The same payload, one item.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "Nothing to fail. 99 has no errorWorkflow of its own.",
+          "say_it": "Every other Oak workflow names 99 as its error workflow, so any production failure lands here.",
+          "next": [
+            "Explain the Failure"
+          ]
+        },
+        {
+          "step": 2,
+          "name": "Explain the Failure",
+          "type": "Code",
+          "what": "Four small decisions. (1) Stage: parses the stage number out of the workflow name after 'GTM' ('Oak GTM - 02A CRM Context [sub-flow]' gives 02A), so a rename cannot break the mapping. (2) Impact: a plain-language line per stage written for a GTM person on a show floor, e.g. 01 'A booth scan may not have been recorded at all. Re-send the same webhook payload: the ledger row is only marked complete at the end, so replaying an incomplete scan is safe.'; 03 'HubSpot is up to date but nobody was notified. Tell the booth manually, and treat this as urgent while the event is live.'; 04 only the company intel is missing; 05 rules still decided the tier and the question fell back to a generic one; 06 a rep's button did not take effect, ask them to try again; 07 only the test run broke. An unknown stage still alerts with 'Check the execution to see which side effects completed before the failure.' (3) Likely cause by regex on the message: 401/403/unauthoriz/authenticat/credential means credentials; 429/rate limit means rate limiting; timeout/ETIMEDOUT/ECONNRESET/ENOTFOUND means network; property/does not exist/invalid means a schema mismatch ('rerun workflow 00'). (4) The message: ':rotating_light: *Oak GTM failure - <stage>*', Workflow, Failed at, Error (truncated to 600 chars), What this means, Likely cause, and '<url|Open the failed execution>' (or the execution id), all capped at 3,500 chars.",
+          "why": "The reader at an event needs what broke, what it costs and what to do now, not a stack trace. An earlier version keyed on the full literal workflow name, so every rename silently degraded alerts to the generic message.",
+          "in": "The error payload from When an Oak Workflow Fails.",
+          "out": "{text, workflow_name, workflow_id, failed_node, error_message, execution_id, execution_url, stage, likely_cause, reported_at}.",
+          "decides": "Which stage failed, its business impact, and the likely cause.",
+          "code": "const stageKey=(function(){const after=String(name).replace(/^[\\s\\S]*?GTM/i,'');const m=/(\\d{1,2}A?)/i.exec(after);return m?m[1].toUpperCase():'';})();\nconst impact=impacts[stageKey]||'Check the execution to see which side effects completed before the failure.';\nconst hint=/401|403|unauthoriz|authenticat|credential/i.test(msg)?'This reads like a credential problem. ...':/429|rate limit/i.test(msg)?'This reads like rate limiting. ...':/timeout|ETIMEDOUT|ECONNRESET|ENOTFOUND/i.test(msg)?'...network or timeout problem...':/property|does not exist|invalid/i.test(msg)?'This reads like a schema mismatch. ... rerun workflow 00.':'';",
+          "branches": [],
+          "on_failure": "No onError setting; every field is defaulted, so a thin payload still yields a message.",
+          "say_it": "Explain the Failure maps the workflow to a stage and translates the error into what it costs the event and the likely cause.",
+          "next": [
+            "Report to RevOps"
+          ]
+        },
+        {
+          "step": 3,
+          "name": "Report to RevOps",
+          "type": "Slack (post message, channel by name)",
+          "what": "Posts the text to the channel named oak-revops with the OAuth2 Slack credential 'Slack account' (slackOAuth2Api), mrkdwn on, no unfurl, no n8n footer link.",
+          "why": "The ops channel is where someone is watching during an event. Precise if asked: the node note says it posts to the policy's notifications.ops_alerts channel; the policy does declare oak-revops there, but 99 does not read the policy, the name is typed into the node. It uses the OAuth2 credential rather than the Slack app credential 03 and 06 use, which is fine because 99 posts no buttons.",
+          "in": "text from Explain the Failure.",
+          "out": "Slack's response.",
+          "decides": null,
+          "code": "channelId: { mode: 'name', value: 'oak-revops' }, text: '={{ $json.text }}'",
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 3, 2000 ms apart, alwaysOutputData, and deliberately NO onError soft-fail: if Slack still refuses, this execution fails, so a lost alert stays findable in the execution list instead of being reported as a success.",
+          "say_it": "The failure report goes to #oak-revops with a link to the failed execution, and the alert itself is not allowed to fail silently.",
+          "next": []
+        }
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Written for the reader on the floor",
+      "why": "'HubSpot is stale, look the contact up by email' beats a stack trace. The alert says what it costs and what to do now."
+    },
+    {
+      "title": "Impact differs by stage, so the message does",
+      "why": "Intake failing can lose a scan; enrichment failing only thins the card; a 03 failure means nobody was told about a lead. Each stage has its own line."
+    },
+    {
+      "title": "Key on the stage number, not the name",
+      "why": "The stage is parsed from the name after 'GTM', so renames cannot break the mapping. An unknown stage still alerts with a generic line and the execution link."
+    },
+    {
+      "title": "Retries and soft-fails live on the watched workflows",
+      "why": "Most external calls in 01 to 06 retry and continue on error with a recorded warning, so the lead still flows. 99 is for what escapes them."
+    },
+    {
+      "title": "The alert itself must not fail silently",
+      "why": "Report to RevOps retries three times and has no continue-on-error, so a Slack failure fails 99's execution and stays visible."
+    }
+  ],
+  "questions": [
+    {
+      "q": "How does a workflow failure reach Slack?",
+      "a": "Each Oak workflow sets settings.errorWorkflow to 99 (N4JW7CO6qjdLi6mq). n8n runs 99's Error Trigger with the workflow name, failed node, error and execution URL; Explain the Failure maps it to a stage, an impact line and a likely cause; Report to RevOps posts it to #oak-revops with a link to the execution."
+    },
+    {
+      "q": "Why not just forward the error message?",
+      "a": "The person reading at an event needs what it costs and what to do. The stage line answers that, for example that a 03 failure means HubSpot is right but nobody was notified, so someone should tell the booth manually and treat it as urgent."
+    },
+    {
+      "q": "What if the failure handler itself fails?",
+      "a": "The Slack node retries three times and then fails the execution, so it shows as an error in the execution list. n8n does not run an error workflow for its own error workflow, to avoid a loop, so the '99' impact line is defensive."
+    },
+    {
+      "q": "Why is there a 07 entry if 07 is a manual test harness?",
+      "a": "Error workflows fire only for production executions and 07 is run by hand, so today it never fires. It stays mapped so a rename, or 07 gaining a real trigger, cannot quietly produce a generic alert."
+    },
+    {
+      "q": "Where do soft-fails end and alerts begin?",
+      "a": "HubSpot, Brave, Gemini and most Slack calls retry and continue on error, recording warnings on the payload so the lead still flows. 99 only sees unhandled exceptions and nodes deliberately left hard-failing, such as 06's thread replies and claim card update, and its own Slack post."
+    },
+    {
+      "q": "Does 99 read the channel from the policy?",
+      "a": "No. The policy declares notifications.ops_alerts as oak-revops and the node posts to oak-revops, so they match, but the name is typed into the node. Changing ops_alerts in the table would not move failure alerts; making 99 read it would be a small change."
+    }
+  ]
+}
