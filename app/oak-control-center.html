@@ -664,6 +664,7 @@ label.check input { width: 16px; height: 16px; flex: none; accent-color: var(--g
 .col:focus-visible { box-shadow: 0 0 0 2px var(--accent-text); }
 .col-val { font-size: .74rem; font-weight: 650; font-variant-numeric: tabular-nums; align-self: end; }
 .col-bar { width: min(24px, 70%); min-height: 0; border-radius: 4px 4px 0 0; background: var(--green-2); box-shadow: 0 1px 0 0 var(--line-strong); }
+.cols ~ .small-note { margin-top: 1rem; }
 .col:hover .col-bar, .col:focus-visible .col-bar { background: var(--green); }
 .col-tick { align-self: start; padding-top: 4px; width: 100%; border-top: 1px solid var(--line-strong); color: var(--muted); font-size: .68rem; text-align: center; white-space: nowrap; overflow: visible; font-variant-numeric: tabular-nums; }
 .dot-strip .grid { stroke: var(--line-soft); stroke-width: 1; }
@@ -690,7 +691,10 @@ label.check input { width: 16px; height: 16px; flex: none; accent-color: var(--g
 @media (max-width: 780px) {
   .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash-grid { grid-template-columns: 1fr; }
-  .hbar { grid-template-columns: 110px minmax(0, 1fr) 56px; }
+  .hbar { grid-template-columns: minmax(0, 1fr) 64px; row-gap: .3rem; }
+  .hbar-track { grid-column: 1 / -1; grid-row: 2; }
+  .panel-header { flex-wrap: wrap; gap: .25rem .8rem; }
+  .panel-header > .muted { font-size: .72rem; }
   .lead-cards { grid-template-columns: 1fr; padding: .7rem; }
   .stat-value { font-size: 1.5rem; }
 }
@@ -1272,7 +1276,7 @@ window.OAK_JOURNEY = {
         'The card leads with the decision, then the evidence, then what to do next at the booth.',
         'A returning visitor with the same tier gets a reply in the first card\'s thread, broadcast back to the channel. If the tier changed, 03 posts a new card in the new tier\'s channel and leaves a one-line pointer in the old thread.',
         'Tier 1 also DMs the HubSpot owner when that owner is mapped to a Slack user.',
-        'Out-of-scope cards are deliberately plain: they exist for the record, not for action.',
+        'Out-of-scope cards have no buttons and no coaching; they are a record of the visit.',
       ],
       hypothesis:
         'Reps stop reacting to @here if it fires often, so only Tier 1 uses it.',
@@ -1301,7 +1305,7 @@ window.OAK_JOURNEY = {
       rejected:
         'Requiring a HubSpot login to fix a misrouted lead. During a live event that fix is unlikely to happen.',
       evidence: 'Slack user id, action, before and after state, and the result of each side effect.',
-      failure: 'Side effects continue on error so the thread always gets one honest reply. Without the signing secret every button fails closed.',
+      failure: 'Side effects continue on error, so the thread always gets one reply that states the result. Without the signing secret every button fails closed.',
     },
     {
       id: 'failure',
@@ -1562,7 +1566,7 @@ window.OAK_JOURNEY = {
       persona: 'David Miller - Head of IT, Boutique Security Ltd',
       tension: 'SaaS-only company with 80 employees. Recorded in #booth-out-of-scope with no buttons.',
       outcome: 'out_of_scope',
-      outcomeLabel: 'Out of scope, no noise',
+      outcomeLabel: 'Out of scope, recorded quietly',
       notes: 'SaaS-only shop, 80 employees. Looking for a basic access tool.',
       steps: [
         ['capture', 'Scan accepted', 'evt_9903; nothing special about the payload.'],
