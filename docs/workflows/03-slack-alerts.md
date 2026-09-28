@@ -4,15 +4,15 @@ Workflow id `gyCxnkoGkh3OJpz5` · 14 nodes · error workflow is 99 · read from 
 
 ## In one breath
 
-03 turns a finished decision into a Slack card a rep can act on in ten seconds. 01 calls it once the tier, CRM context and AI synthesis are settled, and 06 calls it again when a rep reclassifies a lead. It picks the channel from the active policy, builds the card, threads a returning visitor under their first alert, attaches the buttons that tier is entitled to, and hands back a delivery receipt saying exactly what Slack accepted or rejected.
+03 turns a finished decision into a Slack card a rep can act on in ten seconds. 01 calls it once the tier, CRM context and AI synthesis are settled, and 06 calls it again when a rep reclassifies a lead. It picks the channel from the active policy, builds the card, threads a returning visitor under their last alert (or reposts them in the new channel when their classification moved), attaches the buttons that tier is entitled to, and hands back a delivery receipt saying exactly what Slack accepted or rejected.
 
 ## Trigger, input, output
 
 | | |
 |---|---|
 | Trigger | `When Called by Sync` (Execute Workflow Trigger, passthrough). Callers: 01 `Notify Slack`, and 06 `Repost Card via Slack Alerts`. |
-| Input | The full decision payload: `classification`, `score`, `score_breakdown`, `routing`, `crm_context`, `company_enrichment`, `employee_resolution`, `person_evidence`, `notes_from_booth`, `opening_question`, `listen_for`, repeat-scan fields (`notification_mode`, `previous_slack_ts`, `previous_slack_channel`, `material_change`), and from 06 only `override_banner`. |
-| Output | One receipt from `Build Delivery Receipt`: `delivered_count`, `failed_count`, `channel` actually used, `threaded`, `broadcast`, `thread_anchor_recorded`, `owner_dm_requested`, `owner_mapped`, a `deliveries` array (kind, ok, channel, ts, error) and `warnings`. 01 stores it in `oak_deliveries.slack_json`. |
+| Input | The full decision payload: `classification`, `score`, `score_breakdown`, `routing`, `crm_context`, `company_enrichment`, `employee_resolution`, `person_evidence`, `notes_from_booth`, `opening_question`, `listen_for`, repeat-scan fields (`notification_mode`, `previous_slack_ts`, `previous_slack_channel`, `prior_classification`, `rep_override`, `material_change`), and from 06 only `override_banner`. |
+| Output | One receipt from `Build Delivery Receipt`: `delivered_count`, `failed_count`, `channel` actually used, `threaded`, `broadcast`, `moved_from_channel` (only when a repeat changed channel), `thread_anchor_recorded`, `owner_dm_requested`, `owner_mapped`, a `deliveries` array (kind, ok, channel, ts, error) and `warnings`. 01 stores it in `oak_deliveries.slack_json`. |
 | Side effects | Slack posts (channel, thread reply, owner DM) and one upsert into `oak_encounters` (the thread anchor). |
 
 ## Step by step
@@ -31,11 +31,15 @@ Workflow id `gyCxnkoGkh3OJpz5` · 14 nodes · error workflow is 99 · read from 
   const channel=cls==='out_of_scope'?'':configuredChannel;
   ```
 - **Owner DM.** Requested when the policy row (or routing) says `owner_dm: true` and the lead is not out of scope. The HubSpot owner id is mapped to a Slack user through `notifications.owner_overrides` or `slack.owner_directory`. No mapping means no DM and a warning such as "Owner DM skipped: HubSpot owner 123 is not mapped to Slack." In the active policy (`oak-event-v5`) only `tier_1` asks for a DM, and both `owner_overrides` and `owner_directory` are currently empty `{}`, so today every Tier 1 owner DM is skipped with that warning until someone fills the map. (The 06 "Send to owner" button does not depend on this map: it bridges HubSpot to Slack by owner email.)
-- **Threading.** A returning visitor is threaded only when 01 flagged a repeat and there is a stored anchor from the first alert:
+- **Threading.** A returning visitor is threaded only when 01 flagged a repeat, there is a stored anchor from the person's last card, and the lead still belongs in that card's channel. The anchor is a Slack channel id while the policy speaks in channel names, so the old channel is looked up by the classification the card was posted for: the rep override when it stands on this scan (06 reposted the card there), otherwise the previous scan's `prior_classification`.
   ```js
-  const useThread=Boolean(prevTs&&prevCh&&(mode==='repeat_thread'||mode==='repeat_escalation'));
+  const repeatAnchor=Boolean(prevTs&&prevCh&&(mode==='repeat_thread'||mode==='repeat_escalation'));
+  const anchorCls=String((s.rep_override&&s.rep_override===cls)?cls:(s.prior_classification||''));
+  const anchorChannel=anchorCls?clean((notif[anchorCls]||{}).channel||''):'';
+  const moved=Boolean(repeatAnchor&&anchorChannel&&anchorChannel!==configuredChannel);
+  const useThread=repeatAnchor&&!moved;
   ```
-  `reply_broadcast` is set to the same value, so a thread reply is also shown in the channel. A repeat must not vanish into a thread.
+  Same channel: `reply_broadcast` is on, so the thread reply also shows in the channel. A repeat must not vanish into a thread. Moved: the card goes out as a new post in the new classification's channel (with its normal `@here` for Tier 1), and one extra item carries a short, non-broadcast reply into the old thread: "Moved to #booth-hot - rescanned (scan #2) and now tier 1. The new card is there; follow up on that one, not in this thread." A private channel is never named in that pointer. If the old classification is unknown, it falls back to the old behaviour and threads.
 - **Card assembly, in fixed order.** Each section is a divider, a bold title, then the body, so the eye learns where to look:
   1. **Header**: tier emoji and label, the name, and the one blocker (`- confirm company size` or `- size below ICP, needs a call`). Capped at 150 characters, Slack's header limit.
   2. **Returning visitor** line (repeat only): scan number, first seen, and what changed: tier changed from X to Y, new booth notes, or said out loud, "Nothing has changed since the first visit - same booth notes, same tier."
@@ -50,7 +54,7 @@ Workflow id `gyCxnkoGkh3OJpz5` · 14 nodes · error workflow is 99 · read from 
   11. **Links** row: Open HubSpot, Company site (not for out of scope).
   12. **Missing from the scan** context line if any fields were missing, "not guessed".
 - **Escaping.** Every user-supplied string goes through `esc()` which turns `& < >` into entities. A booth note cannot inject `<!channel>` or break the block JSON.
-- **Output.** One item per target. `delivery_kind` is `channel_new`, `channel_thread` or `dm`. With no target at all it returns one item with `delivery_kind: 'none'` and a `skip_reason`.
+- **Output.** One item per target. `delivery_kind` is `channel_new`, `channel_thread` or `dm`. With no target at all it returns one item with `delivery_kind: 'none'` and a `skip_reason`. A moved repeat adds one last item, `delivery_role: 'move_note'`, routed as `channel_thread` to the old card's thread.
 
 **4. `Enforce Out-of-Scope Delivery`** (Code, per item) - the quiet route. For anything other than `out_of_scope` it passes the item through untouched. For out of scope it sets the channel to `routing.channel` or `booth-out-of-scope`, removes every `actions` block and any "Do at the booth" section, and makes it a normal channel post (or a thread reply for a repeat).
 ```js
@@ -59,7 +63,8 @@ parsed.blocks=(parsed.blocks||[]).filter(function(b){if(b.type==='actions')retur
 Why it exists: the card builder already omits coaching for out of scope, but this is a belt-and-braces guard so no future edit can leak a call to action onto the audit channel. The result: out-of-scope visits get a record, not a ping. No `@here`, no coaching, no buttons.
 
 **5. `Attach Core Action Buttons`** (Code, per item) - decides which buttons a card gets.
-- First, if 06 passed an `override_banner`, it inserts that one line right under the header ("*Moved from Needs review to Tier 1* by @rep - confirmed renewal."), so a repost reads as a correction, not a duplicate.
+- A `move_note` item passes straight through: it is a one-line pointer, not a card, so it gets no banner and no buttons.
+- Then, if 06 passed an `override_banner`, it inserts that one line right under the header ("*Moved from Needs review to Tier 1* by @rep - confirmed renewal."), so a repost reads as a correction, not a duplicate.
 - Out of scope returns here with no buttons.
 - Buttons appear only when the n8n variable `OAK_SLACK_ACTIONS_ENABLED` is `true`. Each button's `value` carries `event_person_key`, `scan_id`, `hubspot_contact_id` and `classification`, which is everything 06 needs.
 - The layout per classification:
@@ -97,9 +102,9 @@ $json.ok === true && Boolean($json.message?.ts || $json.message_timestamp)
 ```
 True branch goes to `Record Thread Anchor`. False branch goes straight to the receipt. This is the rule that a thread anchor is only written after Slack confirms the root message, so a failed alert can never orphan later replies.
 
-**9a. `Record Thread Anchor`** (Data Table upsert on `oak_encounters` by `event_person_key`) - stores `last_slack_channel` and `last_slack_ts`. The next scan of the same person reads these back in 01 and replies in this thread.
+**9a. `Record Thread Anchor`** (Data Table upsert on `oak_encounters` by `event_person_key`) - stores `last_slack_channel` and `last_slack_ts`. The next scan of the same person reads these back in 01 and replies in this thread. A repeat that moved channel posts through `Post New Alert` too, so the anchor follows the lead to its new card and a third scan threads there.
 
-**7b. `Reply in Thread`** (Slack, channel by id) - posts into `plan.thread_channel` under `plan.thread_ts` with `reply_broadcast`. Same retry and soft-fail settings. It does not move the anchor, so every repeat stays under the first alert.
+**7b. `Reply in Thread`** (Slack, channel by id) - posts into `plan.thread_channel` under `plan.thread_ts` with `reply_broadcast`. Same retry and soft-fail settings. It does not move the anchor: repeats in the same channel stay under the last card, and the moved pointer is posted here with `reply_broadcast` off.
 
 **7c. `Send Direct Message`** (Slack, user by id) - DMs the mapped HubSpot owner. Same retry and soft-fail.
 
@@ -109,6 +114,7 @@ True branch goes to `Record Thread Anchor`. False branch goes straight to the re
 - It reads the plan from `Attach Core Action Buttons`, not from `Resolve Slack Targets`, because the out-of-scope node rewrites the channel in between. An earlier version recorded `channel: null` for every out-of-scope card that had in fact been posted.
 - Every failure becomes a warning, for example "Slack delivery failed (channel_new): not_in_channel".
 - If targets were resolved but nothing was delivered it adds "check the Slack credential".
+- When a repeat moved channel, the pointer reply is recorded as kind `move_note` rather than `channel_thread`, `threaded` is false because the card itself is a new post, and `moved_from_channel` names the channel the lead left.
 ```js
 const anchored=deliveries.some(d=>d.kind==='channel_new'&&d.ok&&d.ts)&&grab('Record Thread Anchor').length>0;
 ```
@@ -124,13 +130,13 @@ const anchored=deliveries.some(d=>d.kind==='channel_new'&&d.ok&&d.ts)&&grab('Rec
 
 ## Likely interview questions
 
-**How does a returning visitor show up?** 01 sets `notification_mode` to `repeat_thread` or `repeat_escalation` and passes the stored `last_slack_ts` and `last_slack_channel`. 03 replies in that thread with `reply_broadcast` on, so it also shows in the channel. The card opens with "Returning visitor · scan #2" and says what changed, including "Nothing has changed" so a silent repeat never looks like a bug. A material change on a non-Tier-1 card earns one `@here`.
+**How does a returning visitor show up?** 01 sets `notification_mode` to `repeat_thread` or `repeat_escalation` and passes the stored `last_slack_ts` and `last_slack_channel`. If the lead still belongs in that channel, 03 replies in that thread with `reply_broadcast` on, so it also shows in the channel. The card opens with "Returning visitor · scan #2" and says what changed, including "Nothing has changed" so a silent repeat never looks like a bug. A material change on a non-Tier-1 card earns one `@here`.
 
 **How do you change where Tier 1 leads go?** Edit `notifications.tier_1.channel` in the active `oak_policies` row. 01 resolves routing from that row and 03 falls back to it, so nothing in n8n changes. The mention rules are the one exception: they are code in `Resolve Slack Targets`.
 
 **What happens if Slack is down?** Each Slack node retries 3 times, 2 seconds apart, then soft-fails. `Build Delivery Receipt` records every failed delivery with its error, 01 writes the receipt to `oak_deliveries.slack_json`, and the 07 harness fails the test when nothing was delivered. HubSpot is already written by then, so the lead is not lost.
 
-**A returning visitor moved from Matched to Tier 1. Which channel does the second card land in?** The first alert's channel. When a thread anchor exists, the channel target is replaced by `previous_slack_channel`, so the escalation replies in the original `#booth-matched` thread, broadcast to that channel, with the `@here` and "Tier changed from matched to tier 1". The trade-off is one conversation per person over a fresh card in `#booth-hot`; the owner DM, when mapped, still fires. If asked, say you would post a new root card when `repeat_escalation` changes the channel, and link the old thread.
+**A returning visitor moved from Matched to Tier 1. Which channel does the second card land in?** `#booth-hot`. Routing is table-driven by classification, so a thread reply in `#booth-matched` would hide the escalation from the Tier 1 team. 03 compares the channel of the person's last card with the channel for the new classification; when they differ it posts a fresh full card in `#booth-hot` (returning-visitor banner, "Tier changed from matched to tier 1", and the Tier 1 `@here`) and leaves one quiet line in the old `#booth-matched` thread saying where the lead went. The anchor moves to the new card, so a third scan threads in `#booth-hot`. An earlier version threaded every repeat under the first alert regardless of tier; this was the fix.
 
 **Why does an out-of-scope visit get a card at all?** It deserves a record, not a ping. It goes to `#booth-out-of-scope` with the reasons printed verbatim, no mention, no coaching and no buttons, and `Enforce Out-of-Scope Delivery` strips any action block even if a future edit adds one. It gives RevOps an audit trail of who was filtered out and why.
 

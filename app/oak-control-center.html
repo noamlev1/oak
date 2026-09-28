@@ -400,6 +400,182 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(4px); }
 .toast { min-width: 280px; max-width: 420px; padding: .8rem 1rem; border: 1px solid var(--line); border-radius: 7px; background: var(--panel-2); box-shadow: var(--shadow); font-size: .78rem; }
 .toast.error { border-color: rgba(255,113,109,.5); color: var(--red-text); }
 
+/* Connection, theme and settings */
+.status-dot.live { background: var(--green); box-shadow: 0 0 0 4px rgba(185, 239, 74, .1); }
+.mode-pill.connecting .status-dot { background: var(--blue); animation: blink 1s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .35; } }
+.mode-pill:hover { color: var(--text); border-color: var(--line-strong); }
+.theme-toggle { flex: none; display: grid; place-items: center; }
+.theme-toggle svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.theme-toggle .icon-moon { display: none; fill: currentColor; stroke: none; }
+:root[data-theme="light"] .theme-toggle .icon-sun { display: none; }
+:root[data-theme="light"] .theme-toggle .icon-moon { display: block; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .theme-toggle .icon-sun { display: none; }
+  :root:not([data-theme="dark"]) .theme-toggle .icon-moon { display: block; }
+}
+.theme-toggle:hover { color: var(--text); border-color: var(--line-strong); }
+.offline-banner { position: sticky; top: 72px; z-index: 15; display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; padding: .55rem clamp(1rem, 3vw, 3rem); border-bottom: 1px solid rgba(255, 156, 85, .3); background: color-mix(in srgb, var(--bg) 86%, var(--orange)); color: var(--orange-text); font-size: .78rem; line-height: 1.4; }
+.offline-banner[hidden] { display: none; }
+.offline-banner [data-banner-text] { flex: 1 1 320px; }
+.banner-actions { display: flex; gap: .45rem; }
+.conn-status { display: flex; gap: .6rem; align-items: baseline; margin: .8rem 0 1rem; padding: .7rem .8rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); font-size: .78rem; line-height: 1.45; color: var(--muted); overflow-wrap: anywhere; }
+.conn-status b { color: var(--text); }
+.conn-status .status-dot { flex: none; transform: translateY(-1px); }
+.dialog-card label + label, .dialog-card .field-help + label { margin-top: .9rem; }
+.field-help { margin: .45rem 0 0; color: var(--muted); font-size: .72rem; line-height: 1.5; }
+label.check { display: flex; align-items: center; gap: .55rem; margin-top: .9rem; color: var(--text); font-weight: 500; font-size: .78rem; cursor: pointer; }
+label.check input { width: 16px; height: 16px; flex: none; accent-color: var(--green-2); }
+.dialog-actions { flex-wrap: wrap; }
+.dialog-actions .button:first-child { margin-right: auto; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.alert[data-severity="info"]::before { background: var(--blue); }
+.trace-cell { text-align: right; width: 1%; white-space: nowrap; }
+.competitor-note { margin: .8rem 0 0; font-size: .72rem; line-height: 1.45; }
+.small-note { font-size: .72rem; margin-top: -.4rem; }
+
+/* System map */
+.flow-picker { display: grid; gap: .6rem; margin-bottom: 1rem; padding: .85rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-glass); }
+.flow-group { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; }
+.flow-group-label { flex: none; width: 88px; color: var(--muted); font-size: .64rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.chip { display: inline-flex; align-items: center; gap: .45rem; padding: .42rem .72rem; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-2); color: var(--text); font-size: .76rem; line-height: 1.2; cursor: pointer; text-decoration: none; transition: border-color .15s, background .15s; }
+.chip:hover { border-color: var(--green-2); }
+.chip[aria-pressed="true"] { background: var(--seg-bg); border-color: var(--seg-bg); color: var(--seg-text); }
+.chip i { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--muted); }
+.chip i.tier_1 { background: var(--green); } .chip i.matched { background: var(--blue); } .chip i.needs_review { background: var(--orange); }
+.chip i.competitor_intel { background: var(--purple); } .chip i.out_of_scope { background: #68706c; } .chip i.critical { background: var(--red); }
+.chip i.active { background: var(--green-2); } .chip i.all { background: conic-gradient(var(--green), var(--blue), var(--orange), var(--purple), var(--green)); }
+.chip.link { background: transparent; color: var(--accent-text); border-style: dashed; }
+
+.map-panel { border: 1px solid var(--line); border-radius: 12px; background: var(--panel-glass); overflow: hidden; }
+.map-controls { display: flex; align-items: center; justify-content: space-between; gap: .6rem 1rem; flex-wrap: wrap; padding: .75rem 1rem; border-bottom: 1px solid var(--line-soft); }
+.map-heading { display: grid; gap: .2rem; min-width: 0; }
+.map-heading b { font: 400 1.15rem/1.2 Georgia, serif; }
+.map-heading span { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .76rem; }
+.map-buttons { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.play-button { min-width: 72px; }
+.segmented.speed button { padding: .32rem .55rem; }
+.step-count { min-width: 3.4rem; color: var(--muted); font-size: .74rem; text-align: right; font-variant-numeric: tabular-nums; }
+.map-progress { height: 3px; background: var(--line-soft); }
+.map-progress i { display: block; width: 0; height: 100%; background: var(--green); transition: width .45s ease; }
+.map-scroll { overflow-x: auto; background: var(--map-bg); -webkit-overflow-scrolling: touch; }
+.map-svg { display: block; width: 100%; min-width: 900px; height: auto; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+.map-svg.mini { min-width: 640px; }
+.map-legend { display: flex; flex-wrap: wrap; gap: .45rem 1.3rem; padding: .7rem 1rem; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: .72rem; }
+.map-legend span { display: inline-flex; align-items: center; gap: .45rem; }
+.map-legend i { display: inline-block; width: 22px; height: 0; border-top: 2px solid var(--wire); }
+.map-legend .lg-hook { border-top-style: dashed; }
+.map-legend .lg-trail { border-top: 3px solid var(--green); border-radius: 2px; }
+.map-legend .lg-skip { height: 12px; border: 1.5px dashed var(--muted); border-radius: 3px; }
+.map-legend .lg-err { width: 8px; height: 8px; border: 0; border-radius: 50%; background: var(--red); }
+.map-legend .lg-ext { height: 12px; border: 1.5px dashed var(--k-ext); border-radius: 3px; }
+
+.lane-band { fill: var(--lane-fill); stroke: var(--line-soft); }
+.lane-label { fill: var(--muted); font-size: 9.5px; font-weight: 700; letter-spacing: .16em; }
+.node { cursor: pointer; outline: none; }
+.node .box { fill: var(--node-fill); stroke: var(--line); stroke-width: 1.2; transition: stroke .3s, fill .3s, stroke-width .3s; }
+.node .mark { fill: currentColor; }
+.node .pulse { fill: none; stroke: var(--green); stroke-width: 2; opacity: 0; pointer-events: none; }
+.node .n-title { fill: var(--text); font-size: 12.5px; font-weight: 600; }
+.node .n-sub { fill: var(--muted); font-size: 10.5px; }
+.node .n-tag { fill: var(--orange-text); font-size: 8.5px; font-weight: 700; letter-spacing: .08em; }
+.node .err-dot { fill: var(--red); opacity: .75; }
+.node:hover .box, .node:focus-visible .box { stroke: var(--line-strong); }
+.node.sel .box { stroke: var(--text); stroke-width: 1.6; }
+.k-orch { color: var(--k-orch); } .k-sub { color: var(--k-sub); } .k-hook { color: var(--k-hook); } .k-manual { color: var(--k-manual); }
+.k-api { color: var(--k-api); } .k-error { color: var(--k-error); } .k-store { color: var(--k-store); } .k-ext { color: var(--k-ext); }
+.node.k-ext .box { fill: transparent; stroke-dasharray: 4 3; }
+.node.bar .box { fill: color-mix(in srgb, var(--node-fill) 92%, var(--green)); }
+.node.bar .bar-title { font-size: 14px; }
+.node .inlet { fill: none; stroke: var(--wire); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.node .track { stroke: var(--line-strong); stroke-width: 2; stroke-linecap: round; }
+.tick circle { fill: var(--node-fill); stroke: var(--line-strong); stroke-width: 1.6; transition: fill .3s, stroke .3s; }
+.tick text { fill: var(--muted); font-size: 10.5px; }
+.tick .port-mark { fill: var(--node-fill); stroke: var(--line-strong); stroke-width: 1.4; }
+.tick .port-stub { stroke: var(--line-strong); stroke-width: 1.2; }
+.tick.done circle, .tick.done .port-mark { fill: var(--green-2); stroke: var(--green-2); }
+.tick.cur circle, .tick.cur .port-mark { fill: var(--green); stroke: var(--green); }
+.tick.cur circle { r: 7; }
+.tick.cur text { fill: var(--text); font-weight: 700; }
+.tick.done text { fill: var(--text); }
+.tick.skip circle, .tick.skip .port-mark { fill: transparent; stroke-dasharray: 2 2; }
+.tick.skip text { text-decoration: line-through; }
+.tick.off { opacity: .45; }
+
+.edge .wire { fill: none; stroke: var(--wire); stroke-width: 1.5; transition: stroke .3s, opacity .3s; }
+.edge.k-webhook .wire { stroke-dasharray: 5 4; }
+.ah { fill: var(--wire); }
+.ah-done { fill: var(--green-2); }
+.ah-cur { fill: var(--green); }
+.edge-label { fill: var(--muted); font-size: 10.5px; paint-order: stroke; stroke: var(--map-bg); stroke-width: 4px; stroke-linejoin: round; }
+.edge.done .wire { stroke: var(--green-2); stroke-width: 2; }
+.edge.cur .wire { stroke: var(--green); stroke-width: 2.4; stroke-dasharray: 7 5; animation: wire-run .9s linear infinite; }
+.edge.cur .edge-label, .edge.done .edge-label { fill: var(--accent-text); font-weight: 700; }
+.edge.skip .wire { stroke-dasharray: 2 4; opacity: .5; }
+.edge.off { opacity: .22; }
+@keyframes wire-run { to { stroke-dashoffset: -24; } }
+
+.has-focus .node.off { opacity: .26; }
+.node.on .box { stroke: var(--line-strong); }
+.node.done .box { stroke: var(--green-2); stroke-width: 1.6; }
+.node.touch .box { stroke: var(--green); stroke-dasharray: 3 3; stroke-width: 1.8; }
+.node.cur .box { stroke: var(--green); stroke-width: 2.2; fill: var(--node-cur); }
+.node.cur .pulse { animation: node-pulse 1.8s ease-out infinite; }
+.node.bar.cur .pulse { animation: none; }
+.node.skip { opacity: .7; }
+.node.skip .box { stroke: var(--muted); stroke-dasharray: 5 4; fill: transparent; }
+.node.skip .n-title, .node.skip .n-sub { fill: var(--muted); }
+@keyframes node-pulse { 0% { opacity: .7; stroke-width: 2; } 100% { opacity: 0; stroke-width: 16; } }
+.map-svg.mini .err-wire { fill: none; stroke: var(--red); stroke-width: 1.5; stroke-dasharray: 3 4; opacity: .8; }
+
+.trail { fill: none; stroke: var(--green); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.trail.done { stroke-width: 2.6; opacity: .5; }
+.trail.err { stroke: var(--red); stroke-width: 2; stroke-dasharray: 4 4; opacity: .85; }
+.token { pointer-events: none; transition: opacity .2s; }
+.token-core { fill: var(--green); stroke: var(--token-ring); stroke-width: 2.5; }
+.token-halo { fill: var(--green); opacity: .3; transform-box: fill-box; transform-origin: center; animation: halo 1.4s ease-out infinite; }
+.token.err .token-core, .token.err .token-halo { fill: var(--red); }
+@keyframes halo { 0% { transform: scale(.5); opacity: .5; } 100% { transform: scale(1.5); opacity: 0; } }
+
+.map-caption { box-sizing: border-box; height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 20px 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow-soft); color: var(--text); font: 14px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+.map-caption p { margin: 0; }
+.cap-eyebrow { color: var(--accent-text); font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.cap-title { margin: 0; font: 400 23px/1.15 Georgia, serif; letter-spacing: -.01em; }
+.cap-text { color: var(--muted); }
+.cap-quote { color: var(--quote); font-style: italic; }
+.cap-hint { color: var(--muted); font-size: 12.5px; }
+.cap-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+.cap-decided { margin-top: auto; padding: 11px 13px; border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; background: var(--tint-green); color: var(--quote); line-height: 1.45; }
+.cap-decided b { display: block; margin-bottom: 3px; color: var(--accent-text); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; }
+
+.trace-layout { display: grid; grid-template-columns: minmax(280px, .8fr) minmax(0, 1.25fr); gap: 1rem; margin-top: 1rem; align-items: start; }
+.path-list { list-style: none; margin: 0; padding: .45rem; display: grid; gap: 2px; max-height: 560px; overflow: auto; }
+.path-step { width: 100%; display: grid; grid-template-columns: 26px 1fr; gap: .6rem; align-items: start; padding: .5rem .55rem; border: 0; border-radius: 7px; background: none; color: var(--muted); font-size: .74rem; line-height: 1.4; text-align: left; cursor: pointer; }
+.path-step:hover { background: var(--hover); }
+.path-step b { display: block; color: var(--text); font-size: .8rem; font-weight: 600; }
+.path-step .n { width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; font-size: .64rem; font-variant-numeric: tabular-nums; }
+.path-step.done .n { border-color: var(--green-2); color: var(--accent-text); }
+.path-step.cur { background: var(--tint-green); box-shadow: inset 2px 0 0 var(--green); }
+.path-step.cur .n { border-color: var(--green); background: var(--green); color: #111; font-weight: 700; }
+.path-step.skip b { color: var(--muted); text-decoration: line-through; }
+.path-step em.pill { margin-left: .3rem; padding: .1rem .35rem; font-style: normal; font-size: .58rem; }
+.card-eyebrow { margin: .4rem 0 .5rem !important; }
+.step-detail .panel-header { align-items: flex-start; }
+.step-detail h2 { font: 400 1.5rem/1.15 Georgia, serif; margin: .15rem 0 0; }
+.step-detail .uc-block:first-child { margin-top: 0; }
+.stage-inline { margin-top: 1.4rem; padding-top: 1.1rem; border-top: 1px solid var(--line-soft); }
+.stage-inline .stage-question { margin-top: .5rem; }
+.node-card p { color: var(--muted); line-height: 1.6; font-size: .86rem; margin-top: 0; }
+.node-facts { margin: 1rem -1.15rem -1.15rem; }
+.slack-buttons.triage { position: relative; padding: .55rem .5rem .45rem; border: 1px dashed var(--orange); border-radius: 7px; }
+.slack-buttons.triage small { position: absolute; top: -.55rem; left: .5rem; padding: 0 .3rem; background: var(--panel); color: var(--orange-text); font-size: .6rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.mini-map { margin: 0 0 1.4rem; }
+.mini-map .panel-header { padding: .7rem 1rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .edge.cur .wire, .node.cur .pulse, .token-halo, .mode-pill.connecting .status-dot { animation: none; }
+}
+
 @media (max-width: 1100px) {
   .metric-grid { grid-template-columns: repeat(3, 1fr); }
   .metric:nth-child(3) { border-right: 0; }
@@ -408,6 +584,8 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(4px); }
   .stage-grid { grid-template-columns: minmax(190px, .3fr) minmax(0, 1fr); }
   .topbar { gap: 1rem; }
   .brand small { display: none; }
+  .trace-layout { grid-template-columns: 1fr; }
+  .path-list { max-height: 360px; }
 }
 @media (max-width: 780px) {
   .topbar { height: auto; min-height: 64px; flex-wrap: wrap; padding-block: .7rem; }
@@ -428,11 +606,18 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(4px); }
   .pager { flex-direction: column; }
   .fact-grid { grid-template-columns: 1fr; }
   .field-grid { grid-template-columns: 1fr; }
+  .offline-banner { top: 0; position: relative; }
+  .flow-group-label { width: 100%; }
+  .map-controls { align-items: flex-start; }
+  .map-buttons { width: 100%; }
+  .step-count { margin-left: auto; }
+  .trace-cell { display: none; }
+  .data-table th:last-child:has(.sr-only) { display: none; }
 }
 @media print {
   :root { color: #111; background: white; }
   body { background: white; }
-  .topbar, .header-actions, .filters, .button, dialog, .toasts { display: none !important; }
+  .topbar, .header-actions, .filters, .button, dialog, .toasts, .offline-banner, .map-controls, .flow-picker { display: none !important; }
   #main { width: 100%; padding: 0; }
   .panel, .use-case-card, .competitor-card, .uc-block, .entry-card, .scenario-card, .slack-card { color: #111; background: white; border-color: #aaa; break-inside: avoid; }
   .muted, .panel p, .uc-block p, .uc-block li, .trace-body p { color: #444; }
@@ -1299,8 +1484,8 @@ window.OAK_GRAPH = {
   track: 118,
   lanes: [
     { id: 'intake', label: 'INTAKE', y: 8, h: 160 },
-    { id: 'enrich', label: 'ENRICH AND REASON', y: 176, h: 120 },
-    { id: 'write', label: 'WRITE AND NOTIFY', y: 304, h: 120 },
+    { id: 'enrich', label: 'ENRICH AND|REASON', y: 176, h: 120 },
+    { id: 'write', label: 'WRITE AND|NOTIFY', y: 304, h: 120 },
     { id: 'rep', label: 'REP ACTIONS', y: 432, h: 120 },
     { id: 'ops', label: 'OPERATIONS', y: 560, h: 132 },
   ],
@@ -1314,7 +1499,7 @@ window.OAK_GRAPH = {
       what: 'The booth webhook lands here. It verifies the secret, blocks scan_id replays, loads the active policy and competitor rows, classifies deterministically, answers with a provisional 202, then calls 02A, 04, 05, 02 and 03 in that order.', trigger: 'Webhook POST /webhook/oak-event/scan' },
     { id: 'wf02A', wf: '02A', kind: 'sub', x: 540, y: 204, w: 132, h: 64, port: 606, title: '02A CRM Context', sub: 'HubSpot, read-only', err: true,
       what: 'Reads HubSpot: contact by email, company by exact domain, owner, open deals. Every call is a GET or a search.', trigger: 'Called by 01' },
-    { id: 'wf04', wf: '04', kind: 'sub', x: 692, y: 204, w: 132, h: 64, port: 758, title: '04 Enrichment', sub: 'homepage + gated search', err: true,
+    { id: 'wf04', wf: '04', kind: 'sub', x: 692, y: 204, w: 132, h: 64, port: 758, title: '04 Enrichment', sub: 'homepage + search', err: true,
       what: 'Always reads the company homepage (free). Adds paid Brave search unless the scan is out of scope. Resolves headcount, industry and an identity-checked person profile with source URLs. No person search for competitors.', trigger: 'Called by 01' },
     { id: 'wf05', wf: '05', kind: 'sub', x: 844, y: 204, w: 132, h: 64, port: 910, title: '05 AI Reasoning', sub: 'bounded Gemini', err: true,
       what: 'Resolves an ambiguous job title above a 0.7 confidence floor, plus an unknown industry, and writes the opening question and listen-fors. It cannot write a channel or add a mention.', trigger: 'Called by 01 for tier_1, matched and needs_review only' },
@@ -1752,10 +1937,13 @@ window.OAK_GRAPH = {
     await route();
   }
 
+  let lastHash = null;
   async function route() {
     const hash = location.hash || '#/';
     stopPlayer();
     setActiveNav(hash);
+    if (hash !== lastHash) window.scrollTo(0, 0);
+    lastHash = hash;
     main.innerHTML = '<div class="loading"><span></span>Loading view...</div>';
     try {
       if (hash === '#/' || hash === '#') return await renderDashboard();
@@ -2048,7 +2236,10 @@ window.OAK_GRAPH = {
     const lanes = graph.lanes
       .map(
         (l) => `<g class="lane"><rect class="lane-band" x="8" y="${l.y}" width="${w - 16}" height="${l.h}" rx="12" />
-          <text class="lane-label" transform="translate(26 ${l.y + l.h / 2}) rotate(-90)" text-anchor="middle">${esc(l.label)}</text></g>`
+          ${l.label
+            .split('|')
+            .map((line, k, all) => `<text class="lane-label" transform="translate(${28 + (k - (all.length - 1) / 2) * 12} ${l.y + l.h / 2}) rotate(-90)" text-anchor="middle" dominant-baseline="middle">${esc(line)}</text>`)
+            .join('')}</g>`
       )
       .join('');
     const bar = NODE.wf01;
@@ -2687,6 +2878,10 @@ window.OAK_GRAPH = {
   function drawTrails(uptoExclusive) {
     const g = document.querySelector('#map-trails');
     if (!g) return;
+    if (!player.trace) {
+      g.innerHTML = '';
+      return;
+    }
     const parts = [];
     player.trace.steps.forEach((s, j) => {
       if (j >= uptoExclusive) return;
@@ -2873,6 +3068,10 @@ window.OAK_GRAPH = {
     if (count) count.textContent = trace ? `${Math.max(0, player.i + 1)} / ${trace.steps.length}` : '';
     if (bar) bar.style.width = trace ? `${((player.i + 1) / trace.steps.length) * 100}%` : '0%';
     if (!list) return;
+    const pt = document.querySelector('#path-title');
+    const ph = document.querySelector('#path-hint');
+    if (pt) pt.textContent = trace ? 'The path' : 'The workflows';
+    if (ph) ph.textContent = trace ? 'click a step to jump' : 'click one for details';
     if (!trace) {
       list.innerHTML = graph.nodes
         .filter((n) => n.wf)
@@ -3033,7 +3232,7 @@ window.OAK_GRAPH = {
       </section>
       <section class="trace-layout">
         <div class="stack">
-          <article class="panel"><header class="panel-header"><h2>The path</h2><span class="muted">click a step to jump</span></header><ol class="path-list" id="path-list"></ol></article>
+          <article class="panel"><header class="panel-header"><h2 id="path-title">The path</h2><span class="muted" id="path-hint">click a step to jump</span></header><ol class="path-list" id="path-list"></ol></article>
           <div id="map-card"></div>
         </div>
         <div id="map-detail"></div>

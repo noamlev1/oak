@@ -44,7 +44,7 @@ Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `
    - True: the scan already ran end to end. **Build Duplicate Response** + **Respond Duplicate** return `200` with `status: duplicate_ignored`. No CRM write, no Slack post.
    - False: new scan, or a scan that died mid-pipeline (still `accepted`). It runs again on purpose - a retry is how a half-finished scan recovers.
 
-7. **Load Active Policy** (Data Table get on `oak_policies`, `status = active`, limit 1). Loads the single active policy row (`oak-event-v5`). Everything the rules use - personas, thresholds, channels, scoring - comes from its `document_json`.
+7. **Load Active Policy** (Data Table get on `oak_policies`, `status = active`, limit 1). Loads the single active policy row (`oak-event-v5`). Everything the rules use - personas, thresholds, channels, scoring - comes from its `document_json`. Set to always output, like every other lookup here: with no active row the scan still gets its reply, and Evaluate ICP Policy runs on its code defaults, which hold no personas, so every scan lands in `out_of_scope` (or `competitor_intel` from the competitor table) until a policy is active again.
 
 ### Group "2. Classify and spot returning visitors"
 
@@ -60,7 +60,7 @@ Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `
    - **Incumbent tools.** Whole-word match in the notes against the 7 active policy incumbents (SailPoint/IdentityIQ, Saviynt, Omada, One Identity, Okta Identity Governance, Microsoft Entra ID Governance, Ping Identity), all `renewal_trigger: true`.
    - **Tier 1 triggers (urgency)**, each quoted from the notes:
      - `incumbent_renewal`: a renewal-in-N-months phrase (`renewal ... in 5 months` or `5 months ... renewal`), N <= `urgency.renewal_max_months` (6), AND an incumbent tool matched. A renewal with no matched tool is logged as `unverified_renewal` and does not trigger.
-     - `identity_breach`: "identity breach", "security breach" or "breached".
+     - `identity_breach`: "identity breach", "security breach" or "breached", unless a negation (never, no, not, without, zero, or haven't / hasn't / hadn't / didn't / wasn't / weren't) sits within the three words before it in the same clause. "We have never had a security breach" is not a trigger; "we had a security breach last quarter" is. The phrases themselves are in code, not the policy row, and a bare "a breach" does not match.
      - `audit_deadline`: "audit" within 30 characters of "deadline/due/active", "deadline ... audit", or "sox ... deadline/due/active".
    - **The classification cascade** - first match wins:
 
@@ -137,25 +137,29 @@ Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `
 
     ```js
     if(x.competitor_status==='confirmed'&&x.competitor){ classification='competitor_intel'; ... }
-    else if(x.company_size_band==='disqualified_under_500'){ classification='out_of_scope'; ... }
+    else if(x.company_size_band==='disqualified_under_500'&&!possibleCompetitor){ classification='out_of_scope'; ... }
+    else if(siteDisq.length&&!possibleCompetitor&&classification!=='out_of_scope'&&classification!=='competitor_intel'){ classification='out_of_scope'; ... }
     else if(x.company_size_band==='review_500_999'&&classification!=='out_of_scope'){ classification='needs_review'; ... }
+    else if(possibleCompetitor&&classification!=='needs_review'){ classification='needs_review'; ... }
     else if(classification==='out_of_scope'){ route('out_of_scope', ...) }
     else { route(classification, ...) }
     ```
 
     - Confirmed competitor: `competitor_intel`, no mention.
-    - Size band (as resolved by 04) under 500: `out_of_scope`.
+    - Size band (as resolved by 04) under 500: `out_of_scope`, unless the lead is a possible competitor, which stays with a human in `needs_review` as it does in 04.
+    - SaaS-only or single-cloud found on the company's own site (`company_enrichment.disqualifier_signals`), when 05 has lifted the lead off 04's `out_of_scope`: back to `out_of_scope` with 04's reason "Public evidence indicates ...", rule "Out of scope: <disqualifier>", trace `environment_disqualifier_final_gate`. A possible competitor is exempt, as in 04.
     - 500-999: `needs_review`, with reason "Final deterministic gate kept the lead in review because 500-999 employees is below the qualified 1,000+ threshold."
+    - Possible competitor (`competitor_status == 'possible'`) that 05 moved to `matched`, `tier_1` or `out_of_scope` after resolving an ambiguous title: back to `needs_review`, rule "Review: possible competitor", trace `possible_competitor_final_gate`. The model resolves a persona; it does not clear a competitor flag.
     - Otherwise the tier stands and is routed from the policy (`tier_1` to `booth-hot` with mention, `matched` to `booth-matched`, `needs_review` to `booth-review`).
     - Unknown headcount with a target persona: the tier stands, a reason is added, and the rule summary gets "(headcount to confirm)". `unknown_size_requires_review: false` is recorded explicitly.
     - Removes any reason that starts "null employees".
     - **Rep override, last.** If the encounter row carries a rep override from 06 (`tier_1`, `matched`, `out_of_scope` for Not a fit, `needs_review` for False alarm):
       - Same as the gate's answer: keep it, note the rep agreed.
       - Different, and no strong contradiction: the rep wins; routed to the override's channel, no mention, trace `rep_override_honoured`.
-      - Different, and HubSpot or the visitor (confidence >= 0.9) now put the company at 1,000+: `needs_review`, rule "Conflict: rep marked this ..., but N employees from <source> qualifies the company", trace `rep_override_contradicted`. Neither side wins silently.
+      - A Not a fit override (`out_of_scope`), and HubSpot or the visitor (confidence >= 0.9) now put the company at 1,000+: `needs_review`, rule "Conflict: rep marked this ..., but N employees from <source> qualifies the company", trace `rep_override_contradicted`. Neither side wins silently. A Promote, Matched or False alarm override is never contradicted by headcount, because a confirmed large company agrees with it.
 
       ```js
-      const contradicted=Number(er.confidence||0)>=0.9&&String(x.company_size_band||'')==='qualified_1000_plus';
+      const contradicted=ovr==='out_of_scope'&&Number(er.confidence||0)>=0.9&&String(x.company_size_band||'')==='qualified_1000_plus';
       ```
     - Stamps `decision_basis.final_deterministic_gate: true`, `gate_policy_version`, and the override flags.
 

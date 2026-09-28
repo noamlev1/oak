@@ -60,7 +60,7 @@ This is the cost gate: nobody will pursue an out-of-scope lead, so a Brave credi
 
 **9. `Search Company Web`** (Brave, 5 results, US, English, past-year freshness, web and news) - global search for the company plus identity, compliance and employee terms. Retries twice, soft-fails: if Brave is down the lead still gets site-only enrichment.
 
-Know this if asked: the query expression has a second, competitor-flavoured variant ("product launch AI agents non-human identity funding acquisition leadership") chosen by `$json.classification === 'competitor_intel'`. But `$json` here is the output of `Extract Company Signals`, which carries no `classification`, so that variant never fires and competitor leads get the identity query too. The company name in the query is also the homepage `<title>` name (falling back to the scan's name). The fix is to read `$('When Called for Enrichment').first().json.classification` and `.company_name`.
+Know this if asked: a `competitor_intel` lead gets a competitor-flavoured query instead ("company overview product launch AI agents non-human identity funding acquisition leadership"), because a competitor card is about their product and moves, not their IGA pain. The choice reads the classification from the trigger input, `$('When Called for Enrichment').first().json.classification`. The company name in the query is the homepage `<title>` name, falling back to the scan's name when the site is parked or unreachable; the headcount search in step 12 uses the scan's name, so the two searches come at the company from both spellings.
 
 **10. `Extract Search Signals`** (Code) - turns hits into evidence, with **identity alignment** as the gate on every result. A result is kept only if its host matches the resolved domain, or its text contains the full company name. Everything else is discarded and counted.
 - Headcount may only come from a **domain-matched** result. A name match is not entity resolution: "Apex Financial Services" returns a 29-person advisory, a 1,000-person fintech and a 19,379-person group.
@@ -109,14 +109,14 @@ if((sizeOut||disq.length)&&classification!=='competitor_intel'&&competitorStatus
 - **Size and disqualifier rules:** under 500 or a disqualifier signal moves the lead to `out_of_scope`; 500-999 moves it to `needs_review`; 1,000+ from a non-booth source adds a reason line with its confidence.
 - **Scoring:** +15 company size for the 1,000+ band and +15 industry for a target industry, never for out-of-scope or competitor leads, capped at the policy max of 100. Each "add" is `max(points - current, 0)`, so nothing is double-counted.
 - **Incumbent tools** (SailPoint, Saviynt, Omada ...) detected in notes or sourced evidence.
-- **Rep override on a re-scan:** if a rep pressed Not a fit or False alarm earlier and this lead will skip 05 (`persona_reasoning_required` false), the override is applied here, because 01's final gate only runs on the 05 path. The rep wins unless HubSpot or the visitor (confidence 0.9 or higher) now puts the company in the 1,000+ band; then it goes to `needs_review` and "Neither side wins silently - a human decides."
+- **Rep override on a re-scan:** if a rep pressed Promote, Matched, Not a fit or False alarm earlier and this lead will skip 05 (`persona_reasoning_required` false), the override is applied here, because 01's final gate only runs on the 05 path. The rep wins. The one exception is Not a fit: if HubSpot or the visitor (confidence 0.9 or higher) now puts the company in the 1,000+ band, it goes to `needs_review` and "Neither side wins silently - a human decides." A confirmed large headcount agrees with Promote and Matched, so it never contradicts them.
 - **Notification mode:** `first_scan`, `repeat_thread`, or `repeat_escalation` when the classification changed since the last scan. 03 uses this to thread.
 
-**16. `Person Search Worth It?`** (IF) - classification is not `competitor_intel` and not `out_of_scope`.
+**16. `Person Search Worth It?`** (IF) - classification is not `competitor_intel` and not `out_of_scope`, and the policy's `enrichment.person_search_enabled` is not `false` (a missing flag counts as on).
 - True: `Search Relevant Person`.
 - False: straight to `Attach Person Evidence`, which then records "unavailable".
 
-A competitor card is about their product, not one contact, and nobody pursues an out-of-scope lead. Note this runs on the cache-hit path too; the cache saves company searches, not the person search. The policy has an `enrichment.person_search_enabled` flag (currently `true`), but this gate does not read it, so turning it off in the table would not stop person searches.
+A competitor card is about their product, not one contact, and nobody pursues an out-of-scope lead. Note this runs on the cache-hit path too; the cache saves company searches, not the person search. The policy flag `enrichment.person_search_enabled` (currently `true`) switches person search off for everyone with a row edit.
 
 **17. `Search Relevant Person`** (Brave, 3 results) - `"Full Name" Company Title identity security governance LinkedIn`. Soft-fails.
 

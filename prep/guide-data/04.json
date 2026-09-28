@@ -194,11 +194,11 @@
           "name": "Search Company Web",
           "type": "Brave Search",
           "what": "Brave web and news search, 5 results, country US, English, safesearch moderate, freshness past year (py). Query: '<company name> identity governance access management compliance audit company employees'. The company name is $json.company_name from Extract Company Signals, which is the homepage <title> text before '|' or '-', falling back to the domain.",
-          "why": "Global public context: news, identity programme and compliance signals, and possibly a headcount on the company's own domain. Precise if asked: the expression has a competitor variant ('product launch AI agents non-human identity funding acquisition leadership') chosen by $json.classification === 'competitor_intel', but $json here is Extract Company Signals' output, which has no classification, so the variant never fires and competitors get the identity query too. The fix is to read the trigger's classification.",
-          "in": "company_name from Extract Company Signals, domain from Assess Cache.",
+          "why": "Global public context: news, identity programme and compliance signals, and possibly a headcount on the company's own domain. A competitor_intel lead gets a competitor query instead ('company overview product launch AI agents non-human identity funding acquisition leadership'), chosen from the trigger's classification, because a competitor card is about their product and moves. The name is the homepage title name, falling back to the scanned name; the headcount search uses the scanned name.",
+          "in": "company_name from Extract Company Signals, domain from Assess Cache, classification from When Called for Enrichment.",
           "out": "Brave response (web.results[] with title, url, description, age) or an error item.",
           "decides": null,
-          "code": "$json.classification === 'competitor_intel' ? (... ' company overview product launch AI agents non-human identity funding acquisition leadership') : (($json.company_name || $('Assess Cache').first().json.domain) + ' identity governance access management compliance audit company employees')",
+          "code": "$('When Called for Enrichment').first().json.classification === 'competitor_intel' ? (... ' company overview product launch AI agents non-human identity funding acquisition leadership') : (($json.company_name || $('Assess Cache').first().json.domain) + ' identity governance access management compliance audit company employees')",
           "branches": [],
           "on_failure": "retryOnFail maxTries 2, 1000 ms apart, then onError continueRegularOutput with alwaysOutputData: if Brave is down the lead still gets site-only enrichment and a warning.",
           "say_it": "One Brave search for public identity and compliance context, running on n8n gateway credits, so it costs nothing extra.",
@@ -307,7 +307,7 @@
           "step": 15,
           "name": "Build Enrichment Result",
           "type": "Code",
-          "what": "Where enrichment becomes decisions; both the cache-hit and fresh paths land here. (1) Industry ladder: HubSpot company industry mapped to a target (confidence 1), else official site (0.9), else public search (0.7), else unknown; these three confidences are in code. (2) Headcount ladder, first hit wins, confidences from policy employee_confidence: HubSpot 1.0, booth notes 0.9, official website 0.85, domain-matched search 0.7, else not_established. Anything below employee_verification_required_below (1) is needs_verification. (3) Size band from qualified_employee_min 1000 and review_employee_min 500. (4) Competitor rescue first, then size and disqualifier rules, then the 500-999 review band. (5) Score: +15 size for 1,000+ and +15 industry for a target industry (never for out_of_scope or competitor_intel), each add is max(points - current, 0), capped at 100. (6) Incumbent tools from notes and sourced evidence (SailPoint, Saviynt, Omada ...). (7) Rep override on a re-scan when 05 will be skipped. (8) notification_mode: first_scan, repeat_thread, or repeat_escalation if the classification changed.",
+          "what": "Where enrichment becomes decisions; both the cache-hit and fresh paths land here. (1) Industry ladder: HubSpot company industry mapped to a target (confidence 1), else official site (0.9), else public search (0.7), else unknown; these three confidences are in code. (2) Headcount ladder, first hit wins, confidences from policy employee_confidence: HubSpot 1.0, booth notes 0.9, official website 0.85, domain-matched search 0.7, else not_established. Anything below employee_verification_required_below (1) is needs_verification. (3) Size band from qualified_employee_min 1000 and review_employee_min 500. (4) Competitor rescue first, then size and disqualifier rules, then the 500-999 review band. (5) Score: +15 size for 1,000+ and +15 industry for a target industry (never for out_of_scope or competitor_intel), each add is max(points - current, 0), capped at 100. (6) Incumbent tools from notes and sourced evidence (SailPoint, Saviynt, Omada ...). (7) Rep override on a re-scan when 05 will be skipped: the rep wins, except that a Not a fit is sent to needs_review when HubSpot or the visitor (confidence 0.9 or higher) puts the company at 1,000+. (8) notification_mode: first_scan, repeat_thread, or repeat_escalation if the classification changed.",
           "why": "Keeps every size and industry claim tied to a source and a confidence, and applies the same size rules 01's final gate applies, on the paths where that gate does not run. Booth notes beat the website because the visitor is first-party, present and can confirm, and the decision is a coarse band; they sit below HubSpot because they are the one source with no URL.",
           "in": "Trigger lead, Assess Cache (policy, cache), and by name Add Name-Only Size Candidates, else Extract Search Signals, else Extract Company Signals.",
           "out": "The lead plus classification, competitor_status, routing, score, score_breakdown, decision_reasons, decision_trace, company_size_band, employee_resolution {employees, source, confidence, evidence_url, needs_verification, verification_note}, company_enrichment (with industry_resolution), company_evidence, incumbent_tools_detected, reclassified_by_enrichment, classification_changed, material_change, notification_mode, enrichment_cache_hit, enrichment_status, enrichment_source, enrichment_warnings, enriched_at.",
@@ -324,12 +324,12 @@
           "step": 16,
           "name": "Person Search Worth It?",
           "type": "IF",
-          "what": "True when the post-enrichment classification is neither competitor_intel nor out_of_scope. Runs on the cache-hit path too: the cache saves company searches, not the person search.",
-          "why": "A competitor card is about their product, not one contact, and nobody pursues an out-of-scope lead. Precise if asked: the policy has enrichment.person_search_enabled (true today) but this gate does not read it.",
-          "in": "classification from Build Enrichment Result.",
+          "what": "True when the post-enrichment classification is neither competitor_intel nor out_of_scope and the policy's enrichment.person_search_enabled is not false (a missing flag counts as on). Runs on the cache-hit path too: the cache saves company searches, not the person search.",
+          "why": "A competitor card is about their product, not one contact, and nobody pursues an out-of-scope lead. The policy flag switches person search off for everyone with a row edit.",
+          "in": "classification from Build Enrichment Result, policy from Assess Cache.",
           "out": "The Build Enrichment Result item on one output.",
           "decides": "Whether to spend the person search.",
-          "code": "{{ $json.classification }} notEquals 'competitor_intel' AND {{ $json.classification }} notEquals 'out_of_scope'",
+          "code": "{{ $json.classification }} notEquals 'competitor_intel' AND {{ $json.classification }} notEquals 'out_of_scope' AND {{ $('Assess Cache').first().json.policy?.enrichment?.person_search_enabled !== false }} is true",
           "branches": [
             {
               "label": "true",
@@ -339,7 +339,7 @@
             {
               "label": "false",
               "goes_to": "Attach Person Evidence",
-              "meaning": "Competitor or out of scope: skip the search; Attach Person Evidence records it as unavailable."
+              "meaning": "Competitor, out of scope, or person search switched off in the policy: skip the search; Attach Person Evidence records it as unavailable."
             }
           ],
           "on_failure": "No onError; cannot fail.",
@@ -454,7 +454,7 @@
     },
     {
       "q": "Is there anything in 04 you would fix?",
-      "a": "Two honest items. Search Company Web's competitor query variant reads $json.classification, but $json there is Extract Company Signals' output, which has no classification, so competitors get the identity query; it should read the trigger's classification. And Need Headcount Search? cannot see the HubSpot headcount, so a company already sized in the CRM can still spend one Brave credit; Person Search Worth It? also ignores the policy's person_search_enabled flag."
+      "a": "One honest item. Need Headcount Search? cannot see the HubSpot headcount, so a company already sized in the CRM can still spend one Brave credit."
     }
   ]
 }
