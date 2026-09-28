@@ -220,3 +220,10 @@ out.override_banner=(from&&from!==to?('*Moved from '+label(from)+' to '+label(to
 **What if the HubSpot contact does not exist?** Claim only appears when there is a contact id. On the shared path, `CRM Writable?` skips HubSpot, the encounter row is still updated, and the reply says "No HubSpot contact id was on the card, so no CRM write was attempted."
 
 **How does a rep's Not a fit survive a re-scan?** It is stored as `override_classification=out_of_scope` on the encounter (Promote, Matched and False alarm store their tier the same way). On the next scan 01's `Build Visitor Context` reads it back as `rep_override`, and 01's final gate (or 04, when 05 is skipped) honours it, unless HubSpot or the visitor, at 0.9 confidence or higher, now puts the company in the 1,000+ band. Then it goes to review and "Neither side wins silently".
+
+## The card shows who did what (added)
+
+- **Claim:** the card title gets " — <name> is on it", the "Claimed by" line appears under it, the Claim button goes, and the card gets a 👀 reaction: someone is working on it.
+- **Every other action:** after the thread reply, the card title gets " — <name> <what they did>", for example "✅ MATCHED · Dana Cohen - confirm company size — Noam Lev marked it not a fit", and the card gets a ✅ reaction. A later action replaces the earlier ending, so the title always shows the latest.
+- **Form actions (Not a fit, Promote, Meeting booked, Add note):** Slack does not send the card with a form submission, and the app has no permission to read channel history. So `Remember Card` saves the card in `oak_encounters` (`card_blocks_json`, `card_blocks_ts`) when the form opens, and the submission uses it only when the message timestamp matches. If it is missing, the title is left alone; the thread reply and the ✅ still happen.
+- The name is the claimant's real name when the same person acts, otherwise their Slack username.
