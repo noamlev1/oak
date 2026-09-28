@@ -439,6 +439,9 @@ label.check input { width: 16px; height: 16px; flex: none; accent-color: var(--g
 .trace-cell { text-align: right; width: 1%; white-space: nowrap; }
 .competitor-note { margin: .8rem 0 0; font-size: .72rem; line-height: 1.45; }
 .small-note { font-size: .72rem; margin-top: -.4rem; }
+.pill.example-pill { color: var(--muted); border: 1px dashed var(--line-strong); background: transparent; }
+.name-cell .example-pill { display: inline-flex; margin-left: .35rem; padding: .1rem .35rem; font-style: normal; font-size: .56rem; vertical-align: 1px; }
+.example-box { margin: 1rem 0 0; }
 
 /* System map */
 .flow-picker { display: grid; gap: .6rem; margin-bottom: 1rem; padding: .85rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-glass); }
@@ -682,11 +685,11 @@ label.check input { width: 16px; height: 16px; flex: none; accent-color: var(--g
         <div class="dialog-actions"><button value="reset" class="button secondary" data-action="reset-settings">Reset to default</button><button value="cancel" class="button secondary">Cancel</button><button value="save" class="button" data-action="save-settings">Save and reconnect</button></div>
       </form>
     </dialog>
-    <script>window.OAK_OFFLINE=true;window.OAK_OFFLINE_STATE={"snapshot_at":"2026-09-28T12:00:00.000Z","policy":{"version":"oak-event-v5","status":"active","activated_at":"2026-09-22T06:05:58.957Z","document":{"version":"oak-event-v5","company_fit":{"qualified_employee_min":1000,"review_employee_min":500,"disqualified_employee_max":499,"target_industries":["financial_services","fintech","technology","healthcare"],"disqualifiers":["saas-only","single-cloud"],"personal_email_domains":["gmail.com","googlemail.com","outlook.com","hotmail.com","live.com","yahoo.com","icloud.com","proton.me","protonmail.com"]},"personas":{"ciso":{"title_patterns":["ciso","chief information security officer","chief security officer","vp information security","vice president information security","head of information security"],"score":30,"oak_angle":"Board-ready identity risk, continuous compliance, and reducing the identity attack surface.","listen_for":["board pressure","identity breach exposure","SailPoint replacement timing","audit commitments"]},"iam":{"title_patterns":["identity architect","identity engineer","iam engineer","iam manager","identity manager","access governance","identity infrastructure","identity and access management","iga architect"],"score":30,"oak_angle":"Reduce manual identity work, legacy IGA fatigue, and non-human identity or AI-agent sprawl.","listen_for":["manual access requests","legacy IGA fatigue","connector backlog","non-human identity ownership"]},"compliance":{"title_patterns":["compliance auditor","compliance manager","compliance director","internal auditor","it auditor","grc manager","sox manager"],"score":30,"oak_angle":"Automate access certifications and maintain continuous audit readiness.","listen_for":["access certification backlog","manual audit evidence","control exceptions","active audit deadline"]},"other":{"title_patterns":[],"score":0,"oak_angle":"No Oak target persona was established.","listen_for":[]}},"relevance_signals":["identity","identities","iam","iga","access governance","access review","access reviews","access request","access requests","access certification","sailpoint","non-human identities","non human identities","non-human identity","nhi","machine identities","service accounts","api keys","ai agent","ai agents","agent sprawl","sox","audit","compliance"],"relevance_signals_are_scored":false,"competitors":{"confirmed_names":["veza","sailpoint","saviynt","omada identity","one identity","okta identity governance","microsoft entra id governance","ping identity","cyberark","beyondtrust","delinea","astrix security","oasis security","silverfort","aembit","token security","clutch security"],"possible_keywords":["identity governance platform","identity security platform","access governance platform","iga platform","privileged access management platform","non-human identity platform","identity security posture management"],"possible_name_tokens":["identity security","identity governance","access governance","identity platform","privileged access","non-human identity","machine identity","identity fabric","identity management","access management"]},"incumbent_tools":[{"name":"SailPoint","aliases":["sailpoint","identityiq"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"task_defined"},{"name":"Saviynt","aliases":["saviynt"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"Omada Identity","aliases":["omada","omada identity"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"One Identity","aliases":["one identity","identity manager"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"Okta Identity Governance","aliases":["okta iga","okta identity governance"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"Microsoft Entra ID Governance","aliases":["entra id governance","microsoft entra id governance"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"Ping Identity","aliases":["ping identity","pingidentity"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"}],"urgency":{"renewal_max_months":6,"breach_score":40,"audit_deadline_score":40},"scoring":{"persona_points":30,"company_size_points":15,"industry_points":15,"urgency_points":40,"max":100,"rationale":"Every component maps to a line in the Oak ICP summary: the three core personas, the 1,000+ company size bar, the four target industries, and the Tier 1 high-urgency buying triggers. Nothing else earns points."},"classifications":{"tier_1":"Target persona with an active Tier 1 trigger and no disqualifier. Headcount is confirmed at the booth when public evidence does not establish it.","matched":"Target persona without a Tier 1 trigger.","needs_review":"Ambiguous persona, or a known 500-999 employee company.","competitor_intel":"Company or email domain matches an active competitor row.","out_of_scope":"Explicitly below 500 employees, SaaS-only/single-cloud, or no relevant persona/context."},"notifications":{"tier_1":{"channel":"booth-hot","owner_dm":true},"matched":{"channel":"booth-matched","owner_dm":false},"needs_review":{"channel":"booth-review","owner_dm":false},"competitor_intel":{"channel":"competitive-intel","owner_dm":false},"out_of_scope":{"channel":"booth-out-of-scope","owner_dm":false},"ops_alerts":{"channel":"oak-revops","owner_dm":false},"mention_tiers":["tier_1"],"owner_overrides":{}},"slack":{"owner_directory":{},"private_channels":["competitive-intel"]},"enrichment":{"company_cache_ttl_days":30,"max_results":5,"person_results":3,"search_enabled":true,"person_search_enabled":true,"employee_search_enabled":true,"employee_confidence":{"hubspot_company":1,"booth_notes":0.9,"official_website":0.85,"domain_matched_public_search":0.7},"employee_verification_required_below":1},"crm":{"create_company_if_missing":true,"write_enrichment_to_company":true},"llm":{"provider":"gemini","temperature":0,"prompt_version":"oak-persona-v5","minimum_confidence":0.7},"security":{"notes_are_untrusted":true,"webhook_header":"x-oak-webhook-secret","webhook_enforced_when_secret_set":true},"competitor_dont_say":["Do not discuss ConnectAny implementation details."],"policy_fallback":true}},"competitors":[{"id":1,"name":"Veza","domains":["veza.com"],"aliases":["veza","veza technologies"],"category":"identity_security","status":"active","active":true,"verification_status":"task_defined","source_note":"Named competitor in the Oak task.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":2,"name":"SailPoint","domains":["sailpoint.com"],"aliases":["sailpoint","identityiq"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"Employee is competitor; product renewal in notes is a separate incumbent trigger.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":3,"name":"Saviynt","domains":["saviynt.com"],"aliases":["saviynt"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":4,"name":"CyberArk","domains":["cyberark.com"],"aliases":["cyberark"],"category":"pam","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":5,"name":"Okta Identity Governance","domains":[],"aliases":["okta iga","okta identity governance"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied product-line seed; broad corporate domain.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":6,"name":"Omada Identity","domains":["omadaidentity.com"],"aliases":["omada","omada identity"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":7,"name":"One Identity","domains":["oneidentity.com"],"aliases":["one identity"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":8,"name":"Microsoft Entra ID Governance","domains":[],"aliases":["entra id governance","microsoft entra id governance"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied product-line seed; broad corporate domain.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":9,"name":"Ping Identity","domains":["pingidentity.com"],"aliases":["ping identity","pingidentity"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":10,"name":"BeyondTrust","domains":["beyondtrust.com"],"aliases":["beyondtrust"],"category":"pam","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":11,"name":"Delinea","domains":["delinea.com"],"aliases":["delinea"],"category":"pam","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":12,"name":"Astrix Security","domains":["astrix.security"],"aliases":["astrix","astrix security"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"Domain verified; Astrix reports it is now part of Cisco.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":13,"name":"Oasis Security","domains":["oasis.security"],"aliases":["oasis","oasis security"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":14,"name":"Silverfort","domains":["silverfort.com"],"aliases":["silverfort"],"category":"identity_security","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":15,"name":"Aembit","domains":["aembit.com"],"aliases":["aembit"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"Verified official domain is aembit.com.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":16,"name":"Token Security","domains":["token.security"],"aliases":["token security"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":17,"name":"Clutch Security","domains":["clutch.security"],"aliases":["clutch security"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"}],"leads":[{"scan_id":"oak-demo-rachel-2","event_id":"oak-demo-2026","name":"Rachel Green","email":"rachel@apexfinancial.example","company":"Apex Financial Services","title":"Chief Information Security Officer","classification":"tier_1","would_be_classification":null,"score":100,"score_breakdown":{"persona":30,"company_size":15,"industry":15,"urgency":40,"total":100,"max":100},"company_size_band":"qualified_1000_plus","status":"complete","policy_version":"oak-event-v5","channel":"booth-hot","thread_channel":"booth-review","threaded":true,"scanned_at":"2026-09-21T10:42:00.000Z","completed_at":"2026-09-21T10:42:02.600Z","claimed_by":"U123OAK","booth_status":"met","enrichment_status":"cache_hit","persona":"ciso","persona_source":"title_rule","persona_reasoning_required":true,"llm_used":false,"email_valid":true,"repeat_scan":true,"scan_count":2,"prior_classification":"needs_review","notification_mode":"repeat_escalation","decision_reasons":["CISO is a target persona.","12,000 employees stated at the booth (first-party evidence at 0.9 confidence).","SailPoint renewal within six months is a Tier 1 urgency trigger.","Returning visitor: the tier changed from needs review to Tier 1, so 03 replies in the first card's thread, broadcasts it and adds @here."],"evidence":[{"type":"employee_count","source":"booth_notes","quote":"Confirmed 12,000 employees.","confidence":0.9},{"type":"urgency","source":"booth_notes","quote":"SailPoint renews in four months.","confidence":1}]},{"scan_id":"oak-demo-priya","event_id":"oak-demo-2026","name":"Priya Nair","email":"priya.nair@meridianhealth.example","company":"Meridian Health","title":"Head of Access Platforms","classification":"matched","would_be_classification":null,"score":60,"score_breakdown":{"persona":30,"company_size":15,"industry":15,"urgency":0,"total":60,"max":100},"company_size_band":"qualified_1000_plus","status":"complete","policy_version":"oak-event-v5","channel":"booth-matched","scanned_at":"2026-09-21T09:36:00.000Z","completed_at":"2026-09-21T09:36:03.900Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"complete","persona":"iam","persona_source":"ai_resolved_ambiguous","persona_confidence":0.82,"persona_reasoning_required":true,"llm_used":true,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["Title was ambiguous; 05 resolved it as IAM at 0.82 confidence, above the 0.7 floor.","4,800 employees on the HubSpot company record (confidence 1.0).","Healthcare is a target industry.","No Tier 1 trigger in the booth notes, so this is Matched, not Tier 1."],"evidence":[{"type":"employee_count","source":"hubspot_company","quote":"numberofemployees: 4800","confidence":1},{"type":"persona","source":"ai_resolved_ambiguous","quote":"Runs Okta for workforce SSO; owns service-account cleanup.","confidence":0.82}]},{"scan_id":"oak-demo-rachel","event_id":"oak-demo-2026","name":"Rachel Green","email":"rachel@apexfinancial.example","company":"Apex Financial Services","title":"Chief Information Security Officer","classification":"needs_review","would_be_classification":"tier_1","score":85,"score_breakdown":{"persona":30,"company_size":0,"industry":15,"urgency":40,"total":85,"max":100},"company_size_band":"unknown","status":"complete","policy_version":"oak-event-v5","channel":"booth-review","scanned_at":"2026-09-21T08:21:00.000Z","completed_at":"2026-09-21T08:21:03.200Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"partial","persona":"ciso","persona_source":"title_rule","persona_reasoning_required":true,"llm_used":false,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["CISO is a target persona.","SailPoint renewal within six months is a Tier 1 urgency trigger.","Possible Tier 1 - confirm 1,000+ employees before treating as hot."],"evidence":[{"type":"urgency","source":"booth_notes","quote":"SailPoint renews in four months.","confidence":1},{"type":"employee_count","source":"name_matched_public_search","quote":"Apex has 19,000 employees (a different Apex?)","confidence":0.6}]},{"scan_id":"oak-demo-hiroshi","event_id":"oak-demo-2026","name":"Hiroshi Tanaka","email":"hiroshi@northstar.example","company":"Northstar Bank","title":"VP Identity & Access Management","classification":"tier_1","would_be_classification":null,"score":100,"score_breakdown":{"persona":30,"company_size":15,"industry":15,"urgency":40,"total":100,"max":100},"company_size_band":"qualified_1000_plus","status":"complete","policy_version":"oak-event-v5","channel":"booth-hot","scanned_at":"2026-09-21T08:18:00.000Z","completed_at":"2026-09-21T08:18:01.450Z","claimed_by":"U123OAK","booth_status":"met","enrichment_status":"complete","persona":"iam","persona_source":"title_rule","persona_reasoning_required":true,"llm_used":false,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["IAM leadership is a target persona.","2,000 employees stated at the booth (first-party evidence).","SailPoint renewal in five months is a Tier 1 urgency trigger."],"evidence":[{"type":"employee_count","source":"booth_notes","quote":"We have 2,000 employees.","confidence":0.9},{"type":"urgency","source":"booth_notes","quote":"SailPoint renewal in five months.","confidence":1}]},{"scan_id":"oak-demo-tom","event_id":"oak-demo-2026","name":"Tom Becker","email":null,"company":"Ledgerline","title":"Identity Architect","classification":"needs_review","would_be_classification":"matched","score":45,"score_breakdown":{"persona":30,"company_size":0,"industry":15,"urgency":0,"total":45,"max":100},"company_size_band":"unknown","status":"complete","policy_version":"oak-event-v5","channel":"booth-review","scanned_at":"2026-09-21T08:15:00.000Z","completed_at":"2026-09-21T08:15:02.700Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"partial","persona":"iam","persona_source":"title_rule","persona_reasoning_required":true,"llm_used":false,"email_valid":false,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["Identity architect is a target persona.","Fintech is a target industry.","No headcount could be established, so a rep confirms size at the booth.","No email on the badge: HubSpot sync (02) is skipped and the delivery still completes."],"evidence":[{"type":"industry","source":"official_website","quote":"Payments infrastructure for community banks.","confidence":0.9}]},{"scan_id":"oak-demo-david","event_id":"oak-demo-2026","name":"David Stone","email":"david@tiny.example","company":"Tiny Cloud","title":"Founder","classification":"out_of_scope","would_be_classification":null,"score":0,"score_breakdown":{"persona":0,"company_size":0,"industry":0,"urgency":0,"total":0,"max":100},"company_size_band":"disqualified_under_500","status":"complete","policy_version":"oak-event-v5","channel":"booth-out-of-scope","scanned_at":"2026-09-21T08:12:00.000Z","completed_at":"2026-09-21T08:12:02.100Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"homepage_only","persona":"other","persona_source":"none_from_rules","persona_reasoning_required":false,"llm_used":false,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["80 employees stated at the booth; the official site agrees.","Below the 500-employee minimum.","Single-cloud SaaS is a stated disqualifier."],"evidence":[{"type":"employee_count","source":"official_website","quote":"Our team of 80","confidence":0.9}]},{"scan_id":"oak-demo-sarah","event_id":"oak-demo-2026","name":"Sarah Chen","email":"sarah@veza.com","company":"Veza","title":"Product Marketing","classification":"competitor_intel","would_be_classification":null,"score":0,"score_breakdown":{"persona":0,"company_size":0,"industry":0,"urgency":0,"total":0,"max":100},"company_size_band":"unknown","status":"complete","policy_version":"oak-event-v5","channel":"competitive-intel","scanned_at":"2026-09-21T08:08:00.000Z","completed_at":"2026-09-21T08:08:01.100Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"company_only","persona":"other","persona_source":"none_from_rules","persona_reasoning_required":false,"llm_used":false,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["veza.com matches an active competitor domain.","04 read the company homepage but ran no person search: Oak does not profile a competitor's employees."],"evidence":[{"type":"competitor_identity","source":"scanner_email","quote":"sarah@veza.com","confidence":1}]}],"workflowHealth":[{"step":"00","name":"Setup & Seed","id":"PeoS0NF1f7FHzEID","state":"draft only, run manually, never published","health":"healthy"},{"step":"01","name":"Intake & Decision","id":"9SzVHK4vdv7Z3UMH","state":"webhook, active v7d48dcb0","health":"healthy"},{"step":"02A","name":"CRM Context","id":"xnl1bav7McaQIwXC","state":"sub-flow, active vd1d32bc2","health":"healthy"},{"step":"04","name":"Company & Person Enrichment","id":"K9MaVwjIoBmZ0oS9","state":"sub-flow, active v9742a40a","health":"healthy"},{"step":"05","name":"AI Lead Reasoning","id":"McoAVyLN6lxqmLeO","state":"sub-flow, active vd1bb7ad6","health":"healthy"},{"step":"02","name":"HubSpot Sync","id":"WQ2s5hFfpaE8P45o","state":"sub-flow, active vf13df11d","health":"healthy"},{"step":"03","name":"Slack Alerts","id":"gyCxnkoGkh3OJpz5","state":"sub-flow, active v441bda85","health":"healthy"},{"step":"06","name":"Slack Actions","id":"VsKr9HAqOrtOlxZC","state":"Slack webhook, active v87d50258","health":"healthy"},{"step":"07","name":"Task Test Harness","id":"nyht2byorvoxFX2u","state":"manual, active v6f8f8789","health":"healthy"},{"step":"08","name":"Control Center API","id":null,"state":"webhooks /oak-api/*, serves this app","health":"healthy"},{"step":"99","name":"Failure Handler","id":"N4JW7CO6qjdLi6mq","state":"error trigger, active vb4184480","health":"healthy"}]};
+    <script>window.OAK_OFFLINE=true;window.OAK_OFFLINE_STATE={"snapshot_at":"2026-09-28T12:00:00.000Z","policy":{"version":"oak-event-v5","status":"active","activated_at":"2026-09-22T06:05:58.957Z","document":{"version":"oak-event-v5","company_fit":{"qualified_employee_min":1000,"review_employee_min":500,"disqualified_employee_max":499,"target_industries":["financial_services","fintech","technology","healthcare"],"disqualifiers":["saas-only","single-cloud"],"personal_email_domains":["gmail.com","googlemail.com","outlook.com","hotmail.com","live.com","yahoo.com","icloud.com","proton.me","protonmail.com"]},"personas":{"ciso":{"title_patterns":["ciso","chief information security officer","chief security officer","vp information security","vice president information security","head of information security"],"score":30,"oak_angle":"Board-ready identity risk, continuous compliance, and reducing the identity attack surface.","listen_for":["board pressure","identity breach exposure","SailPoint replacement timing","audit commitments"]},"iam":{"title_patterns":["identity architect","identity engineer","iam engineer","iam manager","identity manager","access governance","identity infrastructure","identity and access management","iga architect"],"score":30,"oak_angle":"Reduce manual identity work, legacy IGA fatigue, and non-human identity or AI-agent sprawl.","listen_for":["manual access requests","legacy IGA fatigue","connector backlog","non-human identity ownership"]},"compliance":{"title_patterns":["compliance auditor","compliance manager","compliance director","internal auditor","it auditor","grc manager","sox manager"],"score":30,"oak_angle":"Automate access certifications and maintain continuous audit readiness.","listen_for":["access certification backlog","manual audit evidence","control exceptions","active audit deadline"]},"other":{"title_patterns":[],"score":0,"oak_angle":"No Oak target persona was established.","listen_for":[]}},"relevance_signals":["identity","identities","iam","iga","access governance","access review","access reviews","access request","access requests","access certification","sailpoint","non-human identities","non human identities","non-human identity","nhi","machine identities","service accounts","api keys","ai agent","ai agents","agent sprawl","sox","audit","compliance"],"relevance_signals_are_scored":false,"competitors":{"confirmed_names":["veza","sailpoint","saviynt","omada identity","one identity","okta identity governance","microsoft entra id governance","ping identity","cyberark","beyondtrust","delinea","astrix security","oasis security","silverfort","aembit","token security","clutch security"],"possible_keywords":["identity governance platform","identity security platform","access governance platform","iga platform","privileged access management platform","non-human identity platform","identity security posture management"],"possible_name_tokens":["identity security","identity governance","access governance","identity platform","privileged access","non-human identity","machine identity","identity fabric","identity management","access management"]},"incumbent_tools":[{"name":"SailPoint","aliases":["sailpoint","identityiq"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"task_defined"},{"name":"Saviynt","aliases":["saviynt"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"Omada Identity","aliases":["omada","omada identity"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"One Identity","aliases":["one identity","identity manager"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"Okta Identity Governance","aliases":["okta iga","okta identity governance"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"Microsoft Entra ID Governance","aliases":["entra id governance","microsoft entra id governance"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"Ping Identity","aliases":["ping identity","pingidentity"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"}],"urgency":{"renewal_max_months":6,"breach_score":40,"audit_deadline_score":40},"scoring":{"persona_points":30,"company_size_points":15,"industry_points":15,"urgency_points":40,"max":100,"rationale":"Every component maps to a line in the Oak ICP summary: the three core personas, the 1,000+ company size bar, the four target industries, and the Tier 1 high-urgency buying triggers. Nothing else earns points."},"classifications":{"tier_1":"Target persona with an active Tier 1 trigger and no disqualifier. Headcount is confirmed at the booth when public evidence does not establish it.","matched":"Target persona without a Tier 1 trigger.","needs_review":"Ambiguous persona, or a known 500-999 employee company.","competitor_intel":"Company or email domain matches an active competitor row.","out_of_scope":"Explicitly below 500 employees, SaaS-only/single-cloud, or no relevant persona/context."},"notifications":{"tier_1":{"channel":"booth-hot","owner_dm":true},"matched":{"channel":"booth-matched","owner_dm":false},"needs_review":{"channel":"booth-review","owner_dm":false},"competitor_intel":{"channel":"competitive-intel","owner_dm":false},"out_of_scope":{"channel":"booth-out-of-scope","owner_dm":false},"ops_alerts":{"channel":"oak-revops","owner_dm":false},"mention_tiers":["tier_1"],"owner_overrides":{}},"slack":{"owner_directory":{},"private_channels":["competitive-intel"]},"enrichment":{"company_cache_ttl_days":30,"max_results":5,"person_results":3,"search_enabled":true,"person_search_enabled":true,"employee_search_enabled":true,"employee_confidence":{"hubspot_company":1,"booth_notes":0.9,"official_website":0.85,"domain_matched_public_search":0.7},"employee_verification_required_below":1},"crm":{"create_company_if_missing":true,"write_enrichment_to_company":true},"llm":{"provider":"gemini","temperature":0,"prompt_version":"oak-persona-v5","minimum_confidence":0.7},"security":{"notes_are_untrusted":true,"webhook_header":"x-oak-webhook-secret","webhook_enforced_when_secret_set":true},"competitor_dont_say":["Do not discuss ConnectAny implementation details."],"policy_fallback":true}},"competitors":[{"id":1,"name":"Veza","domains":["veza.com"],"aliases":["veza","veza technologies"],"category":"identity_security","status":"active","active":true,"verification_status":"task_defined","source_note":"Named competitor in the Oak task.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":2,"name":"SailPoint","domains":["sailpoint.com"],"aliases":["sailpoint","identityiq"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"Employee is competitor; product renewal in notes is a separate incumbent trigger.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":3,"name":"Saviynt","domains":["saviynt.com"],"aliases":["saviynt"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":4,"name":"CyberArk","domains":["cyberark.com"],"aliases":["cyberark"],"category":"pam","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":5,"name":"Okta Identity Governance","domains":[],"aliases":["okta iga","okta identity governance"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied product-line seed; broad corporate domain.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":6,"name":"Omada Identity","domains":["omadaidentity.com"],"aliases":["omada","omada identity"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":7,"name":"One Identity","domains":["oneidentity.com"],"aliases":["one identity"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":8,"name":"Microsoft Entra ID Governance","domains":[],"aliases":["entra id governance","microsoft entra id governance"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied product-line seed; broad corporate domain.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":9,"name":"Ping Identity","domains":["pingidentity.com"],"aliases":["ping identity","pingidentity"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":10,"name":"BeyondTrust","domains":["beyondtrust.com"],"aliases":["beyondtrust"],"category":"pam","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":11,"name":"Delinea","domains":["delinea.com"],"aliases":["delinea"],"category":"pam","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":12,"name":"Astrix Security","domains":["astrix.security"],"aliases":["astrix","astrix security"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"Domain verified; Astrix reports it is now part of Cisco.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":13,"name":"Oasis Security","domains":["oasis.security"],"aliases":["oasis","oasis security"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":14,"name":"Silverfort","domains":["silverfort.com"],"aliases":["silverfort"],"category":"identity_security","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":15,"name":"Aembit","domains":["aembit.com"],"aliases":["aembit"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"Verified official domain is aembit.com.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":16,"name":"Token Security","domains":["token.security"],"aliases":["token security"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":17,"name":"Clutch Security","domains":["clutch.security"],"aliases":["clutch security"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"}],"leads":[{"scan_id":"evt_9901","event_id":"oak-live-event-2026","name":"Rachel Green","email":"rachel.green@apex-finance.com","company":"Apex Financial Services","title":"Chief Information Security Officer","classification":"tier_1","would_be_classification":null,"score":70,"score_breakdown":{"persona":30,"company_size":0,"industry":0,"urgency":40,"total":70,"max":100},"company_size_band":"unknown","status":"complete","policy_version":"oak-event-v5","channel":"booth-hot","scanned_at":"2026-07-19T11:00:00.000Z","received_at":"2026-09-22T09:56:31.758Z","completed_at":"2026-09-22T09:56:43.625Z","claimed_by":"noamlev500","booth_status":"not_a_fit","rep_override":"out_of_scope","rep_override_reason":"outside icp","enrichment_status":"partial","enrichment_warnings":["Official website enrichment was incomplete: The domain resolves to a parked or for-sale page, not a usable company website.","Public search was unavailable: Search returned results, but none matched the resolved company name or domain; no public company claim was retained."],"persona":"ciso","persona_source":"rule_title_match","persona_reasoning_required":true,"llm_used":true,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","rule_summary":"Tier 1: CISO + SailPoint renewal ≤ 6 months (headcount to confirm)","decision_reasons":["Job title matches Oak’s CISO target persona.","SailPoint renewal is 5 months away, inside the task’s six-month Tier 1 window.","Booth notes and title show Oak-relevant pain: access review, access reviews, sailpoint. Recorded as conversation evidence; the ICP guide does not score it.","Headcount was not stated in the booth notes, so no size points were awarded yet. Enrichment tries HubSpot, and identity-aligned public search when the lead is in scope; if it stays unresolved the rep confirms it at the booth.","AI synthesis: A CISO at a financial firm facing a SailPoint renewal and manual review pain is a high-intent target for identity risk reduction.","Headcount could not be established from booth notes, HubSpot, the official site or identity-aligned public search (not established). The tier stands on persona and trigger, and the alert asks the rep to confirm 1,000+ at the booth."],"evidence":[{"type":"urgency","source":"booth_notes","quote":"Currently using SailPoint, renewal coming up in 5 months. Complaining about manual access reviews.","confidence":1}],"source_note":"Stored decision from oak_deliveries.raw_json, read 2026-09-28."},{"scan_id":"evt_9902","event_id":"oak-live-event-2026","name":"Hiroshi Tanaka","email":"hiroshi.t@cloudscale-tech.io","company":"CloudScale Technologies","title":"Lead Identity Infrastructure Architect","classification":"matched","would_be_classification":null,"score":30,"score_breakdown":{"persona":30,"company_size":0,"industry":0,"urgency":0,"total":30,"max":100},"company_size_band":"unknown","status":"complete","policy_version":"oak-event-v5","channel":"booth-matched","scanned_at":"2026-07-19T11:05:00.000Z","received_at":"2026-09-22T09:56:46.834Z","completed_at":"2026-09-22T09:56:59.611Z","claimed_by":null,"booth_status":"scanned","rep_override":null,"rep_override_reason":null,"enrichment_status":"partial","enrichment_warnings":["Official website enrichment was incomplete: {\"errno\":-3008,\"code\":\"ENOTFOUND\",\"syscall\":\"getaddrinfo\",\"hostname\":\"cloudscale-tech.io\"}","Public search was unavailable: Search returned results, but none matched the resolved company name or domain; no public company claim was retained."],"persona":"iam","persona_source":"rule_title_match","persona_reasoning_required":true,"llm_used":true,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","rule_summary":"Matched: IAM persona; no verified Tier 1 trigger (headcount to confirm)","decision_reasons":["Job title matches Oak’s IAM target persona.","Booth notes and title show Oak-relevant pain: identity, identities, non-human identities, api keys. Recorded as conversation evidence; the ICP guide does not score it.","Headcount was not stated in the booth notes, so no size points were awarded yet. Enrichment tries HubSpot, and identity-aligned public search when the lead is in scope; if it stays unresolved the rep confirms it at the booth.","AI synthesis: Hiroshi is managing manual overhead and technical debt from a homegrown API key tracker while facing new AI agent sprawl.","Headcount could not be established from booth notes, HubSpot, the official site or identity-aligned public search (not established). The tier stands on persona and trigger, and the alert asks the rep to confirm 1,000+ at the booth."],"evidence":[],"source_note":"Stored decision from oak_deliveries.raw_json, read 2026-09-28."},{"scan_id":"evt_9903","event_id":"oak-live-event-2026","name":"David Miller","email":"david@boutiquesecurity.co.il","company":"Boutique Security Ltd","title":"Head of IT","classification":"out_of_scope","would_be_classification":null,"score":0,"score_breakdown":{"persona":0,"company_size":0,"industry":0,"urgency":0,"total":0,"max":100},"company_size_band":"disqualified_under_500","status":"complete","policy_version":"oak-event-v5","channel":"booth-out-of-scope","scanned_at":"2026-07-19T11:10:00.000Z","received_at":"2026-09-22T09:57:01.954Z","completed_at":"2026-09-22T09:57:07.121Z","claimed_by":null,"booth_status":"scanned","rep_override":null,"rep_override_reason":null,"enrichment_status":"partial","enrichment_warnings":["Official website enrichment was incomplete: {\"errno\":-3008,\"code\":\"ENOTFOUND\",\"syscall\":\"getaddrinfo\",\"hostname\":\"boutiquesecurity.co.il\"}","Public search was unavailable: Company search did not run.","Person search did not run. No person-level claim was made."],"persona":"other","persona_source":"none_from_rules","persona_reasoning_required":false,"llm_used":false,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","rule_summary":"Out of scope: under 500 employees","decision_reasons":["80 employees is below Oak’s stated 500-employee out-of-scope ceiling.","Explicit out-of-scope environment: saas-only.","No Oak target persona or relevant identity/compliance context was found, so paid AI persona reasoning and public search are skipped; the free homepage read still runs so the company can be checked against the competitor list.","80 employees places the company below the task’s 500-employee minimum, per hubspot company."],"evidence":[{"type":"employee_count","source":"hubspot_company","quote":"80 employees","confidence":1}],"source_note":"Stored decision from oak_deliveries.raw_json, read 2026-09-28."},{"scan_id":"evt_9904","event_id":"oak-live-event-2026","name":"Sarah Connor","email":"s.connor@veza.com","company":"Veza Technologies","title":"Director of Product Management","classification":"competitor_intel","would_be_classification":null,"score":0,"score_breakdown":{"persona":0,"company_size":0,"industry":0,"urgency":0,"total":0,"max":100},"company_size_band":"unknown","status":"complete","policy_version":"oak-event-v5","channel":"competitive-intel","scanned_at":"2026-07-19T11:15:00.000Z","received_at":"2026-09-22T09:57:16.831Z","completed_at":"2026-09-22T09:57:20.211Z","claimed_by":null,"booth_status":"scanned","rep_override":null,"rep_override_reason":null,"enrichment_status":"cache_hit","enrichment_warnings":["Person search did not run. No person-level claim was made."],"persona":"other","persona_source":"none_from_rules","persona_reasoning_required":false,"llm_used":false,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","rule_summary":"Competitor: Veza employee","decision_reasons":["Active competitor match by domain: Veza.","Headcount was not stated in the booth notes, so no size points were awarded yet. Enrichment tries HubSpot, and identity-aligned public search when the lead is in scope; if it stays unresolved the rep confirms it at the booth."],"evidence":[{"type":"competitor_identity","source":"email_domain","quote":"s.connor@veza.com","confidence":1}],"source_note":"Stored decision from oak_deliveries.raw_json, read 2026-09-28."},{"scan_id":"example-rachel-visit-2","event_id":"example-data","example":true,"name":"Rachel Green","email":"rachel.green@apex-finance.com","company":"Apex Financial Services","title":"Chief Information Security Officer","classification":"tier_1","would_be_classification":null,"score":85,"score_breakdown":{"persona":30,"company_size":15,"industry":0,"urgency":40,"total":85,"max":100},"company_size_band":"qualified_1000_plus","status":"complete","policy_version":"oak-event-v5","channel":"booth-hot","thread_channel":"booth-hot","threaded":true,"scanned_at":"2026-07-19T15:20:00.000Z","received_at":"2026-07-19T15:20:00.400Z","completed_at":"2026-07-19T15:20:11.900Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"cache_hit","persona":"ciso","persona_source":"rule_title_match","persona_reasoning_required":true,"llm_used":true,"email_valid":true,"repeat_scan":true,"scan_count":2,"prior_classification":"tier_1","notification_mode":"repeat_thread","decision_reasons":["Job title matches the CISO target persona.","12,000 employees stated at the booth (first-party evidence at 0.9 confidence), which earns the 15 size points.","SailPoint renewal inside six months is a Tier 1 trigger.","Returning visitor with the same tier: 03 replies in the first card's thread and broadcasts it."],"evidence":[{"type":"employee_count","source":"booth_notes","quote":"Confirmed 12,000 employees.","confidence":0.9}],"source_note":"Example data written for this demo. Not a real scan."},{"scan_id":"example-maya","event_id":"example-data","example":true,"name":"Maya Singh","email":"maya@middleco.example","company":"Middle Co","title":"CISO","classification":"needs_review","would_be_classification":"tier_1","score":70,"score_breakdown":{"persona":30,"company_size":0,"industry":0,"urgency":40,"total":70,"max":100},"company_size_band":"review_500_999","status":"complete","policy_version":"oak-event-v5","channel":"booth-review","scanned_at":"2026-07-19T14:02:00.000Z","received_at":"2026-07-19T14:02:00.300Z","completed_at":"2026-07-19T14:02:12.100Z","claimed_by":null,"booth_status":"scanned","rep_override":"tier_1","rep_override_reason":"US arm of a 3,000-person group that buys centrally","enrichment_status":"complete","persona":"ciso","persona_source":"rule_title_match","persona_reasoning_required":true,"llm_used":true,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["CISO matches a title rule.","An audit deadline in Q4 is a Tier 1 trigger.","800 employees stated at the booth: above the 500 floor, under the 1,000 ICP line, so a human decides."],"evidence":[{"type":"employee_count","source":"booth_notes","quote":"800 employees here.","confidence":0.9},{"type":"urgency","source":"booth_notes","quote":"Audit deadline in Q4.","confidence":1}],"source_note":"Example data written for this demo. Not a real scan."},{"scan_id":"example-priya","event_id":"example-data","example":true,"name":"Priya Nair","email":"priya.nair@meridianhealth.example","company":"Meridian Health","title":"Head of Access Platforms","classification":"matched","would_be_classification":null,"score":60,"score_breakdown":{"persona":30,"company_size":15,"industry":15,"urgency":0,"total":60,"max":100},"company_size_band":"qualified_1000_plus","status":"complete","policy_version":"oak-event-v5","channel":"booth-matched","scanned_at":"2026-07-19T13:36:00.000Z","received_at":"2026-07-19T13:36:00.200Z","completed_at":"2026-07-19T13:36:13.800Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"complete","persona":"iam","persona_source":"ai_resolved_ambiguous","persona_confidence":0.82,"persona_reasoning_required":true,"llm_used":true,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["Title was ambiguous; 05 resolved it as IAM at 0.82 confidence, above the 0.7 floor.","4,800 employees on the HubSpot company record (confidence 1.0).","Healthcare is a target industry.","No Tier 1 trigger in the booth notes, so this is Matched, not Tier 1."],"evidence":[{"type":"employee_count","source":"hubspot_company","quote":"4,800 employees","confidence":1}],"source_note":"Example data written for this demo. Not a real scan."},{"scan_id":"example-tom","event_id":"example-data","example":true,"name":"Tom Becker","email":null,"company":"Ledgerline","title":"Identity Architect","classification":"matched","would_be_classification":null,"score":45,"score_breakdown":{"persona":30,"company_size":0,"industry":15,"urgency":0,"total":45,"max":100},"company_size_band":"unknown","status":"complete","policy_version":"oak-event-v5","channel":"booth-matched","scanned_at":"2026-07-19T13:15:00.000Z","received_at":"2026-07-19T13:15:00.200Z","completed_at":"2026-07-19T13:15:09.700Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"partial","persona":"iam","persona_source":"rule_title_match","persona_reasoning_required":true,"llm_used":true,"email_valid":false,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["Identity architect matches the IAM title rule.","Fintech is a target industry, from the official site.","No Tier 1 trigger and no headcount: Matched, and the rep confirms size at the booth.","No email on the badge: HubSpot sync (02) is skipped and the delivery still completes."],"evidence":[{"type":"industry","source":"official_website","quote":"Payments infrastructure for community banks.","confidence":0.9}],"source_note":"Example data written for this demo. Not a real scan."}],"workflowHealth":[{"step":"00","name":"Setup & Seed","id":"PeoS0NF1f7FHzEID","state":"draft only, run manually, never published","health":"healthy"},{"step":"01","name":"Intake & Decision","id":"9SzVHK4vdv7Z3UMH","state":"webhook, active v7d48dcb0","health":"healthy"},{"step":"02A","name":"CRM Context","id":"xnl1bav7McaQIwXC","state":"sub-flow, active vd1d32bc2","health":"healthy"},{"step":"04","name":"Company & Person Enrichment","id":"K9MaVwjIoBmZ0oS9","state":"sub-flow, active v9742a40a","health":"healthy"},{"step":"05","name":"AI Lead Reasoning","id":"McoAVyLN6lxqmLeO","state":"sub-flow, active vd1bb7ad6","health":"healthy"},{"step":"02","name":"HubSpot Sync","id":"WQ2s5hFfpaE8P45o","state":"sub-flow, active vf13df11d","health":"healthy"},{"step":"03","name":"Slack Alerts","id":"gyCxnkoGkh3OJpz5","state":"sub-flow, active v441bda85","health":"healthy"},{"step":"06","name":"Slack Actions","id":"VsKr9HAqOrtOlxZC","state":"Slack webhook, active v87d50258","health":"healthy"},{"step":"07","name":"Task Test Harness","id":"nyht2byorvoxFX2u","state":"manual, active v6f8f8789","health":"healthy"},{"step":"08","name":"Control Center API","id":"F1WVtZUcC3Y54acX","state":"webhooks /oak-api/*, active v17e32411","health":"healthy"},{"step":"99","name":"Failure Handler","id":"N4JW7CO6qjdLi6mq","state":"error trigger, active vb4184480","health":"healthy"}],"example_note":"Rows with example: true and event example-data are written for this demo. The four evt_99xx rows are the real stored decisions."};
 window.OAK_DATA = {
   fixtures: {
     apex: {
-      label: 'Apex - possible Tier 1, size unknown',
+      label: 'Apex CISO, renewal, size unknown - Tier 1',
       payload: {
         scan_id: 'oak-ui-test-apex-review',
         event_id: 'oak-demo-2026',
@@ -702,14 +705,14 @@ window.OAK_DATA = {
       },
     },
     booth2000: {
-      label: 'Booth-stated 2,000 - Tier 1',
+      label: 'Example: booth-stated 2,000 - Tier 1',
       payload: {
         scan_id: 'oak-ui-test-booth-2000',
         event_id: 'oak-demo-2026',
         scanned_at: '2026-09-21T09:02:00.000Z',
-        first_name: 'Hiroshi',
-        last_name: 'Tanaka',
-        email: 'hiroshi@northstar.example',
+        first_name: 'Kenji',
+        last_name: 'Mori',
+        email: 'kenji@northstar.example',
         job_title: 'VP Identity & Access Management',
         company_name: 'Northstar Bank',
         company_domain: 'northstar.example',
@@ -718,7 +721,7 @@ window.OAK_DATA = {
       },
     },
     review800: {
-      label: 'Known 800 - needs review',
+      label: 'Known 800 CISO - needs review',
       payload: {
         scan_id: 'oak-ui-test-review-800',
         event_id: 'oak-demo-2026',
@@ -768,21 +771,21 @@ window.OAK_DATA = {
       id: 'tier_1',
       label: 'Tier 1',
       channel: '#booth-hot',
-      rule: 'Target persona + urgency + 1,000+ employees at confidence ≥ 0.9.',
+      rule: 'Target persona + a Tier 1 trigger, no disqualifier. Unknown size does not block it; the card asks the rep to confirm 1,000+.',
       treatment: '@here plus an owner DM; immediate booth action.',
     },
     {
       id: 'matched',
       label: 'Matched',
       channel: '#booth-matched',
-      rule: 'Target persona + 1,000+ employees; no Tier 1 urgency.',
+      rule: 'Target persona without a Tier 1 trigger.',
       treatment: 'No mention; normal booth follow-up.',
     },
     {
       id: 'needs_review',
       label: 'Needs review',
       channel: '#booth-review',
-      rule: 'Unknown/low-confidence size, known 500-999, or ambiguous persona.',
+      rule: 'Ambiguous persona, or a known 500-999 employee company.',
       treatment: 'No @here. The card carries a triage row: Promote to Tier 1 | Matched | Not a fit.',
     },
     {
@@ -796,7 +799,7 @@ window.OAK_DATA = {
       id: 'out_of_scope',
       label: 'Out of scope',
       channel: '#booth-out-of-scope',
-      rule: 'Under 500 at confidence ≥ 0.9, SaaS-only, single-cloud, or irrelevant.',
+      rule: 'Explicitly under 500 employees, SaaS-only or single-cloud, or no relevant persona or context.',
       treatment: 'Quiet record: no mention, no coaching, no buttons. No AI call and no paid search.',
     },
   ],
@@ -841,16 +844,16 @@ window.OAK_DATA = {
     {
       id: 'would-be-tier1',
       number: '03',
-      title: 'Handle a would-be Tier 1 with unknown size',
+      title: 'Handle a hot lead whose size is unknown or borderline',
       owner: 'Booth rep',
-      status: 'designed',
-      hypothesis: 'Preserving urgency while withholding @here keeps the hot channel credible without losing real enterprise buyers.',
-      business: 'A CISO with an imminent SailPoint renewal but no established headcount lands in review with a prominent “Possible Tier 1” message.',
+      status: 'live',
+      hypothesis: 'The tier follows what Oak can prove; the one fact it cannot prove goes to the person standing in front of the visitor.',
+      business: 'A CISO with a SailPoint renewal and no established headcount is Tier 1 with "confirm company size" in the header. A known 500-999 company with the same persona and trigger goes to review as would-be Tier 1.',
       logic: [
-        'Keep classification needs_review and store would_be_classification=tier_1.',
-        'Award persona and urgency points, but not the 15 size points.',
-        'Lead with “confirm 1,000+” in NEXT AT THE BOOTH.',
-        'The card carries a triage row: Promote to Tier 1 | Matched | Not a fit.',
+        'Unknown size: the tier stands on persona and trigger, no size points, and the card asks the rep to confirm 1,000+.',
+        'Known 500-999: classification needs_review with would_be_classification recorded.',
+        'Award persona and urgency points, but not the 15 size points, until a count is established.',
+        'A review card carries a triage row: Promote to Tier 1 | Matched | Not a fit. Not a fit is on every other card.',
         '06 reloads the stored decision from oak_deliveries.raw_json and calls 03, which reposts to the new channel with that tier\'s buttons.',
       ],
       evidence: 'Persona match, exact urgency quote, absent/low-confidence headcount and human override.',
@@ -882,7 +885,7 @@ window.OAK_DATA = {
       owner: 'Encounter model',
       status: 'live',
       hypothesis: 'One person can visit repeatedly; event encounter and delivery identities prevent lost history and noisy duplicate roots.',
-      business: 'The same visitor scanned again gets a new CRM note and a reply in the first card\'s thread, broadcast back to the channel. A tier change adds an @here.',
+      business: 'The same visitor scanned again gets a new CRM note. Same tier: a reply in the first card\'s thread, broadcast back to the channel. Changed tier: a new card in the new tier\'s channel plus a one-line pointer in the old thread.',
       logic: [
         'Person identity is normalized email.',
         'Encounter identity is event_id + email.',
@@ -1047,19 +1050,20 @@ window.OAK_JOURNEY = {
       owner: '04 Enrichment + final gates',
       question: 'Do we actually know this company is 1,000+, or do we just have a number?',
       business:
-        'A count the visitor states at the booth is first-party evidence and can qualify them. A number scraped from a page that merely shares the company name is not, and sends the lead to review instead.',
+        'A count the visitor states at the booth is first-party evidence and can qualify them. A number from a page that merely shares the company name is never counted. When nothing establishes a count, the rep is asked to confirm it at the booth.',
       mechanics: [
         'Precedence: the HubSpot company record (read by 02A), then the booth-stated count, then the official company domain, then a domain-matched public result.',
         'Confidence comes from the policy row: HubSpot 1.0, booth notes 0.9, official site 0.85, domain-matched search 0.7.',
         'Strong evidence may promote, disqualify, award the size points, and write HubSpot; weaker evidence is flagged for the rep to confirm at the booth.',
         'A count found only by company name is never counted. It appears on the card as a candidate with its link.',
+        'With no count anywhere, the tier stands on persona and trigger, no size points are awarded, and the card leads the rep to the size question.',
       ],
       hypothesis:
-        'The real failure mode is entity resolution, not arithmetic. Trust is therefore asymmetric: promoting a lead to a hot channel demands strong evidence, demoting to review demands none, and disqualifying demands strong evidence again so a wrong match cannot silently kill a real enterprise buyer.',
+        'The real failure mode is entity resolution, not arithmetic, so a wrong number is worse than no number. A name-only match never counts, disqualifying demands strong evidence so a wrong match cannot silently kill a real enterprise buyer, and when size is simply unknown the rep, who is standing in front of the visitor, settles it with one question.',
       rejected:
         'Treating any public number as fact. That is how a 28-person firm sharing a name with a 19,000-person firm ends up paging an executive to the booth.',
       evidence: 'employee_resolution: value, source, confidence, evidence URL or booth quote, verification flag.',
-      failure: 'No count anywhere means unknown, which means review - never an optimistic guess.',
+      failure: 'No count anywhere means unknown: no size points, and the card asks the rep to confirm 1,000+ instead of guessing.',
     },
     {
       id: 'enrichment',
@@ -1160,7 +1164,7 @@ window.OAK_JOURNEY = {
       mechanics: [
         'Channel is chosen by classification; only Tier 1 uses a mention.',
         'The card leads with the decision, then the evidence, then what to do next at the booth.',
-        'A returning visitor gets a reply in the first card\'s thread, broadcast back to the channel; a tier change adds an @here.',
+        'A returning visitor with the same tier gets a reply in the first card\'s thread, broadcast back to the channel. If the tier changed, 03 posts a new card in the new tier\'s channel and leaves a one-line pointer in the old thread.',
         'Tier 1 also DMs the HubSpot owner when that owner is mapped to a Slack user.',
         'Out-of-scope cards are deliberately plain: they exist for the record, not for action.',
       ],
@@ -1217,70 +1221,166 @@ window.OAK_JOURNEY = {
 
   scenarios: [
     {
-      id: 'northstar',
-      chip: 'Tier 1 CISO-level buyer',
-      title: 'The visitor tells you the number',
-      persona: 'Hiroshi Tanaka - VP Identity & Access Management, Northstar Bank',
-      tension: 'Same shape as Apex, one crucial difference: the count is first-party.',
+      id: 'rachel',
+      chip: 'Tier 1 CISO',
+      source: 'Task lead evt_9901',
+      title: 'A hot buyer with no proof of size',
+      persona: 'Rachel Green - CISO, Apex Financial Services',
+      tension: 'Persona and trigger say Tier 1 and headcount is unknown, so Oak alerts now and hands the one open question to the rep standing in front of her.',
       outcome: 'tier_1',
-      outcomeLabel: 'Tier 1, @here and owner DM',
-      notes: 'We have 2,000 employees. SailPoint renewal in five months; evaluating non-human identity governance.',
+      outcomeLabel: 'Tier 1, confirm size at the booth',
+      notes: 'Currently using SailPoint, renewal coming up in 5 months. Complaining about manual access reviews.',
       steps: [
-        ['capture', 'Scan accepted', 'New scan_id, first visit. 01 answers the scanner with a provisional 202 in about two seconds.'],
-        ['identity', 'Encounter created', 'First visit for this person at this event: new encounter, new delivery.'],
+        ['capture', 'Scan accepted', 'evt_9901, first visit of the event. 01 answers the scanner with a provisional 202 in about two seconds.'],
+        ['identity', 'Encounter created', 'Person rachel.green@apex-finance.com; encounter = event + person; delivery = this scan.'],
         ['policy', 'Version pinned', 'oak-event-v5 is active; the decision is stamped with it.'],
-        ['gates', 'Persona, urgency and size match', 'IAM leadership is a target persona, a SailPoint renewal inside six months is a Tier 1 trigger, and the visitor stated 2,000 employees.'],
-        ['size', 'Booth-stated count qualifies', '2,000 employees stated by the visitor. Booth notes carry 0.9 confidence, so the size gate is satisfied and the 15 size points are awarded.'],
-        ['enrichment', 'Confirms rather than decides', 'The official site corroborates financial services, which adds the 15 industry points. Nothing here was needed to reach the tier.'],
-        ['ai', 'Opening question only', 'The title matched a rule, so 05 does not resolve the persona. It writes an opening question grounded in a quote from the booth notes, plus listen-fors.'],
-        ['crm', 'Full write', 'Contact, company, meeting, note and the oak_* properties. Headcount is written because it is first-party.'],
-        ['persistence', 'Delivery complete', 'Status complete, classification tier_1, policy version recorded, before the card is posted.'],
-        ['slack', 'Hot card with a mention', '#booth-hot with @here, plus a DM to the HubSpot owner when that owner is mapped to Slack.'],
-        ['human', 'Claim and meet', 'A rep taps Claim so nobody double-approaches, then Mark met.'],
+        ['gates', 'CISO plus a renewal inside six months', 'CISO matches a title rule. A SailPoint renewal in 5 months is inside the six-month Tier 1 window. There is no count in the notes, so no size points yet.'],
+        ['size', 'No headcount can be established', 'Not in the booth notes, not on a HubSpot company record, not on the official site, not in identity-aligned search. Size stays unknown and earns no points.'],
+        ['enrichment', 'Evidence kept, headcount still open', 'The homepage read and gated search run, and anything kept carries a source URL. Nothing establishes headcount.'],
+        ['ai', 'Synthesis, not a verdict', 'CISO matched a rule, so 05 does not resolve the persona. It writes the synthesis, the opening question and the listen-fors.'],
+        ['crm', 'Context written, headcount withheld', 'Contact, meeting, note and the oak_* properties. numberofemployees is not written, because no count exists.'],
+        ['persistence', 'Delivery complete', 'Status complete, classification tier_1, score 70: persona 30 + urgency 40.'],
+        ['slack', 'Hot card that asks one question', '#booth-hot with @here and an owner DM. The header reads "TIER 1 · Rachel Green - confirm company size", and the first step at the booth is the size question.'],
+        ['human', 'Claim, then confirm size', 'A rep taps Claim so nobody double-approaches, then asks how many people work at Apex. Under 500, Not a fit moves the lead to #booth-out-of-scope.'],
       ],
       card: {
         channel: 'booth-hot',
         mention: true,
-        header: 'TIER 1 · Hiroshi Tanaka',
+        header: 'TIER 1 · Rachel Green - confirm company size',
         lead: 'Hot lead at the booth now. Whoever is free, take it.',
         facts: [
-          ['Person', 'Hiroshi Tanaka, VP IAM'],
-          ['Company', 'Northstar Bank: 2,000 employees (stated at booth)'],
-          ['Score', '100/100: persona 30, size 15, industry 15, urgency 40'],
-          ['Trigger', '"SailPoint renewal in five months"'],
+          ['Person', 'Rachel Green, CISO'],
+          ['Company', 'Apex Financial Services: size not established'],
+          ['Score', '70/100: persona 30, urgency 40'],
+          ['Trigger', '"SailPoint, renewal coming up in 5 months"'],
         ],
-        next: 'Get the renewal date and the evaluation owner. Offer the migration-risk conversation now.',
+        next: 'Open with the renewal, then ask roughly how many people are at Apex Financial Services. Under 500, tap Not a fit.',
         buttons: [['Claim', 'Why this score?'], ['Mark met', 'Meeting booked', 'Not a fit'], ['Add note', 'Send to owner', 'Snooze']],
       },
       counterfactual:
-        'This is the case that proves the rule is about evidence quality, not about distrusting the booth. The visitor said the number, so Oak uses it. Demanding a CRM record here would bury a real Tier 1 in the review queue.',
+        'A size-first rule would have parked a CISO with a live SailPoint renewal in a review queue while she walked away. Oak spends the @here on the persona and the trigger it can prove, and gives the one unknown to the person who can ask.',
       map: {
         intake: 'tier_1', final: 'tier_1', ai: 'question', search: 'full', crm: true,
-        t02A: 'Contact and company looked up by email and exact domain. Nothing useful on file yet; the booth count is the best evidence.',
-        rep: { button: 'Claim', then: 'Mark met' },
+        t02A: 'Contact and company looked up by email and exact domain. No company record with a headcount, so the first source in the precedence is empty.',
+        rep: { button: 'Claim' },
+      },
+    },
+    {
+      id: 'hiroshi',
+      chip: 'Matched practitioner',
+      source: 'Task lead evt_9902',
+      title: 'The right person, no clock running',
+      persona: 'Hiroshi Tanaka - Lead Identity Infrastructure Architect, CloudScale Technologies',
+      tension: 'A real IAM buyer with real pain, but nothing in the notes forces a decision this quarter.',
+      outcome: 'matched',
+      outcomeLabel: 'Matched, normal follow-up',
+      notes: 'Struggling with non-human identities and AI agent sprawl. Built a homegrown tool to track API keys.',
+      steps: [
+        ['capture', 'Scan accepted', 'evt_9902; 202 returned in about two seconds.'],
+        ['identity', 'Encounter created', 'First visit for hiroshi.t@cloudscale-tech.io at this event.'],
+        ['policy', 'Version pinned', 'oak-event-v5.'],
+        ['gates', 'IAM persona, no Tier 1 trigger', '"Identity infrastructure" matches the IAM title rule. Non-human identity and AI agent sprawl are recorded as conversation evidence, but none of them is a Tier 1 trigger: no renewal, breach or audit deadline.'],
+        ['size', 'Headcount unknown', 'No count in the notes, and none established by HubSpot, the official site or identity-aligned search. No size points.'],
+        ['enrichment', 'Evidence kept with citations', 'Homepage read, gated public search and an identity-checked person search. Nothing here sets the tier.'],
+        ['ai', 'Synthesis only', 'The title matched a rule, so 05 does not resolve the persona. It summarises the pain (a homegrown API key tracker, AI agent sprawl) and writes the opening question.'],
+        ['crm', 'Full write', 'Contact, meeting, note and the oak_* properties.'],
+        ['persistence', 'Delivery complete', 'Status complete, classification matched, score 30: persona 30.'],
+        ['slack', 'Matched card, no mention', '#booth-matched. A real fit gets the full card and buttons, but nobody is interrupted.'],
+        ['human', 'Normal follow-up', 'A rep claims it when free. If a renewal or a deadline comes up, Promote to Tier 1 is on the card.'],
+      ],
+      card: {
+        channel: 'booth-matched',
+        mention: false,
+        header: 'MATCHED · Hiroshi Tanaka - confirm company size',
+        lead: 'Target persona, no time-bound trigger.',
+        facts: [
+          ['Person', 'Hiroshi Tanaka, Lead Identity Infrastructure Architect'],
+          ['Company', 'CloudScale Technologies: size not established'],
+          ['Score', '30/100: persona 30'],
+          ['Pain', '"Built a homegrown tool to track API keys"'],
+        ],
+        next: 'Ask what breaks when an API key outlives its owner, then confirm headcount.',
+        buttons: [['Claim', 'Why this score?'], ['Mark met', 'Meeting booked', 'Not a fit'], ['Add note', 'Send to owner', 'Snooze', 'Promote to Tier 1']],
+      },
+      counterfactual:
+        'Scoring the pain words would have pushed this lead toward Tier 1 on vocabulary alone. Oak records the pain as evidence for the rep and keeps the tier for things a buyer cannot say casually: a renewal date, a breach, an audit deadline.',
+      map: {
+        intake: 'matched', final: 'matched', ai: 'question', search: 'full', crm: true,
+        t02A: 'Contact looked up by email and company by exact domain. No company headcount on file.',
+        rep: { button: 'Claim' },
+      },
+    },
+    {
+      id: 'maya',
+      chip: 'Needs review, then promoted',
+      example: true,
+      source: 'Example written for this demo',
+      title: 'A mid-size company the rep can settle in one question',
+      persona: 'Maya Singh - CISO, Middle Co',
+      tension: 'A known 800-person company sits between the review floor and the ICP line, so a human decides.',
+      outcome: 'needs_review',
+      outcomeLabel: 'Needs review, then promoted by a rep',
+      notes: 'Audit deadline in Q4. 800 employees here.',
+      steps: [
+        ['capture', 'Scan accepted', 'An example scan; 202 in about two seconds.'],
+        ['identity', 'Encounter created', 'First visit for this person at this event.'],
+        ['policy', 'Version pinned', 'oak-event-v5.'],
+        ['gates', 'Known 500-999', 'CISO matches a title rule and an audit deadline is a Tier 1 trigger, but the visitor stated 800 employees: above the 500 floor, under the 1,000 ICP line. The policy sends that band to review and records would-be Tier 1.'],
+        ['size', '800 at booth confidence', 'A booth-stated count carries 0.9 confidence, so the 500-999 band is certain and no size points are awarded.'],
+        ['enrichment', 'Evidence kept with citations', 'The official site is read and cited. Nothing changes the band.'],
+        ['ai', 'Opening question only', 'The title matched a rule; 05 writes the opening question and listen-fors.'],
+        ['crm', 'Context written', 'Contact, meeting, note and the oak_* properties.'],
+        ['persistence', 'Delivery complete', 'Status complete, classification needs_review, would-be tier_1, score 70: persona 30 + urgency 40.'],
+        ['slack', 'Review card with the triage row', '#booth-review, no mention. The card asks the rep to decide and carries Promote to Tier 1 | Matched | Not a fit in one row.'],
+        ['human', 'The rep decides in one tap', 'Maya explains Middle Co is the US arm of a 3,000-person group that buys centrally. The rep taps Promote to Tier 1.'],
+      ],
+      card: {
+        channel: 'booth-review',
+        mention: false,
+        header: 'REVIEW · Maya Singh - size below ICP, needs a call',
+        lead: 'Would-be Tier 1: persona and trigger match, and 800 employees is under the 1,000 line.',
+        facts: [
+          ['Person', 'Maya Singh, CISO'],
+          ['Company', 'Middle Co: 800 employees (stated at booth)'],
+          ['Score', '70/100: persona 30, urgency 40'],
+          ['Trigger', '"Audit deadline in Q4"'],
+        ],
+        next: 'Ask whether Middle Co buys on its own or through a parent. Parent at 1,000+ → Promote to Tier 1. No urgency after all → Matched. Under 500 → Not a fit.',
+        buttons: [['Claim', 'Why this score?'], ['Promote to Tier 1', 'Matched', 'Not a fit'], ['Mark met', 'Meeting booked'], ['Add note', 'Send to owner', 'Snooze']],
+        triageRow: 1,
+      },
+      counterfactual:
+        'Rounding 800 up pages the booth for a company outside the ICP; rounding it down loses a buyer whose group qualifies. The triage row gives that call to the person who can ask, and 06 replays the stored decision instead of rebuilding the card.',
+      map: {
+        intake: 'needs_review', wouldBe: 'tier_1', final: 'needs_review', ai: 'question', search: 'full', crm: true,
+        t02A: 'No HubSpot company record for this domain, so the booth count stands.',
+        rep: { button: 'Promote to Tier 1' },
+        reclassify: { to: 'tier_1' },
       },
     },
     {
       id: 'priya',
-      chip: 'Matched practitioner',
-      title: 'A strong fit with no clock running',
+      chip: 'Ambiguous title, resolved by AI',
+      example: true,
+      source: 'Example written for this demo',
+      title: 'The one place the model decides',
       persona: 'Priya Nair - Head of Access Platforms, Meridian Health',
-      tension: 'The right person at the right size, but nothing forces a decision this quarter.',
+      tension: 'The title matches no rule. The model may resolve it, above a floor, and the rules still set the tier.',
       outcome: 'matched',
-      outcomeLabel: 'Matched, normal follow-up',
+      outcomeLabel: 'Matched after 05 resolves the title',
       notes: 'Runs Okta for workforce SSO, happy with it. Owns service-account cleanup this year.',
       steps: [
-        ['capture', 'Scan accepted', 'New scan_id; 202 returned in about two seconds.'],
+        ['capture', 'Scan accepted', 'An example scan; 202 in about two seconds.'],
         ['identity', 'Encounter created', 'First visit for this person at this event.'],
         ['policy', 'Version pinned', 'oak-event-v5.'],
         ['gates', 'Persona unclear, no urgency', '"Head of Access Platforms" matches no title rule, so the persona is ambiguous and 01 holds it as needs_review until enrichment and reasoning have run. Okta is named, but with no renewal window it is not a Tier 1 trigger.'],
         ['size', 'HubSpot knows the company', '02A finds the company record: 4,800 employees at confidence 1.0, the top of the precedence order.'],
         ['enrichment', 'Industry confirmed', 'The official site says healthcare, a target industry. The person search finds a public profile that matches both the name and the company.'],
-        ['ai', 'The one place the model decides', '05 reads the title and the notes and resolves the persona as IAM at 0.82 confidence, above the 0.7 floor.'],
+        ['ai', 'The model resolves the title', '05 reads the title and the notes and resolves the persona as IAM at 0.82 confidence, above the 0.7 floor.'],
         ['crm', 'Full write', 'Contact, company, meeting, note and the oak_* properties.'],
-        ['persistence', 'Delivery complete', 'Status complete, classification matched, persona source recorded as ai_resolved_ambiguous.'],
+        ['persistence', 'Delivery complete', 'Status complete, classification matched, score 60: persona 30 + size 15 + industry 15, persona source ai_resolved_ambiguous.'],
         ['slack', 'Matched card, no mention', '#booth-matched. A real fit gets the full card and buttons, but nobody is interrupted.'],
-        ['human', 'Normal follow-up', 'A rep claims it when free. If a renewal comes up after all, Promote to Tier 1 is on the card.'],
+        ['human', 'Normal follow-up', 'A rep claims it when free.'],
       ],
       card: {
         channel: 'booth-matched',
@@ -1299,90 +1399,45 @@ window.OAK_JOURNEY = {
       counterfactual:
         'A rules-only matcher would have left this title in review, and a model with free rein might have promoted it on the word Okta. Here the model resolves one ambiguous phrase above a floor, and the rules still decide the tier.',
       map: {
-        intake: 'needs_review', final: 'matched', ai: 'resolve', search: 'full', crm: true,
-        t02A: 'HubSpot has the company: 4,800 employees on the record, confidence 1.0. No open deal and no owner conflict.',
+        intake: 'needs_review', final: 'matched', ai: 'resolve', personaConfidence: 0.82, search: 'full', crm: true,
+        t02A: 'HubSpot has the company: 4,800 employees on the record, confidence 1.0.',
         rep: { button: 'Claim' },
       },
     },
     {
-      id: 'apex',
-      chip: 'Needs review, then promoted',
-      title: 'A perfect buyer with no proof of size',
-      persona: 'Rachel Green - CISO, Apex Financial Services',
-      tension: 'Everything says Tier 1 except the one fact Oak refuses to assume.',
-      outcome: 'needs_review',
-      outcomeLabel: 'Needs review, then promoted by a rep',
-      notes: 'SailPoint renews in four months. Wants to discuss migration risk.',
-      steps: [
-        ['capture', 'Scan accepted', 'New scan_id, first visit of the event. 01 answers the scanner with a provisional 202 in about two seconds.'],
-        ['identity', 'Encounter created', 'Person rachel@apexfinancial.example, encounter = event + person, delivery = this scan.'],
-        ['policy', 'Version pinned', 'oak-event-v5 is active; the decision will be stamped with it.'],
-        ['gates', 'Persona and urgency match, size does not', 'CISO is a target persona. "SailPoint renews in four months" is a Tier 1 urgency trigger. With no headcount, 01 routes it to review and records would-be Tier 1.'],
-        ['size', 'No headcount can be established', 'HubSpot has no company record. The booth notes carry no count. Search finds only pages that share the name Apex, so they stay candidates. Size is unknown.'],
-        ['enrichment', 'Evidence kept with citations', 'Industry resolved as financial services from the official site. The name-only headcount is shown as a candidate with its link, not used for routing.'],
-        ['ai', 'Title is unambiguous', 'CISO matches a title rule, so 05 does not resolve the persona. It only drafts the opening question and listen-fors.'],
-        ['crm', 'Context written, headcount withheld', 'Contact, meeting and note created. numberofemployees is not written, because no trusted count exists.'],
-        ['persistence', 'Delivery complete', 'Status complete, classification needs_review, would-be tier_1 recorded.'],
-        ['slack', 'Review card, no mention', 'Posted to #booth-review. The header asks the rep to confirm company size, and the card carries the triage row.'],
-        ['human', 'The rep decides in one tap', 'She confirms 12,000 employees. The rep taps Promote to Tier 1 in the triage row.'],
-      ],
-      card: {
-        channel: 'booth-review',
-        mention: false,
-        header: 'REVIEW · Rachel Green - confirm company size',
-        lead: 'Possible Tier 1. Confirm 1,000+ employees before treating as hot.',
-        facts: [
-          ['Person', 'Rachel Green, CISO'],
-          ['Company', 'Apex Financial Services'],
-          ['Score', '85/100: persona 30, industry 15, urgency 40, size 0'],
-          ['Size', 'Unknown: name-only matches are candidates, not counted'],
-        ],
-        next: 'Ask how many employees they have. 1,000+ → Promote to Tier 1. No urgency after all → Matched. Under 500 → Not a fit.',
-        buttons: [['Claim', 'Why this score?'], ['Promote to Tier 1', 'Matched', 'Not a fit'], ['Mark met', 'Meeting booked'], ['Add note', 'Send to owner', 'Snooze']],
-        triageRow: 1,
-      },
-      counterfactual:
-        'Without the evidence rule this lead would have gone to #booth-hot with an @here. If the name-matched page belonged to a different Apex, an executive would have been pulled to the booth for a 28-person prospect, and the next real Tier 1 mention would be trusted less.',
-      map: {
-        intake: 'needs_review', wouldBe: 'tier_1', final: 'needs_review', ai: 'question', search: 'full', crm: true,
-        t02A: 'No HubSpot company record for this domain, so the first source in the headcount precedence is empty.',
-        rep: { button: 'Promote to Tier 1' },
-        reclassify: { to: 'tier_1' },
-      },
-    },
-    {
-      id: 'veza',
+      id: 'sarah',
       chip: 'Competitor',
+      source: 'Task lead evt_9904',
       title: 'A competitor walks up',
-      persona: 'Sarah Chen - Product Marketing, Veza',
+      persona: 'Sarah Connor - Director of Product Management, Veza Technologies',
       tension: 'Competitor identity and incumbent tooling are different things and must not be confused.',
       outcome: 'competitor_intel',
       outcomeLabel: 'Competitive intel',
-      notes: 'Asked detailed questions about pricing and roadmap.',
+      notes: 'Asked a lot of detailed questions about our ConnectAny architecture.',
       steps: [
-        ['capture', 'Scan accepted', 'Standard intake; 202 in about two seconds.'],
+        ['capture', 'Scan accepted', 'evt_9904; 202 in about two seconds.'],
         ['identity', 'Encounter created', 'Recorded against this event.'],
-        ['policy', 'Version pinned', 'oak-event-v5 plus the active rows in oak_competitors.'],
+        ['policy', 'Version pinned', 'oak-event-v5 plus the 17 active rows in oak_competitors.'],
         ['gates', 'Competitor identity wins first', 'veza.com matches an active competitor domain, so the decision ends before persona or size are considered.'],
         ['size', 'Not consulted', 'Company size is irrelevant once identity is established.'],
-        ['enrichment', 'Company only, no person search', '04 reads the homepage and keeps the competitor language it finds, but never runs the person search: Oak does not profile a competitor\'s employee.'],
+        ['enrichment', 'Company only, no person search', 'The company evidence comes from the domain-keyed cache and is kept for intel. The person search never runs: Oak does not profile a competitor\'s employee.'],
         ['ai', 'Skipped', 'Identity matching is deterministic. 05 never runs for competitor_intel.'],
         ['crm', 'Marked and excluded', 'Recorded with oak_competitor_status so they never enter a nurture sequence.'],
-        ['persistence', 'Delivery complete', 'Status complete, classification competitor_intel.'],
+        ['persistence', 'Delivery complete', 'Status complete, classification competitor_intel, score 0.'],
         ['slack', 'Intel card', '#competitive-intel, a private channel. No mention, framed as intelligence rather than a lead.'],
         ['human', 'Correctable', 'Flag for competitive intel logs what they asked. If the match were wrong, False alarm corrects it.'],
       ],
       card: {
         channel: 'competitive-intel',
         mention: false,
-        header: 'COMPETITOR · Sarah Chen',
-        lead: 'Veza employee visited the booth. Treat as intel, not a prospect.',
+        header: 'COMPETITOR · Sarah Connor',
+        lead: 'Veza employee at the booth. Treat as intel, not a prospect.',
         facts: [
-          ['Person', 'Sarah Chen, Product Marketing'],
+          ['Person', 'Sarah Connor, Director of Product Management'],
           ['Match', 'veza.com: active competitor domain'],
-          ['Asked about', 'Pricing and roadmap'],
+          ['Asked about', 'ConnectAny architecture'],
         ],
-        next: 'Log what they asked. Do not pitch. Do not discuss ConnectAny implementation details.',
+        next: 'Log what they ask about. Do not pitch. Do not discuss ConnectAny implementation details.',
         buttons: [['Why this score?', 'Flag for competitive intel', 'False alarm']],
       },
       counterfactual:
@@ -1394,36 +1449,37 @@ window.OAK_JOURNEY = {
       },
     },
     {
-      id: 'tiny',
+      id: 'david',
       chip: 'Out of scope',
+      source: 'Task lead evt_9903',
       title: 'A polite no, recorded quietly',
-      persona: 'David Stone - Founder, Tiny Cloud',
+      persona: 'David Miller - Head of IT, Boutique Security Ltd',
       tension: 'Being out of scope is a real outcome that still deserves a record.',
       outcome: 'out_of_scope',
       outcomeLabel: 'Out of scope, no noise',
-      notes: 'Single-cloud SaaS team.',
+      notes: 'SaaS-only shop, 80 employees. Looking for a basic access tool.',
       steps: [
-        ['capture', 'Scan accepted', 'Normal intake; nothing special about the payload.'],
+        ['capture', 'Scan accepted', 'evt_9903; nothing special about the payload.'],
         ['identity', 'Encounter created', 'Recorded like any other visitor.'],
         ['policy', 'Version pinned', 'oak-event-v5.'],
-        ['gates', 'Disqualifier and size', 'The visitor stated 80 employees and a single-cloud SaaS stack. Both are disqualifiers, so 01 decides out_of_scope at intake.'],
-        ['size', '80 employees at high confidence', 'A booth-stated count carries 0.9 confidence, which is strong enough to disqualify. The official site agrees.'],
-        ['enrichment', 'Homepage only', '04 still reads the homepage, which is free. Paid public search is gated off for out-of-scope scans.'],
+        ['gates', 'Disqualified at intake', 'The notes say SaaS-only and 80 employees. SaaS-only is an explicit disqualifier, 80 is under the 500 minimum, and "Head of IT" matches no target persona.'],
+        ['size', '80, confirmed by HubSpot', '02A finds the HubSpot company record at 80 employees, confidence 1.0, the record of truth. It matches what the visitor said.'],
+        ['enrichment', 'Homepage only', '04 still reads the homepage, which is free, so the company can be checked against the competitor list. Paid public search is skipped.'],
         ['ai', 'Skipped', '05 never runs for out_of_scope, and neither does the final gate that follows it.'],
         ['crm', 'Still recorded', 'Contact and note are written so the visit exists and the reason is searchable later.'],
-        ['persistence', 'Delivery complete', 'Status complete, classification out_of_scope with the reason attached.'],
+        ['persistence', 'Delivery complete', 'Status complete, classification out_of_scope, score 0, with the reason attached.'],
         ['slack', 'Quiet card', '#booth-out-of-scope. No mention, no coaching, no action buttons.'],
         ['human', 'Nothing required', 'Deliberately no call to action. There is nothing on the card to press.'],
       ],
       card: {
         channel: 'booth-out-of-scope',
         mention: false,
-        header: 'OUT OF SCOPE · David Stone',
+        header: 'OUT OF SCOPE · David Miller',
         lead: 'Recorded for completeness. No action needed.',
         facts: [
-          ['Person', 'David Stone, Founder'],
-          ['Company', 'Tiny Cloud: 80 employees (stated at booth)'],
-          ['Reason', 'Below the 500-employee minimum; single-cloud SaaS'],
+          ['Person', 'David Miller, Head of IT'],
+          ['Company', 'Boutique Security Ltd: 80 employees (HubSpot)'],
+          ['Reason', 'Under the 500-employee minimum; SaaS-only'],
         ],
         next: 'None. The visit is logged and excluded from outreach.',
         buttons: [],
@@ -1432,52 +1488,54 @@ window.OAK_JOURNEY = {
         'Deleting these visits would be easier, but then nobody can answer "who came to the booth and why did we not follow up". The quiet channel keeps the record without spending attention.',
       map: {
         intake: 'out_of_scope', final: 'out_of_scope', ai: 'skip', search: 'homepage', crm: true,
-        t02A: 'Contact looked up so the record lands in the right place. Read-only.',
+        t02A: 'HubSpot has the company: 80 employees, confidence 1.0, the CRM record of truth.',
         rep: null,
       },
     },
     {
       id: 'returning',
       chip: 'Returning visitor',
+      example: true,
+      source: 'Example written for this demo',
       title: 'The same person comes back',
       persona: 'Rachel Green, second visit - after checking her headcount',
-      tension: 'The lead changes tier mid-event. Oak must escalate without losing the history.',
+      tension: 'Same person, same tier, new facts. Oak must add to the story without starting a new one.',
       outcome: 'tier_1',
-      outcomeLabel: 'Tier 1, threaded under the first card',
+      outcomeLabel: 'Tier 1 again, threaded under the first card',
       notes: 'Confirmed 12,000 employees. Brought the IAM architect.',
       steps: [
         ['capture', 'New scan accepted', 'A different scan_id, so this is not a duplicate and is processed fully.'],
-        ['identity', 'Same encounter, second delivery', 'Matched on event + email. Scan count becomes two; the prior classification and the first card\'s Slack thread are remembered.'],
+        ['identity', 'Same encounter, second delivery', 'Matched on event + email. Scan count becomes two, and the first card\'s Slack thread is remembered.'],
         ['policy', 'Version pinned', 'Still oak-event-v5, so the two decisions are comparable.'],
-        ['gates', 'Re-evaluated with new information', 'Persona and urgency unchanged; the missing fact has arrived. The tier moves from needs_review to tier_1, so the notification mode is repeat_escalation.'],
-        ['size', 'Confirmed at the booth', '12,000 employees stated by the visitor. First-party evidence, so the size gate is now satisfied.'],
+        ['gates', 'Same tier, new facts', 'Persona and trigger are unchanged, so the tier is still tier_1. The notes changed and the tier did not: notification mode repeat_thread.'],
+        ['size', 'Confirmed at the booth', '12,000 employees stated by the visitor: first-party evidence at 0.9, which earns the 15 size points. The score rises from 70 to 85.'],
         ['enrichment', 'Cache hit', 'Company evidence is reused from the domain-keyed cache rather than fetched again.'],
-        ['ai', 'Opening question only', 'Nothing ambiguous remains. 05 writes a question that picks up from the first conversation.'],
-        ['crm', 'New note, upgraded fields', 'A second note preserves the narrative; tier fields are updated rather than duplicated.'],
+        ['ai', 'Opening question only', '05 writes a question that picks up from the first conversation.'],
+        ['crm', 'New note, upgraded fields', 'A second note preserves the narrative, and headcount can now be written.'],
         ['persistence', 'Second delivery complete', 'Two deliveries, one encounter, a visible before and after.'],
-        ['slack', 'Threaded, broadcast, @here', '03 replies in the thread of the first #booth-review card and broadcasts it back to the channel, with "Tier changed from needs review to tier 1" and an @here. No new root message.'],
+        ['slack', 'Threaded and broadcast', '03 replies in the thread of the first #booth-hot card and broadcasts it back to the channel, with the new notes and the previous ones side by side. Had the tier changed, 03 would post a new card in the new tier\'s channel and leave a one-line pointer in the old thread.'],
         ['human', 'Claim and meet', 'A rep claims it and meets both of them while they are still at the booth.'],
       ],
       card: {
-        channel: 'booth-review',
+        channel: 'booth-hot',
         thread: true,
         mention: true,
         header: 'TIER 1 · Rachel Green',
-        lead: 'Returning visitor · scan #2. Tier changed from needs review to tier 1.',
+        lead: 'Returning visitor · scan #2. New booth notes since the last scan.',
         facts: [
           ['Person', 'Rachel Green, CISO, visit 2'],
-          ['Company', 'Apex Financial Services: 12,000 employees (confirmed at booth)'],
-          ['Change', 'needs_review → tier_1 on new evidence'],
-          ['Trigger', 'SailPoint renewal in four months'],
+          ['Company', 'Apex Financial Services: 12,000 employees (stated at booth)'],
+          ['Score', '85/100: persona 30, size 15, urgency 40'],
+          ['Before', 'Tier 1 at 70, size unknown'],
         ],
         next: 'Open by referring back to the first conversation. She brought the IAM architect: get the evaluation timeline while both are here.',
         buttons: [['Claim', 'Why this score?'], ['Mark met', 'Meeting booked', 'Not a fit'], ['Add note', 'Send to owner', 'Snooze']],
       },
       counterfactual:
-        'This is the payoff for separating person, encounter, and delivery in stage 2. Without it the second scan would either be silently dropped as a duplicate or would start a new root card, and nobody could see that the lead improved.',
+        'This is the payoff for separating person, encounter, and delivery in stage 2. Without it the second scan would either be silently dropped as a duplicate or would start a second root card, and nobody could see how the lead developed.',
       map: {
         intake: 'tier_1', final: 'tier_1', ai: 'question', search: 'cache', crm: true, repeat: true,
-        thread: { channel: 'booth-review', escalation: true, prior: 'needs_review' },
+        thread: { channel: 'booth-hot', escalation: false },
         t02A: 'HubSpot now has the contact from the first visit, with the first booth note attached.',
         rep: { button: 'Claim', then: 'Mark met' },
       },
@@ -1839,7 +1897,7 @@ window.OAK_GRAPH = {
       const count = (key, value) => rows.filter((row) => row[key] === value).length;
       const latencies = rows
         .filter((row) => row.completed_at)
-        .map((row) => new Date(row.completed_at) - new Date(row.scanned_at))
+        .map((row) => new Date(row.completed_at) - new Date(row.received_at || row.scanned_at))
         .sort((a, b) => a - b);
       return {
         mode: 'offline',
@@ -1864,6 +1922,7 @@ window.OAK_GRAPH = {
         workflow_health: source.workflowHealth,
         alerts: [
           { severity: 'warning', text: 'Offline demo data: these rows are an embedded snapshot, not the live oak_deliveries table.' },
+          { severity: 'info', text: 'evt_9901 to evt_9904 are the real stored decisions. Rows tagged example (event example-data) were written for this demo.' },
           { severity: 'info', text: '00 Setup & Seed runs from its draft by design and is never published.' },
           { severity: 'info', text: 'Slack buttons fail closed unless OAK_SLACK_SIGNING_SECRET verifies the request.' },
         ],
@@ -1904,10 +1963,13 @@ window.OAK_GRAPH = {
           : count >= reviewMin
             ? 'review_500_999'
             : 'disqualified_under_500';
+    const disqualified = /saas[- ]only|single[- ]cloud/.test(notes);
+    /* Same order as the live policy: competitor, disqualifiers, the 500-999
+     * review band, then persona and trigger. Unknown size does not block a tier. */
     let classification;
     if (competitor) classification = 'competitor_intel';
-    else if (sizeBand === 'disqualified_under_500') classification = 'out_of_scope';
-    else if (sizeBand === 'unknown' || sizeBand === 'review_500_999') classification = 'needs_review';
+    else if (sizeBand === 'disqualified_under_500' || disqualified) classification = 'out_of_scope';
+    else if (sizeBand === 'review_500_999') classification = 'needs_review';
     else if (persona && urgency) classification = 'tier_1';
     else if (persona) classification = 'matched';
     else classification = 'needs_review';
@@ -1921,9 +1983,9 @@ window.OAK_GRAPH = {
       would_be_classification:
         classification === 'needs_review' ? (persona && urgency ? 'tier_1' : persona ? 'matched' : null) : null,
       company_size_band: sizeBand,
-      needs_headcount_verification: sizeBand === 'unknown',
+      needs_headcount_verification: sizeBand === 'unknown' && ['tier_1', 'matched'].includes(classification),
       score,
-      score_note: 'Offline estimate before enrichment: industry points are added once 04 resolves the industry.',
+      score_note: 'Offline estimate before enrichment: size and industry points are added once a count and an industry are established.',
       mutations: {
         hubspot: Boolean(payload.email),
         slack_channel: policy.notifications[classification]?.channel || null,
@@ -2072,6 +2134,7 @@ window.OAK_GRAPH = {
     main.innerHTML = `
       <div class="header-actions"><a href="#/leads" class="button small secondary">← All leads</a>
         <a href="#/map/lead/${encodeURIComponent(lead.scan_id)}" class="button small">Trace this lead on the map</a>${sourceTag()}</div>
+      ${lead.example ? `<p class="warning-box example-box"><b>Example data.</b> ${esc(lead.source_note || 'Written for this demo, not a real scan.')}</p>` : ''}
       <section class="detail-grid" style="margin-top:1rem">
         <article class="panel">
           <div class="detail-hero"><p class="eyebrow">${esc(lead.scan_id)}</p><span class="pill ${esc(lead.classification)}">${esc(label(lead.classification))}</span>
@@ -2090,6 +2153,8 @@ window.OAK_GRAPH = {
             .join('') || '<p class="muted">No evidence retained.</p>'}</div></section>
         </article>
         <aside class="stack sticky">
+          ${d.rep_override ? `<article class="warning-box"><b>Rep override: ${esc(label(d.rep_override))}</b><br/>Recorded on the encounter${d.claimed_by ? ` by ${esc(d.claimed_by)}` : ''}${d.rep_override_reason || d.downgrade_reason ? `: “${esc(d.rep_override_reason || d.downgrade_reason)}”` : ''}. 06 reposted the stored decision through 03.</article>` : ''}
+          ${lead.classification === 'tier_1' && lead.company_size_band === 'unknown' ? '<article class="warning-box"><b>Confirm company size</b><br/>Tier 1 on persona and trigger. No headcount was established, so the card asks the rep to confirm 1,000+ at the booth.</article>' : ''}
           ${lead.would_be_classification ? `<article class="warning-box"><b>Possible ${esc(label(lead.would_be_classification))}</b><br/>Confirm 1,000+ employees before treating this lead as hot. The card carries the triage row: Promote to Tier 1 | Matched | Not a fit.</article>` : ''}
           <article class="panel"><header class="panel-header"><h3>Encounter state</h3></header><div class="panel-body">
             ${fact('Claimed by', lead.claimed_by || 'Unclaimed')}${fact('Booth status', label(lead.booth_status))}${fact('Enrichment', label(lead.enrichment_status || d.enrichment_status))}
@@ -2503,21 +2568,27 @@ window.OAK_GRAPH = {
       decided: 'oak_deliveries.status is complete and raw_json holds the whole decision, before any card is posted.',
       moves: [toTrack('persist')], nodes: ['wf01'], ticks: ['persist'], glow: ['tables'],
     });
+    /* Since the 03 change: same tier threads under the first card; a changed
+     * tier gets a new card in the new channel plus a pointer in the old thread. */
+    const tierChanged = Boolean(f.thread && f.thread.escalation);
     const threadCh = f.thread ? String(f.thread.channel || 'the first card\'s channel').replace(/^#/, '') : null;
+    const threaded = Boolean(f.thread) && !tierChanged;
     add({
       key: '03', stage: 'slack', where: '03 Slack Alerts',
       title: '03 picks the channel and builds the card',
-      happened: f.thread
-        ? 'A returning visitor with a stored thread anchor: 03 replies under the first card instead of posting a new root message.'
-        : `The channel is looked up by classification in the active policy: ${label(f.final)} goes to #${ch}.`,
-      decided: f.thread
-        ? `Thread reply in #${threadCh}, broadcast back to the channel${f.thread.escalation ? ', with @here because the tier changed' : ''}.`
-        : `#${ch}${f.final === 'tier_1' ? ' with @here, plus a DM to the HubSpot owner when mapped' : ', no mention'}.`,
+      happened: threaded
+        ? 'A returning visitor with the same tier and a stored thread anchor: 03 replies under the first card instead of posting a new root message.'
+        : tierChanged
+          ? `A returning visitor whose tier changed: 03 posts a new card where ${label(f.final)} belongs and leaves a one-line pointer in the old thread.`
+          : `The channel is looked up by classification in the active policy: ${label(f.final)} goes to #${ch}.`,
+      decided: threaded
+        ? `Thread reply in #${threadCh}, broadcast back to the channel${f.final === 'tier_1' ? ', with @here' : ''}.`
+        : `#${ch}${f.final === 'tier_1' ? ' with @here, plus a DM to the HubSpot owner when mapped' : ', no mention'}${tierChanged ? `, and a pointer in the old thread in #${threadCh}` : ''}.`,
       moves: [toSub('wf03')], nodes: ['wf03'], edges: ['01-03'], ticks: ['p03'],
     });
     const w3 = NODE.wf03;
     const sl = NODE.slack;
-    const mention = f.final === 'tier_1' || (f.thread && f.thread.escalation && f.final !== 'out_of_scope');
+    const mention = f.final === 'tier_1';
     pos = { t: 'pt', p: [w3.port, w3.y] };
     add({
       key: 'card', stage: 'slack', where: 'Slack',
@@ -2527,7 +2598,7 @@ window.OAK_GRAPH = {
         ? 'No buttons, no coaching, no mention: the card exists for the record.'
         : `Buttons: ${buttonsFor(f.final).join(', ')}.${f.final === 'needs_review' ? ' The triage row is Promote to Tier 1 | Matched | Not a fit.' : ''}`,
       moves: [toPts([[w3.port, w3.y], [sl.cx, sl.y]])], nodes: ['slack'], edges: ['03-slack'],
-      channel: `#${f.thread ? `${threadCh} thread` : ch}${mention ? ' @here' : ''}`,
+      channel: `#${threaded ? `${threadCh} thread` : ch}${mention ? ' @here' : ''}`,
     });
     add({
       key: 'receipt', stage: 'persistence', where: '01 Intake & Decision',
@@ -2569,7 +2640,7 @@ window.OAK_GRAPH = {
           key: 'repost', stage: 'slack', where: '03 Slack Alerts',
           title: `Reposted to #${channelFor(to)}${to === 'tier_1' ? ' with @here' : ''}`,
           happened: 'An override banner under the header names who moved it and why, so the repost reads as a correction rather than a duplicate scan.',
-          decided: `${label(to)} card with ${label(to)} buttons: ${buttonsFor(to).join(', ')}.`,
+          decided: buttonsFor(to).length ? `${label(to)} card with ${label(to)} buttons: ${buttonsFor(to).join(', ')}.` : `${label(to)} card: no buttons and no mention, kept for the record.`,
           moves: [toPts([[1190, w3.y + w3.h], [w3.port, w3.y + w3.h], [sl.cx, sl.y]])], nodes: ['wf03', 'slack'], edges: ['03-slack'],
           channel: `#${channelFor(to)}${to === 'tier_1' ? ' @here' : ''}`,
         });
@@ -2595,7 +2666,7 @@ window.OAK_GRAPH = {
       id: s.id,
       kind: 'scenario',
       title: s.title,
-      persona: s.persona,
+      persona: `${s.persona} · ${s.source || ''}`,
       outcome: s.outcome,
       outcomeLabel: s.outcomeLabel,
       notes: s.notes,
@@ -2697,9 +2768,11 @@ window.OAK_GRAPH = {
       if (v !== undefined && v !== null && v !== '') merged[k] = v;
     });
     merged.slack_receipt = slack;
+    if (!merged.rep_override && merged.override_classification) merged.rep_override = merged.override_classification;
     return merged;
   }
-  const isAiResolved = (d) => d.persona_source === 'ai_resolved_ambiguous' || d.llm_used === true || d.decision_basis?.llm_used === true;
+  /* Mirrors 03: llm_used alone only means 05 ran (synthesis); the persona counts as AI-resolved when 05 settled an ambiguous title. */
+  const isAiResolved = (d) => d.persona_source === 'ai_resolved_ambiguous' || (d.persona_status === 'ambiguous' && (d.llm_used === true || d.decision_basis?.llm_used === true));
 
   function leadTrace(lead) {
     const d = decisionOf(lead);
@@ -2757,7 +2830,7 @@ window.OAK_GRAPH = {
         crm: email,
         repeat,
         scanCount: d.scan_count,
-        thread: threaded ? { channel: d.thread_channel || (String(d.previous_slack_channel || '').startsWith('C') ? '' : d.previous_slack_channel) || channelFor(d.prior_classification || final), escalation: d.notification_mode === 'repeat_escalation' || d.classification_changed === true } : null,
+        thread: threaded ? { channel: d.thread_channel || (/^C[0-9A-Z]{6,}$/.test(String(d.previous_slack_channel || '')) ? '' : d.previous_slack_channel) || channelFor(d.prior_classification || final), escalation: d.notification_mode === 'repeat_escalation' || d.classification_changed === true } : null,
         rep,
         reclassify: override ? { to: override } : null,
         policyVersion: d.policy_version,
@@ -3228,7 +3301,7 @@ window.OAK_GRAPH = {
         <div class="header-actions"><div class="segmented"><button data-action="set-view" data-view="business" class="${business ? 'active' : ''}">Business</button><button data-action="set-view" data-view="technical" class="${!business ? 'active' : ''}">Technical</button></div>
           <a class="button secondary" href="#/flow">Stage by stage</a></div></section>
       <section class="flow-picker" aria-label="Choose a path">
-        <div class="flow-group"><span class="flow-group-label">Visitors</span>${journey.scenarios.map((s) => chip(s.id, s.chip || s.title, s.outcome)).join('')}</div>
+        <div class="flow-group"><span class="flow-group-label">Visitors</span>${journey.scenarios.map((s) => chip(s.id, `${s.chip || s.title}${s.example ? ' (example)' : ''}`, s.outcome)).join('')}</div>
         <div class="flow-group"><span class="flow-group-label">System</span>${chip('', 'Everything at once', 'all')}${chip('failure', 'When a step fails', 'critical')}${chip('control', 'Setup and this Control Center', 'active')}
           ${trace && trace.kind === 'lead' ? chip(trace.id, `Real lead: ${trace.lead.name || trace.lead.scan_id}`, trace.outcome) : ''}
           <a class="chip link" href="#/leads">Trace a real lead →</a></div>
@@ -3316,7 +3389,7 @@ window.OAK_GRAPH = {
   function miniMap(stageId) {
     const where = STAGE_WHERE[stageId];
     if (!where) return '';
-    return `<section class="mini-map panel"><header class="panel-header"><h3>Where this happens</h3><a class="button small secondary" href="#/map/northstar">Watch a scan travel →</a></header>
+    return `<section class="mini-map panel"><header class="panel-header"><h3>Where this happens</h3><a class="button small secondary" href="#/map/rachel">Watch a scan travel →</a></header>
       <div class="map-scroll">${mapSvg({ mini: true, highlight: where })}</div></section>`;
   }
 
@@ -3365,7 +3438,7 @@ window.OAK_GRAPH = {
       <section class="scenario-grid">${journey.scenarios
         .map(
           (s) => `<a class="scenario-card" href="#/scenarios/${esc(s.id)}">
-            <span class="pill ${esc(s.outcome)}">${esc(s.outcomeLabel)}</span>
+            <span class="header-actions"><span class="pill ${esc(s.outcome)}">${esc(s.outcomeLabel)}</span><span class="pill ${s.example ? 'example-pill' : 'live'}">${esc(s.example ? 'example' : s.source || 'task lead')}</span></span>
             <h2>${esc(s.title)}</h2>
             <p class="scenario-persona">${esc(s.persona)}</p>
             <p>${esc(s.tension)}</p>
@@ -3381,7 +3454,7 @@ window.OAK_GRAPH = {
     const stageOf = (stageId) => journey.stages.find((x) => x.id === stageId) || { title: stageId, number: '·' };
     main.innerHTML = `
       <div class="header-actions"><a href="#/scenarios" class="button small secondary">← All scenarios</a><a href="#/map/${esc(s.id)}" class="button small">Play it on the map</a></div>
-      <section class="page-header" style="margin-top:1rem"><div><p class="eyebrow">${esc(s.persona)}</p><h1>${esc(s.title)}</h1>
+      <section class="page-header" style="margin-top:1rem"><div><p class="eyebrow">${esc(s.persona)} · ${esc(s.source || '')}</p><h1>${esc(s.title)}</h1>
         <p>${esc(s.tension)}</p><p class="booth-quote">Booth notes: “${esc(s.notes)}”</p></div>
         <span class="pill ${esc(s.outcome)}">${esc(s.outcomeLabel)}</span></section>
       <section class="detail-grid">
@@ -3453,7 +3526,7 @@ window.OAK_GRAPH = {
           <article class="warning-box"><b>Safe-live boundary</b><br/>A 202 means accepted, not completed. After a send, this console polls the delivery row until it reaches complete. 07 is not involved.</article>
           <article class="preview-card" id="payload-preview">${renderPreview(null)}</article>
           <article class="panel"><header class="panel-header"><h3>Canonical expectations</h3></header><div class="panel-body"><ul class="reason-list">
-            <li>Apex + CISO + renewal + no count → needs review.</li><li>Booth-stated 2,000 → Tier 1.</li><li>Known 800 → needs review.</li><li>Known 80 → out of scope.</li><li>veza.com → competitor intel.</li>
+            <li>Apex + CISO + renewal + no count → Tier 1, confirm size.</li><li>Booth-stated 2,000 → Tier 1.</li><li>Known 800 → needs review.</li><li>Known 80 → out of scope.</li><li>veza.com → competitor intel.</li>
           </ul></div></article>
         </aside>
       </section>`;
@@ -3463,7 +3536,7 @@ window.OAK_GRAPH = {
     return `<div class="data-table-wrap"><table class="data-table"><thead><tr><th>Visitor</th><th>Company</th><th>Classification</th><th>Score</th><th>Status</th><th>Scanned</th>${withTrace ? '<th><span class="sr-only">Trace</span></th>' : ''}</tr></thead><tbody>
       ${leads
         .map(
-          (lead) => `<tr data-open-lead="${esc(lead.scan_id)}"><td class="name-cell"><b>${esc(lead.name)}</b><span>${esc(lead.title)}</span></td><td>${esc(lead.company)}</td>
+          (lead) => `<tr data-open-lead="${esc(lead.scan_id)}"><td class="name-cell"><b>${esc(lead.name)}${lead.example ? ' <em class="pill example-pill" title="Written for this demo, not a real scan">example</em>' : ''}</b><span>${esc(lead.title)}</span></td><td>${esc(lead.company)}</td>
             <td><span class="pill ${esc(lead.classification)}">${esc(label(lead.classification))}</span>${lead.would_be_classification ? `<br><small class="muted">possible ${esc(label(lead.would_be_classification))}</small>` : ''}</td>
             <td>${esc(lead.score)}</td><td>${esc(label(lead.status))}</td><td>${esc(date(lead.scanned_at))}</td>
             ${withTrace ? `<td class="trace-cell"><a class="button small secondary" href="#/map/lead/${encodeURIComponent(lead.scan_id)}">Trace</a></td>` : ''}</tr>`
