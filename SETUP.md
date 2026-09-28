@@ -164,6 +164,7 @@ active row and the next scan follows it - no redeploy, no workflow edit:
 | `scoring` | Points per component and the maximum |
 | `competitors` | Named vendors, domains and the possible-competitor language tokens |
 | `llm` | Model, prompt version and the confidence floor the AI must clear |
+| `llm.ai_trigger_review` | `true` lets 05 look for a Tier 1 trigger the rules missed and send that lead to `needs_review` with the quoted sentence for a rep to confirm; absent or `false` (the default) changes nothing |
 
 Competitor identities live in their own table, `oak_competitors`, one row per vendor with
 its domains and aliases. Set `active` to false to stop a vendor matching.

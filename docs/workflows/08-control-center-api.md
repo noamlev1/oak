@@ -82,9 +82,11 @@ Table timestamps each workflow leaves behind (01 intake row, 02 and 02A CRM sync
 elsewhere or not at all: `event_id`, `enrichment.cache_ttl_days` (stored as `company_cache_ttl_days`),
 `enrichment.employee_source_precedence` (derived from `employee_confidence`), `feature_flags`
 (`public_search_enabled` is `enrichment.search_enabled`; `slack_actions_enabled` mirrors the n8n variable
-`OAK_SLACK_ACTIONS_ENABLED`), `owner_directory`, and `notifications.<class>.mention` / `quiet`. They are listed
+`OAK_SLACK_ACTIONS_ENABLED`; `ai_trigger_review` is `llm.ai_trigger_review`, 05's opt-in second look for a missed Tier 1
+trigger, so the app renders it as an Enabled/Disabled toggle), `owner_directory`, and `notifications.<class>.mention` / `quiet`. They are listed
 in `projected_keys`, and a draft maps them back before anything is stored, so a stored document keeps the exact
-key set 01, 03 and 04 read.
+key set 01, 03 and 04 read. `llm.ai_trigger_review` is written only when the toggle is Enabled or the key already
+exists, so saving with it Disabled stores the same document as before the toggle existed.
 
 Draft (`POST /policy/drafts`):
 

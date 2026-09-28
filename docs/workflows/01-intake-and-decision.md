@@ -1,6 +1,6 @@
 # 01 - Intake & Decision
 
-Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `7d48dcb0`. Error workflow: 99 (`N4JW7CO6qjdLi6mq`).
+Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `7b8eac75`. Error workflow: 99 (`N4JW7CO6qjdLi6mq`).
 
 ## In one breath
 
@@ -130,7 +130,7 @@ Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `
     - True (`tier_1`, `matched`, `needs_review` as classified in step 9): go to AI.
     - False (`competitor_intel`, `out_of_scope`): skip AI and the final gate, go straight to `Can Sync Contact?`. This is the spend gate on Gemini.
 
-23. **Reason with AI** (Execute Workflow 05, continue on error). Bounded Gemini call. It can change the tier in exactly one situation: `persona_status == 'ambiguous'`. At confidence >= 0.7 (policy `llm.minimum_confidence`) it resolves the persona and moves the lead to `matched`, or to `tier_1` if the rules already quoted an urgency trigger; if it is confident there is no persona it moves it to `out_of_scope`; below 0.7 it stays `needs_review`. It never overrides a title the rules matched, and it writes the opening question and listen-fors. If the notes looked like an injection, Gemini is skipped entirely.
+23. **Reason with AI** (Execute Workflow 05, continue on error). Bounded Gemini call. It can change the tier in exactly one situation: `persona_status == 'ambiguous'`. At confidence >= 0.7 (policy `llm.minimum_confidence`) it resolves the persona and moves the lead to `matched`, or to `tier_1` if the rules already quoted an urgency trigger; if it is confident there is no persona it moves it to `out_of_scope`; below 0.7 it stays `needs_review`. It never overrides a title the rules matched, and it writes the opening question and listen-fors. If the notes looked like an injection, Gemini is skipped entirely. With the policy's `llm.ai_trigger_review` on and no rule urgency, it also looks for a trigger the rules missed and may return an `ai_trigger_candidate`; it does not change the tier for it.
 
 24. **Load Gate Policy** (Data Table get on the active `oak_policies` row, always output). Reloads the policy because step 18 dropped it; without this the gate would route with hardcoded fallback channels.
 
@@ -154,6 +154,11 @@ Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `
     - Otherwise the tier stands and is routed from the policy (`tier_1` to `booth-hot` with mention, `matched` to `booth-matched`, `needs_review` to `booth-review`).
     - Unknown headcount with a target persona: the tier stands, a reason is added, and the rule summary gets "(headcount to confirm)". `unknown_size_requires_review: false` is recorded explicitly.
     - Removes any reason that starts "null employees".
+    - **AI second look (policy `llm.ai_trigger_review`, off by default).** If 05 handed over an `ai_trigger_candidate` and the lead is still `matched` with no rule urgency (current or carried from an earlier scan), no confirmed or possible competitor flag and no rep override: `needs_review`, rule "Review: possible Tier 1 trigger found by AI", trace `ai_trigger_review`, and a reason quoting the sentence and telling the rep to confirm it, then use Promote to Tier 1. It never makes a Tier 1 and leaves every other branch alone; a rule-found `tier_1` stays `tier_1`. With the flag off 05 never emits the key, so this block never runs.
+
+      ```js
+      if(aiTrig&&typeof aiTrig==='object'&&aiTrig.quote&&classification==='matched'&&!(x.urgency_evidence||[]).length&&x.competitor_status!=='confirmed'&&x.competitor_status!=='possible'&&!String(x.rep_override||'').trim()){ classification='needs_review'; ... }
+      ```
     - **Rep override, last.** If the encounter row carries a rep override from 06 (`tier_1`, `matched`, `out_of_scope` for Not a fit, `needs_review` for False alarm):
       - Same as the gate's answer: keep it, note the rep agreed.
       - Different, and no strong contradiction: the rep wins; routed to the override's channel, no mention, trace `rep_override_honoured`.
@@ -222,7 +227,10 @@ Competitor first, then possible competitor by name, then hard disqualifiers (kno
 Persona 30, company size 15 (only at 1,000+), industry 15 (only when enrichment resolves a target industry), Tier 1 urgency 40; total 100, weights from `policy.scoring`. 01 awards persona, size-from-notes and urgency; 04 and 05 add size and industry later. The score does not route anything - the cascade does - so Rachel is Tier 1 at 70 because persona plus a quoted renewal trigger is the rule, not because 70 crossed a threshold.
 
 **What stops the LLM from promoting a bad lead?**
-Four things. It is only called for `tier_1`, `matched` and `needs_review`, and only changes a tier when the persona is `ambiguous`. It needs 0.7 confidence and cannot invent urgency - Tier 1 requires a trigger the regex already quoted from the notes. And Enforce Final Deterministic Gates runs after it and re-applies competitor, size band and rep override from a freshly loaded policy.
+Four things. It is only called for `tier_1`, `matched` and `needs_review`, and only changes a tier when the persona is `ambiguous`. It needs 0.7 confidence and cannot invent urgency - Tier 1 requires a trigger the regex already quoted from the notes. And Enforce Final Deterministic Gates runs after it and re-applies competitor, size band and rep override from a freshly loaded policy. The opt-in second look for missed triggers (`llm.ai_trigger_review`) cannot promote at all: the gate can only move a `matched` lead to `needs_review`, and a rep presses Promote.
+
+**The rules missed a trigger worded unusually. What then?**
+By default, nothing: the lead stays `matched`, because a regex that misses is cheaper than a model that invents. Switch on `llm.ai_trigger_review` in the policy and 05 also looks for a renewal, breach or audit sentence the rules missed. If the sentence is verbatim in the notes, not negated and above the 0.7 floor, the gate sends the lead to `needs_review` with the quote on the card, the same hand-off an unconfirmed company size gets, and the rep confirms it and presses Promote to Tier 1.
 
 **What is the difference between a duplicate and a returning visitor?**
 A duplicate is the same `scan_id` whose ledger row already reached `complete`; it gets 200 `duplicate_ignored` and nothing else happens. A returning visitor is the same `event_person_key` (event plus email) with a new `scan_id`; `scan_count` goes up, the mode is `repeat_thread` (reply in the first card's thread) or `repeat_escalation` if the tier changed, and the card shows what they said last time.
