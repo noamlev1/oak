@@ -10,15 +10,13 @@ Every row of the `oak_test_payloads` Data Table (`G6sBwk6wTFKmidiZ`), grouped by
 |---|---|
 | `enabled` (or unset) | Only rows with `enabled = true`, the old behaviour |
 | a suite name, e.g. `boundaries` | Every row in that suite, whatever its `enabled` flag |
-| `all` | All 63 rows |
-
-> **Check first:** the `OAK_TEST_SUITE` switch is being added to 07's `Build Test Plan` node by another agent. Open that node and confirm it reads `$vars.OAK_TEST_SUITE` before relying on it. Until it exists, 07 runs only rows with `enabled = true` (today that is rows 5 to 8, not the four task leads), so either flip `enabled` on the rows you want or paste payloads into `scans` in the `Paste JSON Here` node, which takes precedence over the table.
+| `all` | All 64 rows |
 
 **Harness controls** live in `Paste JSON Here`, outside `scans`: `reset` (default `true`: deletes every `oak_deliveries` and `oak_encounters` row with event_id `oak-live-event-2026` first, so scan_ids can be replayed), `gap_seconds` (default 15, between POSTs) and `settle_seconds` (default 90, after the last POST).
 
 **Suite-specific instructions**
 
-- `returning-visitor`: use `gap_seconds: 90` so the first card exists before the second scan arrives and the reply threads under it. The classifications are asserted either way. Row 5 (Rachel) depends on Lead 1 running first in the same pass.
+- `returning-visitor`: use `gap_seconds: 90` so the first card exists before the second scan arrives and the reply threads under it. The classifications are asserted either way. Row 5 (Rachel's second scan) needs an earlier Rachel scan in the same run; row 4.5 (`evt_9964`) provides it, so the suite now runs on its own. If you pick rows by `enabled` instead, enable 4.5 and 5 together.
 - `replay`: run once with `reset: true`, then again with `reset: false`. The second run's `POST Booth Scan` output must show `status: duplicate_ignored`, and no second card may appear in #booth-matched. 07 cannot assert this itself (see Harness limits).
 - `caching`: run both rows in one pass with at least a 30 second gap.
 - `all` takes roughly 16 minutes of POSTs at the default 15 second gap plus the settle wait. Suites are faster and fail more legibly.
@@ -121,10 +119,11 @@ Every row of the `oak_test_payloads` Data Table (`G6sBwk6wTFKmidiZ`), grouped by
 | 57 | `evt_9957` | Injection with a genuine trigger - rules still stand | An injection with a genuine renewal: Gemini is skipped and the rules still give Tier 1. | `tier_1` / persona `iam` / #booth-hot |
 | 58 | `evt_9958` | HTML and script in fields | Markup in the name, company and notes is escaped for Slack and does not change the decision. | `matched` / persona `ciso` / #booth-matched |
 
-## Suite: `returning-visitor` (5)
+## Suite: `returning-visitor` (6)
 
 | # | scan_id | Case | What it proves | Expected outcome |
 |---|---|---|---|---|
+| 4.5 | `evt_9964` | Rachel, first scan (lets this suite run on its own) | The same scan as Lead 1 under its own scan_id. 07 clears the event before every run, so without it Rachel's second scan arrives as a first visit with no trigger and lands in Matched. In an `all` run it is her second visit and replies in her first card's thread. Added after a returning-visitor run failed for exactly that reason. | `tier_1` / persona `ciso` / #booth-hot |
 | 5 | `evt_9905` | Rachel, second scan - new notes | A second scan of Lead 1 exercises the returning-visitor thread reply and the last-time notes block. Urgency she mentioned on her first visit is carried forward, so she stays Tier 1 even though these notes carry no trigger. | `tier_1` / #booth-hot |
 | 60 | `evt_9960` | Pair A, first scan | Pair A first visit: a CISO with no trigger is matched and creates the encounter. | `matched` / persona `ciso` / #booth-matched |
 | 61 | `evt_9961` | Pair A, second scan with new notes escalates | Pair A second visit with a renewal in the new notes escalates the returning visitor to Tier 1. | `tier_1` / persona `ciso` / #booth-hot |
