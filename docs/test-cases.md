@@ -104,7 +104,7 @@ Every row of the `oak_test_payloads` Data Table (`G6sBwk6wTFKmidiZ`), grouped by
 
 | # | scan_id | Case | What it proves | Expected outcome |
 |---|---|---|---|---|
-| 17 | `evt_9917` | Unlisted competitor caught by company name | A company name with an identity-vendor token is flagged as a possible competitor. **Likely FAIL against deployed logic: the final deterministic gate in 01 turns any disqualified_under_500 lead into out_of_scope and does not exempt competitor_status possible, so 60 people ends in #booth-out-of-scope.** | `needs_review` / #booth-review |
+| 17 | `evt_9917` | Unlisted competitor caught by company name | A company name with an identity-vendor token is flagged as a possible competitor. The final gate exempts a possible competitor from the size rule, so it stays with a human. | `needs_review` / #booth-review |
 | 18 | `evt_9918` | Small identity vendor - homepage language only | A small identity vendor is still homepage-checked for competitor language; outcome depends on their site. | Accepted, pipeline completes, Slack delivered (no verdict asserted) |
 | 51 | `evt_9951` | Competitor by email domain, unrelated company name | A competitor email domain wins even when the badge names an unrelated company. | `competitor_intel` / persona `other` / #competitive-intel |
 | 52 | `evt_9952` | Competitor by alias in company name, personal email | A whole-word competitor alias in the company name wins with a personal email and no domain. | `competitor_intel` / persona `other` / #competitive-intel |
@@ -169,4 +169,4 @@ Every row of the `oak_test_payloads` Data Table (`G6sBwk6wTFKmidiZ`), grouped by
 Found by running the deployed `Normalize Scan`, `Evaluate ICP Policy`, `Build Visitor Context`, 04 `Build Enrichment Result` and `Enforce Final Deterministic Gates` code locally against every row with enrichment and AI stubbed out. The 43 new rows all agree with the deployed code. Two older rows do not:
 
 - **Row 5 `evt_9905`** expects `tier_1` / #booth-hot, but its notes carry no Tier 1 trigger and 01 reads urgency only from the current scan. Expect `matched` / #booth-matched. If a rep has pressed Not a fit on Rachel and reset is off, the stored override adds a further twist: the gate then sends it to #booth-review as a conflict.
-- **Row 17 `evt_9917`** expects `needs_review` / #booth-review, but `Enforce Final Deterministic Gates` sends every `disqualified_under_500` lead to `out_of_scope` and has no exemption for `competitor_status: possible` (04 does have one). Expect `out_of_scope` / #booth-out-of-scope until either the gate or the row changes.
+- **Row 17 `evt_9917`** now passes: the final gate was fixed to exempt `competitor_status: possible` from the under-500 size rule, matching 04.
