@@ -1,0 +1,616 @@
+{
+  "name": "Oak GTM - 03 Slack Alerts [sub-flow]",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "f15187b6-c1fc-475b-9316-afa4e2458679",
+      "name": "When Called by Sync",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_policies"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "keyValue": "active"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "b9230b43-63f5-4f10-ad87-cdbb6f628f05",
+      "name": "Load Routing Policy",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        288
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.delivery_kind }}",
+                    "rightValue": "channel_new",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "New channel alert"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.delivery_kind }}",
+                    "rightValue": "channel_thread",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Thread reply"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.delivery_kind }}",
+                    "rightValue": "dm",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Direct message"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "No delivery"
+        }
+      },
+      "id": "de6f0714-7d37-43ce-8903-f609c224c7ae",
+      "name": "Route Delivery",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        784,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $json.target.target }}"
+        },
+        "messageType": "block",
+        "blocksUi": "={{ $json.slack_blocks }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true,
+          "unfurl_links": false
+        }
+      },
+      "id": "e60aedfc-5e06-4052-93c6-382e9c26d524",
+      "name": "Post New Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1008,
+        288
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "alwaysOutputData": true,
+      "webhookId": "3c24321b-4852-46e1-a9a4-bc655bdcd5ed",
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "146thVlAK0lscU75",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const s=$('When Called by Sync').first().json;\nconst grab=(name)=>{try{return $(name).all().map(i=>i.json).filter(v=>v&&typeof v==='object');}catch(e){return[];}};\nlet plan={};\n// Read the plan from the last node that can still change it. Enforce Out-of-Scope Delivery rewrites the\n// channel after Resolve Slack Targets, so a receipt taken from the earlier node recorded channel null for\n// every out-of-scope lead while a card had in fact been posted to the audit channel.\ntry{plan=$('Attach Core Action Buttons').first().json.plan||{};}catch(e){plan={};}\nif(!plan||!Object.keys(plan).length){try{plan=$('Resolve Slack Targets').first().json.plan||{};}catch(e){plan={};}}\nlet routingWarnings=[];\ntry{routingWarnings=$('Resolve Slack Targets').first().json.routing_warnings||[];}catch(e){routingWarnings=[];}\nconst map=(rows,kind)=>rows.map(m=>({kind,ok:m.ok===true&&!m.error,channel:m.channel||null,ts:(m.message&&m.message.ts)||m.message_timestamp||null,error:m.error?String(m.error):null}));\nconst deliveries=[].concat(map(grab('Post New Alert'),'channel_new'),map(grab('Reply in Thread'),plan.moved?'move_note':'channel_thread'),map(grab('Send Direct Message'),'dm'));\nconst failed=deliveries.filter(d=>!d.ok);\nconst anchored=deliveries.some(d=>d.kind==='channel_new'&&d.ok&&d.ts)&&grab('Record Thread Anchor').length>0;\nconst warnings=routingWarnings.slice();\nfor(const f of failed)warnings.push('Slack delivery failed ('+f.kind+'): '+(f.error||'unknown error'));\nif(!deliveries.length&&plan.target_count)warnings.push('Slack targets were resolved but nothing was delivered; check the Slack credential.');\nreturn[{json:{scan_id:s.scan_id,event_person_key:s.event_person_key,classification:s.classification,score:s.score==null?null:Number(s.score),notification_mode:plan.mode||s.notification_mode,channel:plan.channel||null,owner_dm_requested:plan.owner_dm===true,owner_mapped:plan.owner_mapped===true,opening_question_source:s.opening_question_source||null,ai_status:(s.ai&&s.ai.status)||'unknown',delivered_count:deliveries.filter(d=>d.ok).length,failed_count:failed.length,thread_anchor_recorded:Boolean(anchored),threaded:Boolean(plan.use_thread),broadcast:Boolean(plan.reply_broadcast),...(plan.moved?{moved_from_channel:plan.moved_from_channel||null}:{}),deliveries,warnings,completed_at:new Date().toISOString()}}];"
+      },
+      "id": "705671bb-aa45-423a-978e-4fe5c28abe53",
+      "name": "Build Delivery Receipt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1776,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.plan.thread_channel }}"
+        },
+        "messageType": "block",
+        "blocksUi": "={{ $json.slack_blocks }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "thread_ts": {
+            "replyValues": {
+              "thread_ts": "={{ $json.plan.thread_ts }}",
+              "reply_broadcast": "={{ $json.plan.reply_broadcast }}"
+            }
+          },
+          "mrkdwn": true,
+          "unfurl_links": false
+        }
+      },
+      "id": "cbaa6cb7-a47b-4b53-8a6d-2e603a1f0261",
+      "name": "Reply in Thread",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1232,
+        480
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "alwaysOutputData": true,
+      "webhookId": "8f314251-90cc-4971-b640-a94234652e89",
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "146thVlAK0lscU75",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.target.target }}"
+        },
+        "messageType": "block",
+        "blocksUi": "={{ $json.slack_blocks }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true,
+          "unfurl_links": false
+        }
+      },
+      "id": "399d2db6-e4f4-4da8-a8fb-ac7bfb6da344",
+      "name": "Send Direct Message",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1232,
+        672
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "alwaysOutputData": true,
+      "webhookId": "5c74be5e-6686-4435-8075-8d5586e9f776",
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "146thVlAK0lscU75",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(i=>({json:{delivered:false,delivery_kind:'none',reason:i.json.skip_reason||'No Slack audience resolved for this classification.'}}));"
+      },
+      "id": "8ef63591-7f7c-4771-ad93-f7140a56c73c",
+      "name": "Record No Delivery",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok === true && Boolean($json.message?.ts || $json.message_timestamp) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1728732f-63cb-4bd6-a140-f77f53997435",
+      "name": "Slack Post Succeeded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1232,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const x=$json;\n// The one-line \"moved\" pointer from Resolve Slack Targets is not a card: it gets no banner and no buttons.\nif(x.delivery_role==='move_note')return{json:x};\nconst cls=String(x.classification||'');\nlet parsed={blocks:[]};try{parsed=JSON.parse(x.slack_blocks||'{\"blocks\":[]}');}catch(e){}\n// 06 sets override_banner when a rep has reclassified a lead, so this card is a repost of an earlier\n// decision rather than a new scan. Without that one line a repost is indistinguishable from a duplicate.\nconst banner=String(x.override_banner||'').trim();\nif(banner){parsed.blocks=(parsed.blocks||[]).filter(b=>!b||b.block_id!=='oak_override_banner');const hi=parsed.blocks.findIndex(b=>b&&b.type==='header');parsed.blocks.splice(hi>=0?hi+1:0,0,{type:'context',block_id:'oak_override_banner',elements:[{type:'mrkdwn',text:banner}]});}\nif(cls==='out_of_scope')return{json:banner?{...x,slack_blocks:JSON.stringify(parsed)}:x};\nparsed.blocks=(parsed.blocks||[]).filter(b=>['oak_core_actions','oak_triage_actions','oak_more_actions','oak_status_actions'].indexOf(b.block_id)<0);const enabled=String($vars.OAK_SLACK_ACTIONS_ENABLED||'').toLowerCase()==='true';if(enabled){const contactId=((x.crm_context||{}).hubspot_contact_id)||'';const ctx={event_person_key:x.event_person_key,scan_id:x.scan_id,hubspot_contact_id:contactId,classification:cls};const val=(extra)=>JSON.stringify(Object.assign({},ctx,extra||{}));const btn=(id,label,extra,style)=>{const e={type:'button',action_id:id,text:{type:'plain_text',text:label,emoji:true},value:val(extra)};if(style)e.style=style;return e;};const add=(blockId,elements)=>{const kept=elements.filter(Boolean);if(kept.length)parsed.blocks.push({type:'actions',block_id:blockId,elements:kept});};if(cls==='competitor_intel'){add('oak_core_actions',[btn('oak_why_score','Why this score?'),btn('oak_flag_intel','Flag for competitive intel',null,'primary'),btn('oak_false_alarm','False alarm',null,'danger')]);}else{\n// A review card asks one question - where does this lead belong - so on that card only, the three\n// destinations sit in one row instead of being spread across two. Matched opens no modal: promote and\n// not-a-fit are the outcomes a reviewer has to justify, the middle one is not.\nconst triage=cls==='needs_review';add('oak_core_actions',[contactId?btn('oak_claim','Claim',null,'primary'):null,btn('oak_why_score','Why this score?')]);if(triage)add('oak_triage_actions',[btn('oak_promote_tier1','Promote to Tier 1',null,'primary'),btn('oak_mark_matched','Matched'),btn('oak_downgrade','Not a fit',null,'danger')]);add('oak_status_actions',[btn('oak_booth_status_met','Mark met',{status:'met'}),btn('oak_booth_status_meeting_booked','Meeting booked',{status:'meeting_booked'}),triage?null:btn('oak_downgrade','Not a fit',null,'danger')]);add('oak_more_actions',[btn('oak_add_note','Add note'),btn('oak_send_owner','Send to owner'),btn('oak_snooze','Snooze'),(cls!=='tier_1'&&!triage)?btn('oak_promote_tier1','Promote to Tier 1'):null]);}}\n// Slack rejects the entire message with invalid_blocks when two interactive elements share an action_id.\n// 06 resolves its handler from the longest matching action_id prefix, so a suffix here stays routable.\nconst usedIds={};let duplicateIdsFixed=0;for(const b of parsed.blocks){if(!b||!Array.isArray(b.elements))continue;for(const e of b.elements){if(!e||!e.action_id)continue;const base=String(e.action_id);if(usedIds[base]){usedIds[base]+=1;e.action_id=base+'__'+usedIds[base];duplicateIdsFixed+=1;}else usedIds[base]=1;}}\nreturn{json:{...x,slack_blocks:JSON.stringify(parsed),slack_actions_enabled:enabled,slack_duplicate_action_ids_fixed:duplicateIdsFixed}};"
+      },
+      "id": "48cb1e9f-8550-46a3-a57e-1587943c5fa4",
+      "name": "Attach Core Action Buttons",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "content": "# 03 - Slack Alerts\n\n## What this workflow does\n\nTurns a finished decision into a card a rep can act on in ten seconds while somebody is standing in front of them. It decides **which channel**, builds the card, threads repeat visits under the person's last alert, and records whether Slack actually accepted the message. Workflow 01 calls it as a sub-flow once the classification, the CRM record and the AI synthesis are settled, and it hands back a delivery receipt: which targets were tried, what Slack answered, and every error.\n\n## Hypotheses this design rests on\n\n1. **The rep reads the top three lines and nothing else.** Everything below has to survive being skimmed, so the card leads with who the person is and what is blocking the decision.\n2. **\"New lead\" is useless.** Any claim that is not self-evident carries its source inline, because the next question is always \"how do you know that?\"\n3. **Scanner facts need no citation; public claims always do.** A rep typed the badge data. Nobody typed what the web said.\n4. **A returning visitor is not a new lead, and must not be invisible either.** A repeat scan replies in the thread of the person's last card, carrying the previous booth notes, and is also broadcast back to the channel so a thread is not where a repeat goes to die. If the new classification routes to a different channel, a reply there would hide the lead from the team that now owns it, so the repeat posts a fresh card in the new channel and leaves a one-line pointer in the old thread; the next scan threads under the new card. A banner says what changed: the tier moved, the notes are new, or, said out loud, nothing changed at all - because a silent repeat is indistinguishable from a bug.\n5. **An out-of-scope visit deserves a record, not a ping.** It is logged quietly with no mention, no coaching and no buttons.\n6. **A Slack outage must not lose a lead.** Delivery failures are non-fatal, which only works because every outcome is recorded and asserted by the test harness.\n\n## The logic that is implemented\n\n**Channel names are table-driven.** The channel and the owner DM are looked up by classification in the `notifications` block of the active policy. Change a channel in the Data Table and the next scan follows it; no workflow edit. The mention rules are the exception: they are code in this workflow, not policy.\n\n| Decision | Channel | Mention |\n|---|---|---|\n| `tier_1` | `#booth-hot` | `@here` + owner DM |\n| `matched` | `#booth-matched` | none |\n| `needs_review` | `#booth-review` | none |\n| `competitor_intel` | `#competitive-intel` | none |\n| `out_of_scope` | `#booth-out-of-scope` | none, and no buttons |\n\nThat table is the first scan. On a repeat scan with a material change, `matched`, `needs_review` and `competitor_intel` each get one `@here` too; `tier_1` already has one, and `out_of_scope` never gets one.\n\n**The card is assembled in a fixed order** so the eye learns it: header (tier + the one blocker) → Prospect information → Company information → size candidates when size is unresolved → Booth notes verbatim → Why this lead → Do at the booth → links. Each group is a divider, a bold title, then the body.\n\n**Prospect and Company blend CRM and enrichment, and every line names its own source** - badge scan, HubSpot, their website, a public source, or AI. That is the whole point of the layout: a rep can see which facts are trustworthy without asking.\n\n**This workflow renders a decision; it does not make one.** The tier, the score and the classification arrive already settled from 01, 04 and 05. What is decided here is the channel lookup, the `@here`, the card order, the threading and the buttons. Two slots on the card are model prose - the opening question and the listen-fors - plus the decision reasons, which are printed verbatim on the out-of-scope card.\n\n**The real bound on the model.** It cannot name a channel or add a mention: channel names come from the policy table, the mention rules from the code above. What it can do is resolve an ambiguous job title in 05, above the policy confidence floor, and a resolved persona is a different classification - so the lookup lands on a different row and the lead does move channels, as far as `#booth-hot` when 01 had already quoted an urgency trigger from the notes. A model can change which row is read; it cannot write the row. The guard that holds that line lives in 05.\n\n**Threading is conditional on Slack confirming the root message.** The thread anchor is written only after a successful post, so a failed alert can never orphan later replies.\n\n**A rep can move a lead, and the move comes back through here.** When someone reclassifies a lead from the card, 06 reloads the stored decision, overrides the classification and calls this workflow again - so the channel comes from the policy row for the new tier and the buttons are the ones that tier should have, with no card assembled by hand anywhere else. One `override_banner` line under the header names who moved it and why, so a repost reads as a correction rather than a duplicate scan. A review card carries all three destinations - Tier 1, Matched, Not a fit - in one row, because the only question a review card asks is where the lead belongs.\n\n## Where it can fail\n\nSlack can reject a card (`invalid_blocks`) or refuse a channel the app has not joined (`not_in_channel`). Both are non-fatal by design - but both come back in the delivery receipt, which 01 writes to `oak_deliveries.slack_json`, and the harness fails the test when nothing was delivered, so a silent drop is impossible. The receipt records the channel the card actually went to, read after the out-of-scope override rather than before it, so it cannot report a null channel for a card that was in fact posted. That is the lesson this workflow encodes: soft-failing is only safe when the failure is recorded.",
+        "height": 2180,
+        "width": 1120,
+        "color": 5
+      },
+      "id": "1cfff345-a3ec-4266-807a-a221155b5160",
+      "name": "Interview Guide - Slack",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        -2080
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const x=$json;if(String(x.classification||'')!=='out_of_scope')return{json:x};const channel=String((x.routing||{}).channel||'booth-out-of-scope').replace(/^#/,'');let parsed={blocks:[]};try{parsed=JSON.parse(x.slack_blocks||'{\"blocks\":[]}');}catch(e){}\n// The card builder already omits coaching and links for out of scope. This stays as a belt-and-braces\n// guard so no future edit can leak a call to action into the quiet audit route.\nparsed.blocks=(parsed.blocks||[]).filter(function(b){if(b.type==='actions')return false;return !(b.type==='section'&&/\\*Do at the booth\\*/.test(String(((b.text||{}).text)||'')));});const plan={...(x.plan||{}),channel,target_count:1};return{json:{...x,delivery_kind:plan.use_thread?'channel_thread':'channel_new',target:{kind:'channel',target:channel,role:'classification_channel'},plan,slack_blocks:JSON.stringify(parsed),skip_reason:null}};"
+      },
+      "id": "3f5bf2e4-d1b7-4f6a-b8da-47ded9495116",
+      "name": "Enforce Out-of-Scope Delivery",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        320
+      ],
+      "notes": "Fail-safe audit route: out-of-scope visits get one quiet card with no coaching, mentions, or action buttons."
+    },
+    {
+      "id": "6ce9f172-bd1e-4dda-a51a-61fd12c85239",
+      "name": "Resolve Slack Targets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        320
+      ],
+      "parameters": {
+        "jsCode": "const s=$('When Called by Sync').first().json;\nlet p={};try{p=JSON.parse((($('Load Routing Policy').first()||{}).json||{}).document_json||'{}');}catch(e){}\nconst notif=p.notifications||{};const sl=p.slack||{};const crm=s.crm_context||{};\nconst cls=String(s.classification||'needs_review');const routing=s.routing||{};\nconst warnings=[].concat(crm.warnings||[],s.enrichment_warnings||[],s.ai_warnings||[]);\nconst clean=v=>String(v==null?'':v).replace(/^#/,'').trim();\nconst configuredChannel=clean(routing.channel||(notif[cls]||{}).channel||sl.default_channel||'booth-review');\nconst channel=cls==='out_of_scope'?'':configuredChannel;\nconst ownerDm=cls!=='out_of_scope'&&(routing.owner_dm===true||(notif[cls]||{}).owner_dm===true);\nconst ownerId=crm.owner_id?String(crm.owner_id):'';\nconst mapped=ownerId?String((notif.owner_overrides||{})[ownerId]||(sl.owner_directory||{})[ownerId]||''):'';\nconst targets=[];if(channel)targets.push({kind:'channel',target:channel,role:'classification_channel'});\nif(ownerDm&&mapped)targets.push({kind:'dm',target:mapped,role:'crm_owner'});\nelse if(ownerDm&&!mapped)warnings.push(ownerId?('Owner DM skipped: HubSpot owner '+ownerId+' is not mapped to Slack.'):'Owner DM skipped: this contact has no HubSpot owner.');\nconst mode=String(s.notification_mode||'first_scan');\nconst prevTs=String(s.previous_slack_ts||'');const prevCh=String(s.previous_slack_channel||'');\nconst repeatAnchor=Boolean(prevTs&&prevCh&&(mode==='repeat_thread'||mode==='repeat_escalation'));\n// A repeat threads under the last card only while it still belongs in that card's channel. The anchor is a\n// Slack channel id and the policy speaks in names, so the old channel is looked up by the classification the\n// card was posted for: the rep's override when it stands on this scan (06 reposted the card there), else the\n// previous scan's. A lead that moved gets a new card in its new channel and a one-line pointer in the old thread.\nconst anchorCls=String((s.rep_override&&s.rep_override===cls)?cls:(s.prior_classification||''));\nconst anchorChannel=anchorCls?clean((notif[anchorCls]||{}).channel||''):'';\nconst moved=Boolean(repeatAnchor&&anchorChannel&&anchorChannel!==configuredChannel);\nconst useThread=repeatAnchor&&!moved;\nconst plan={mode,channel,owner_dm:ownerDm,owner_mapped:Boolean(mapped),use_thread:useThread,thread_ts:useThread?prevTs:'',thread_channel:useThread?prevCh:'',reply_broadcast:useThread,target_count:targets.length};\nif(moved){plan.moved=true;plan.moved_from_channel=anchorChannel;}\n\n/* ---------- helpers ---------- */\nconst trunc=(v,n)=>{const x=String(v==null?'':v);return x.length>n?x.slice(0,n-3)+'...':x;};\nconst esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\nconst link=(url,label)=>{const t=esc(label).replace(/\\|/g,'-');return url?('<'+url+'|'+t+'>'):t;};\nconst num=v=>Number(v).toLocaleString('en-US');\nconst src=t=>'_('+esc(t)+')_';\nconst when=t=>String(t||'').slice(0,16).replace('T',' ');\n// Every group is a divider, a bold title, a blank line, then the body. Same shape every time,\n// so the eye can skip to the group it wants instead of re-reading the card.\nconst blocks=[];\nconst rule=()=>blocks.push({type:'divider'});\nconst group=(title,body,limit,meta)=>blocks.push({type:'section',text:{type:'mrkdwn',text:trunc('*'+title+'*'+(meta?('  '+meta):'')+'\\n\\n'+body,limit||2600)}});\n\nconst competitor=cls==='competitor_intel';\nconst enr=s.company_enrichment||{};\nconst er=s.employee_resolution||enr.employee_resolution||{};\nconst empVal=er.employees==null?null:Number(er.employees);\nconst empConf=Number(er.confidence||0);\nconst band=String(s.company_size_band||'unknown');\nconst SRC={hubspot_company:'HubSpot',official_website:'their website',official_site:'their website',identity_aligned_public_search:'public source',public_search:'public source',booth_notes:'booth notes',scanner:'booth notes',ai_from_public_source:'AI, from a public source',ai_inferred:'AI estimate',not_established:'not found',unknown:'unresolved'};\nconst empSrcLabel=SRC[String(er.source||'')]||String(er.source||'not found').replace(/_/g,' ');\nconst candidates=Array.isArray(enr.headcount_name_only_candidates)?enr.headcount_name_only_candidates:[];\nconst sizeUnknown=empVal===null;\nconst needSize=!competitor&&cls!=='out_of_scope'&&(sizeUnknown||band==='review_500_999'||er.needs_verification===true);\n\n/* ---------- header ---------- */\nconst TIER={tier_1:'🔥 TIER 1',matched:'✅ MATCHED',needs_review:'🔎 REVIEW',competitor_intel:'🕵️ COMPETITOR',out_of_scope:'⛔ OUT OF SCOPE'};\nconst tier=TIER[cls]||cls.replace(/_/g,' ').toUpperCase();\nconst flag=competitor?'':(sizeUnknown&&cls!=='out_of_scope'?' - confirm company size':(band==='review_500_999'?' - size below ICP, needs a call':''));\nconst full=s.full_name||s.email||'Unknown visitor';\nconst title=s.job_title||(crm.existing_contact||{}).job_title||'title missing';\nconst company=s.company_name||(crm.company||{}).name||s.company_domain||'company unknown';\nconst domain=String(s.company_domain||(crm.company||{}).domain||'');\nconst companyUrl=domain?'https://'+domain.replace(/^https?:\\/\\//,''):'';\nconst email=s.email||(crm.existing_contact||{}).email||'email missing';\nconst repeatScan=s.repeat_scan===true;\nconst scanNo=Number(s.scan_count||(repeatScan?2:1));\n\nblocks.push({type:'header',text:{type:'plain_text',text:trunc(tier+' · '+full+flag,150),emoji:true}});\nconst changeNote=repeatScan?(s.classification_changed===true?('Tier changed from '+esc(String(s.prior_classification||'unknown').replace(/_/g,' '))+' to '+esc(cls.replace(/_/g,' '))+'.'):(s.notes_changed===true?'New booth notes since the last scan.':'Nothing has changed since the first visit - same booth notes, same tier.')):'';\nif(repeatScan)blocks.push({type:'context',elements:[{type:'mrkdwn',text:'🔁 *Returning visitor · scan #'+scanNo+'*'+(s.first_scanned_at?(' · first seen '+esc(when(s.first_scanned_at))):'')+' · '+changeNote}]});\nif(cls==='tier_1')blocks.push({type:'context',elements:[{type:'mrkdwn',text:'<!here> *Hot lead at the booth now* - whoever is free, take it.'}]});\nif(repeatScan&&s.material_change===true&&cls!=='tier_1'&&cls!=='out_of_scope')blocks.push({type:'context',elements:[{type:'mrkdwn',text:'<!here> *Something changed on a returning visitor* - not a new lead, but worth another look.'}]});\n\n/* ---------- 1. PROSPECT INFORMATION - badge scan + CRM + person enrichment ---------- */\nrule();\nconst personLines=[];\npersonLines.push('*Name:*  '+esc(full)+'   '+src('badge scan'));\npersonLines.push('*Role:*  '+esc(title)+'   '+src('badge scan'));\npersonLines.push('*Email:*  '+esc(email)+'   '+src('badge scan'));\nconst relationship=String(crm.customer_status||'unknown').replace(/_/g,' ');\nconst dealCount=Number(crm.open_deal_count||0);\nconst ownerLabel=crm.owner_name?esc(crm.owner_name):(ownerId?('id '+esc(ownerId)):'unassigned');\npersonLines.push('*In HubSpot:*  '+esc(relationship)+'  ·  owner '+ownerLabel+'  ·  '+dealCount+' open deal'+(dealCount===1?'':'s')+'   '+src('HubSpot'));\nif(!competitor){\n  const pe0=(Array.isArray(s.person_evidence)?s.person_evidence:[]).filter(e=>e&&e.url&&e.quote)[0];\n  if(pe0)personLines.push('*Public profile:*  '+esc(trunc(pe0.quote,160))+'  '+link(pe0.url,'source'));\n  else if(Number((s.person_enrichment||{}).search_result_count||0)>0)personLines.push('*Public profile:*  nothing matched both the name and the company   '+src('web search'));\n}\ngroup('Prospect information',personLines.join('\\n'),1800);\n\n/* ---------- 2. COMPANY INFORMATION - CRM + enrichment, every line sourced ---------- */\nrule();\nconst ind=enr.industry_resolution||{};\nconst compLines=[];\ncompLines.push('*Company:*  '+link(companyUrl,company)+(domain?('  ·  '+esc(domain)):'')+'   '+src('badge scan'));\nif(!competitor){\n  if(sizeUnknown)compLines.push('*Size:*  not established   '+src('HubSpot, their site and web search all checked'));\n  else compLines.push('*Size:*  '+num(empVal)+' employees  '+(er.evidence_url?link(er.evidence_url,empSrcLabel):src(empSrcLabel))+(empConf>0&&empConf<1?('  ·  '+Math.round(empConf*100)+'% confidence'):''));\n}\nif(ind.industry&&ind.industry!=='unknown')compLines.push('*Industry:*  '+esc(String(ind.industry).replace(/_/g,' '))+'  '+(ind.evidence_url?link(ind.evidence_url,SRC[String(ind.source||'')]||'source'):src(SRC[String(ind.source||'')]||String(ind.source||'source').replace(/_/g,' '))));\nif(crm.company&&crm.company.id)compLines.push('*CRM record:*  '+(crm.company_created===true?'created by this scan':'existing')+(crm.hubspot_company_url?('  ·  '+link(crm.hubspot_company_url,'open in HubSpot')):'')+'   '+src('HubSpot'));\nconst tools=(Array.isArray(s.incumbent_tools_detected)?s.incumbent_tools_detected:[]).map(t=>t&&t.name).filter(Boolean);\nif(tools.length)compLines.push('*Incumbent tool:*  '+esc(tools.join(', '))+'   '+src('booth notes'));\nconst headline=String((s.company_enrichment||{}).headline||'').trim();\nif(headline){\n  compLines.push('*Public context:*  '+esc(trunc(headline,180))+'  '+link(String(enr.fetch_url||ind.evidence_url||''),'their website'));\n}else{\n  const ce0=(Array.isArray(s.company_evidence)?s.company_evidence:[]).filter(e=>e&&e.url&&e.quote&&e.type!=='competitor_language'&&e.type!=='competitor_named')[0];\n  if(ce0)compLines.push('*Public context:*  '+esc(trunc(ce0.quote,180))+'  '+link(ce0.url,String(ce0.source||'source').replace(/_/g,' ')));\n}\ngroup('Company information',compLines.join('\\n'),2000);\n\nif(sizeUnknown&&candidates.length&&!competitor){\n  const lines=candidates.slice(0,3).map((c,i)=>(i+1)+'. *'+num(c.employees)+' employees* - '+link(c.url,trunc(c.name_in_source||'source',70)));\n  group('Companies matching this name',lines.join('\\n')+'\\n\\n_Matched on the company name alone, so these may be different companies. Not counted in the score - confirm which one at the booth._',1800);\n}\nif(s.personal_email===true)blocks.push({type:'context',elements:[{type:'mrkdwn',text:'✉️ Personal email - no company domain to check. Ask for their work email.'}]});\n\n/* ---------- 3. BOOTH NOTES ---------- */\nrule();\nconst notes=String(s.notes_from_booth||'').trim();\ngroup('Booth notes','>'+esc(notes||'No notes were taken.'),2400,src('badge scan · '+(when(s.scanned_at)||'time unknown')));\nif(s.injection_suspected===true)blocks.push({type:'context',elements:[{type:'mrkdwn',text:'🛡️ These notes contain text that tries to instruct an AI. Treated as quoted text only - routing and scoring ignored it.'}]});\nconst prevNotes=String(s.previous_notes_from_booth||'').trim();\nif(repeatScan&&prevNotes){\n  const prevScan=s.previous_scan||{};\n  group('Booth notes last time','>'+esc(prevNotes),1600,src((when(prevScan.scanned_at)||'earlier')+(prevScan.classification?(' · '+String(prevScan.classification).replace(/_/g,' ')):'')));\n}\n\n/* ---------- 4. WHY THIS LEAD - numbered reasons ---------- */\nrule();\nconst bd=s.score_breakdown||{};\nconst scoreMax=Number(bd.max||100);\nconst persona=String(s.persona||'other');\nconst personaSource=String(s.persona_source||'');\nconst aiResolved=personaSource==='ai_resolved_ambiguous'||(s.persona_status==='ambiguous'&&(s.decision_basis||{}).llm_used===true);\nconst urg=(Array.isArray(s.urgency_evidence)?s.urgency_evidence:[])[0]||null;\nconst reasons=[];\nif(competitor){\n  reasons.push('*Competitor.* Works at '+esc((s.competitor||{}).name||company)+', matched on '+esc((s.competitor||{}).matched_on||'name')+'.');\n  reasons.push('*Treat as intel, not a prospect.* Log what they ask about; do not pitch.');\n}else if(cls==='out_of_scope'){\n  for(const r of (s.decision_reasons||['Outside Oak’s ICP.']).slice(0,3))reasons.push(esc(trunc(String(r),300)));\n}else{\n  if(persona!=='other')reasons.push('*Persona:* a '+esc(persona.toUpperCase())+', one of Oak’s three buying personas.'+(aiResolved?' Title was ambiguous, so AI resolved it from the notes.':''));\n  else reasons.push('*Persona:* not established from the title or notes.');\n  if(sizeUnknown)reasons.push('*Company size:* unconfirmed - no source could establish it, so no size points were awarded.');\n  else if(band==='qualified_1000_plus')reasons.push('*Company size:* '+num(empVal)+' people, inside Oak’s 1,000+ ICP.');\n  else if(band==='review_500_999')reasons.push('*Company size:* '+num(empVal)+' people - above the 500 floor but under the 1,000 ICP line, so a human decides.');\n  else reasons.push('*Company size:* '+num(empVal)+' people.');\n  if(urg){\n    if(urg.type==='incumbent_renewal')reasons.push('*Urgency:* '+esc(urg.tool||'their incumbent tool')+' renews in '+Number(urg.value)+' months - inside Oak’s 6-month Tier 1 window.');\n    else if(urg.type==='identity_breach')reasons.push('*Urgency:* they reported an identity breach - the strongest trigger Oak has.');\n    else reasons.push('*Urgency:* they are inside an active audit deadline.');\n  }else if(persona!=='other')reasons.push('*Urgency:* nothing time-bound in the notes, so this is a real fit but not a drop-everything lead.');\n}\nconst scoreBits=[];\nfor(const k of [['persona','persona'],['urgency','urgency'],['company_size','size'],['industry','industry']])if(Number(bd[k[0]]||0))scoreBits.push(k[1]+' '+Number(bd[k[0]]));\nconst whyTitle=competitor?'Why this matters':(cls==='out_of_scope'?'Why this is out of scope':'Why this lead');\nconst howDecided=[];\nif(persona!=='other')howDecided.push(aiResolved?'persona inferred by AI from the title and notes':'persona from a title rule, which AI cannot override');\nif(urg)howDecided.push('trigger quoted from the booth notes');\nif(!sizeUnknown)howDecided.push('size from '+empSrcLabel);\n// Score, reasons and provenance are one thought, so they are one block.\nlet whyBody=reasons.map((t,i)=>(i+1)+'. '+t).join('\\n\\n');\nif(scoreBits.length)whyBody+='\\n\\n*Score:*  '+esc(scoreBits.join(' + '))+'  =  '+Number(s.score||0)+'/'+scoreMax;\nif(howDecided.length)whyBody+='\\n_Decided by: '+esc(howDecided.join(' · '))+'_';\ngroup(whyTitle,whyBody,2600);\n\n/* ---------- 6. DO AT THE BOOTH ---------- */\nif(cls!=='out_of_scope'){\n  rule();\n  const question=competitor\n    ?'What brought you by today - which identity problem are you looking into?'\n    :(s.opening_question||('At '+company+', which identity process creates the most manual work today?'));\n  const listen=competitor\n    ?['which product areas they probe','customer or pricing claims','who they came with']\n    :((Array.isArray(s.listen_for)&&s.listen_for.length)?s.listen_for.slice(0,3):['current tool','timing','who owns it']);\n  const steps=[];\n  if(repeatScan)steps.push({h:'They have been here before',b:'Open by referring back to the last conversation, not from scratch.'});\n  steps.push({h:'Open with',b:'“'+esc(trunc(String(question),260))+'”'});\n  if(needSize)steps.push({h:'Then confirm size',b:'“'+(sizeUnknown?('Roughly how many people are at '+esc(company)+'?'):('We have '+num(empVal)+' on record - is that the global headcount?'))+'”\\nUnder 500, tap *Not a fit*.'});\n  steps.push({h:'Listen for',b:listen.map(x=>'• '+esc(x)).join('\\n')});\n  if(competitor)steps.push({h:'Do not discuss',b:esc((s.competitor_dont_say||['ConnectAny implementation details.']).join(' '))});\n  group('Do at the booth',steps.map((st,i)=>'*'+(i+1)+'. '+st.h+'*\\n'+st.b).join('\\n\\n'),2600);\n}\n\n/* ---------- 7. links ---------- */\nconst links=[];\nif(cls!=='out_of_scope'){\nif(crm.hubspot_contact_url)links.push({type:'button',text:{type:'plain_text',text:'Open HubSpot',emoji:true},url:crm.hubspot_contact_url,style:cls==='tier_1'?'primary':undefined});\nif(companyUrl)links.push({type:'button',text:{type:'plain_text',text:'Company site',emoji:true},url:companyUrl});\n}\nif(links.length)blocks.push({type:'actions',block_id:'oak_evidence_links',elements:links.map(b=>{const x={...b};if(!x.style)delete x.style;return x;})});\nconst missing=((s.data_quality||{}).missing_fields)||[];\nif(missing.length)blocks.push({type:'context',elements:[{type:'mrkdwn',text:'*Missing from the scan:* '+esc(missing.join(', '))+' - not guessed.'}]});\n\nconst payload=JSON.stringify({blocks});\nconst fallback=trunc((repeatScan?('RETURNING #'+scanNo+' · '):'')+tier+' · '+full+' · '+title+' · '+(s.rule_summary||cls),1800);\n// The pointer is a quiet reply (no broadcast, no mention, no buttons) and never names a private channel.\nconst movedTo=((sl.private_channels||[]).map(clean).indexOf(configuredChannel)>=0)?'a private channel':('#'+esc(configuredChannel));\nconst noteText='Moved to '+movedTo+' - rescanned (scan #'+scanNo+') and now '+esc(cls.replace(/_/g,' '))+'. The new card is there; follow up on that one, not in this thread.';\nconst moveNote=moved?[{json:{...s,delivery_kind:'channel_thread',delivery_role:'move_note',target:{kind:'channel',target:prevCh,role:'move_note'},plan:{...plan,use_thread:true,thread_ts:prevTs,thread_channel:prevCh,reply_broadcast:false},slack_blocks:JSON.stringify({blocks:[{type:'context',elements:[{type:'mrkdwn',text:noteText}]}]}),slack_text:noteText,routing_warnings:warnings}}]:[];\nif(!targets.length)return[{json:{...s,delivery_kind:'none',plan,slack_blocks:payload,slack_text:fallback,routing_warnings:warnings,skip_reason:cls==='out_of_scope'?'Out of scope: recorded without a Slack alert.':'No Slack route for '+cls}}].concat(moveNote);\nreturn targets.map(t=>({json:{...s,delivery_kind:t.kind==='dm'?'dm':(useThread?'channel_thread':'channel_new'),target:(t.kind==='channel'&&useThread)?{kind:'channel',target:prevCh,role:t.role}:t,plan,slack_blocks:payload,slack_text:fallback,routing_warnings:warnings}})).concat(moveNote);"
+      },
+      "notes": "Looks the channel and the owner DM up by classification in the policy's `notifications` block; the `slack` block only maps a HubSpot owner id to a Slack user. Channels change in the Data Table, not here."
+    },
+    {
+      "id": "dfc7e533-19d8-40ba-827f-0843a0f5be49",
+      "name": "Record Thread Anchor",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        288
+      ],
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "displayName": "event_person_key",
+              "id": "event_person_key",
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "displayName": "last_slack_channel",
+              "id": "last_slack_channel",
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "displayName": "last_slack_ts",
+              "id": "last_slack_ts",
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "displayName": "updated_at",
+              "id": "updated_at",
+              "type": "date"
+            }
+          ],
+          "value": {
+            "event_person_key": "={{ $('When Called by Sync').first().json.event_person_key }}",
+            "last_slack_channel": "={{ $json.channel }}",
+            "last_slack_ts": "={{ $json.message.ts }}",
+            "updated_at": "={{ $now.toISO() }}"
+          }
+        },
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_encounters"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_person_key",
+              "keyValue": "={{ $('When Called by Sync').first().json.event_person_key }}"
+            }
+          ]
+        },
+        "matchType": "allConditions",
+        "operation": "upsert",
+        "options": {}
+      },
+      "notes": "Stores the root message so the next scan of the same person replies in this thread instead of starting a new alert, unless that scan moves the lead to another channel.",
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    }
+  ],
+  "connections": {
+    "When Called by Sync": {
+      "main": [
+        [
+          {
+            "node": "Load Routing Policy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Delivery": {
+      "main": [
+        [
+          {
+            "node": "Post New Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply in Thread",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Direct Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record No Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply in Thread": {
+      "main": [
+        [
+          {
+            "node": "Build Delivery Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Direct Message": {
+      "main": [
+        [
+          {
+            "node": "Build Delivery Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record No Delivery": {
+      "main": [
+        [
+          {
+            "node": "Build Delivery Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post New Alert": {
+      "main": [
+        [
+          {
+            "node": "Slack Post Succeeded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Post Succeeded?": {
+      "main": [
+        [
+          {
+            "node": "Record Thread Anchor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Delivery Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Core Action Buttons": {
+      "main": [
+        [
+          {
+            "node": "Route Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enforce Out-of-Scope Delivery": {
+      "main": [
+        [
+          {
+            "node": "Attach Core Action Buttons",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Routing Policy": {
+      "main": [
+        [
+          {
+            "node": "Resolve Slack Targets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Slack Targets": {
+      "main": [
+        [
+          {
+            "node": "Enforce Out-of-Scope Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Thread Anchor": {
+      "main": [
+        [
+          {
+            "node": "Build Delivery Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "binaryMode": "separate",
+    "errorWorkflow": "N4JW7CO6qjdLi6mq"
+  },
+  "pinData": {},
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  },
+  "tags": [],
+  "active": true,
+  "versionId": "d0c9c3c9-cf76-432a-acc4-28301e41d6e0",
+  "id": "gyCxnkoGkh3OJpz5"
+}

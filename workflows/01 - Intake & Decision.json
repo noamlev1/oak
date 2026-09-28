@@ -1,0 +1,1903 @@
+{
+  "name": "Oak GTM - 01 Intake & Decision",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "oak-event/scan",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "361787fd-02d1-4f14-a100-c18afb44fbd8",
+      "name": "Receive Booth Scan",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -64,
+        192
+      ],
+      "webhookId": "a21bbfbe-49cd-40f0-9761-f1f6e7a3014d"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item=$json||{};\nconst headers=(item.headers&&typeof item.headers==='object')?item.headers:{};\nconst raw=(item.body&&typeof item.body==='object')?item.body:item;\nlet vars={};\ntry{vars=(typeof $vars!=='undefined'&&$vars)?$vars:{};}catch(e){vars={};}\nconst expectedSecret=String(vars.OAK_WEBHOOK_SECRET||'').trim();\nconst suppliedSecret=String(headers['x-oak-webhook-secret']||headers['X-Oak-Webhook-Secret']||'').trim();\nconst authMode=expectedSecret?'enforced':'open_no_secret_configured';\nconst authOk=expectedSecret?(suppliedSecret===expectedSecret):true;\nconst clean=(v)=>String(v==null?'':v).trim();\nconst email=clean(raw.email).toLowerCase();\nconst emailValid=/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email);\nconst emailDomain=emailValid?email.split('@').pop():'';\nconst personal=['gmail.com','googlemail.com','outlook.com','hotmail.com','live.com','yahoo.com','icloud.com','proton.me','protonmail.com'];\nconst suppliedDomain=clean(raw.company_domain).toLowerCase().replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0];\nconst inferredDomain=!suppliedDomain&&emailValid&&personal.indexOf(emailDomain)<0?emailDomain:'';\nconst companyDomain=suppliedDomain||inferredDomain;\nconst suppliedCompany=clean(raw.company_name);\nconst inferredCompany=!suppliedCompany&&companyDomain?companyDomain.split('.')[0].replace(/[-_]+/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase()):'';\nconst companyName=suppliedCompany||inferredCompany;\nconst eventId=clean(raw.event_id)||'oak-live-event-2026';\nconst scanId=clean(raw.scan_id);\nconst first=clean(raw.first_name);const last=clean(raw.last_name);\nconst notes=clean(raw.notes_from_booth);\nfunction hash(text){let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}return(h>>>0).toString(16);}\nconst missing=[];\nif(!emailValid)missing.push('email');\nif(!first&&!last)missing.push('name');\nif(!companyName&&!companyDomain)missing.push('company');\nif(!clean(raw.job_title))missing.push('job_title');\nif(!notes)missing.push('notes_from_booth');\nconst fatal=[];\nif(!scanId)fatal.push('scan_id');\nif(!emailValid&&!first&&!last&&!companyName)fatal.push('person_identity');\nreturn{json:{scan_id:scanId,event_id:eventId,event_person_key:eventId+'|'+(emailValid?email:('scan:'+scanId)),first_name:first,last_name:last,full_name:[first,last].filter(Boolean).join(' ')||email||'Unknown visitor',email:emailValid?email:'',email_valid:emailValid,email_domain:emailDomain,personal_email:emailValid&&personal.indexOf(emailDomain)>=0,company_domain:companyDomain,company_domain_source:suppliedDomain?'scanner':(inferredDomain?'email_domain':'unknown'),job_title:clean(raw.job_title),company_name:companyName,company_name_source:suppliedCompany?'scanner':(inferredCompany?'email_domain':'unknown'),scanned_at:clean(raw.scanned_at)||new Date().toISOString(),notes_from_booth:notes,notes_hash:hash(notes.toLowerCase()),auth_ok:authOk,auth_mode:authMode,valid:fatal.length===0,validation_errors:fatal,data_quality:{missing_fields:missing,complete:missing.length===0,can_sync_contact:emailValid,can_enrich_company:Boolean(companyDomain||companyName)},normalized_at:new Date().toISOString()}};"
+      },
+      "id": "6d82287b-63c9-4af3-9fb4-67270c412b41",
+      "name": "Normalize Scan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "d6109564-db0d-47b2-b9e6-dd6e46cd8090"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d688169b-6065-42c6-92f7-3152daae7b07",
+      "name": "Valid Scan?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_deliveries"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "scan_id",
+              "keyValue": "={{ $('Normalize Scan').item.json.scan_id }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "befec17e-e267-4ccb-999f-64dc7fc2fd4c",
+      "name": "Find Existing Scan",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        592
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.status ?? '' }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "complete",
+              "id": "a2d0f8ba-5061-4f12-9711-5aae53bacfbc"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0a950cad-9845-4ca1-880a-091590ec7262",
+      "name": "Duplicate Delivery?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1072,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const s=$('Normalize Scan').item.json;return{json:{accepted:true,status:'duplicate_ignored',scan_id:s.scan_id,message:'This scan_id was already processed end to end. No CRM write and no Slack notification will be created. A scan that failed mid-pipeline is not marked complete, so re-sending it is safe and will run again.'}};"
+      },
+      "id": "4fe13c84-2e88-495d-9a5d-fb2c697b0b35",
+      "name": "Build Duplicate Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "c6b93ff2-dee9-420b-93ff-d505ccdc64bf",
+      "name": "Respond Duplicate",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1392,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_policies"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "keyValue": "active"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "0df59405-5560-496e-8bf9-a77cac8c150f",
+      "name": "Load Active Policy",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1296,
+        608
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const scan=$('Normalize Scan').first().json;let p={};try{p=JSON.parse((($('Load Active Policy').first()||{}).json||{}).document_json||'{}');}catch(e){p={};}const lower=(v)=>String(v==null?'':v).toLowerCase();const rawNotes=String(scan.notes_from_booth||'');const title=lower(scan.job_title);const notes=lower(rawNotes);const company=lower(scan.company_name);const domain=lower(scan.company_domain);const esc=(x)=>String(x).replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&');const hasWord=(hay,needle)=>new RegExp('(?:^|[^a-z0-9])'+esc(lower(needle))+'(?:$|[^a-z0-9])','i').test(hay);let competitorRows=[];try{competitorRows=$('Load Competitors').all().map(i=>i.json).filter(r=>r&&r.name);}catch(e){}let competitor=null;for(const r of competitorRows){if(r.active===false)continue;let domains=[];let aliases=[];try{domains=JSON.parse(r.domains_json||'[]');}catch(e){}try{aliases=JSON.parse(r.aliases_json||'[]');}catch(e){}const byDomain=domain&&domains.some(d=>lower(d)===domain);const byName=company&&[r.name].concat(aliases).some(n=>n&&hasWord(company,n));if(byDomain||byName){competitor={name:r.name,category:r.category||'competitor',matched_on:byDomain?'domain':'company_name',verification_status:r.verification_status||'active'};break;}}const possibleNameHit=competitor?'':((((p.competitors||{}).possible_name_tokens)||[]).filter(function(t){return t&&company&&hasWord(company,t);})[0]||'');const personas=p.personas||{};let persona='other';for(const k of Object.keys(personas)){if(k==='other')continue;const pats=(personas[k]||{}).title_patterns||[];if(pats.some(x=>x&&title.includes(lower(x)))){persona=k;break;}}const personaCfg=personas[persona]||{};const relevanceSignals=(p.relevance_signals||[]).filter(x=>x&&(title.includes(lower(x))||notes.includes(lower(x))));const fit=p.company_fit||{};const empM=rawNotes.match(/\\b(\\d[\\d,]{1,8})\\s*(?:employees|people|staff|seats|users)\\b/i);const employees=empM?Number(String(empM[1]).replace(/,/g,'')):null;const reviewMin=Number(fit.review_employee_min||500);const qualifiedMin=Number(fit.qualified_employee_min||1000);const sizeBand=employees==null?'unknown':employees>=qualifiedMin?'qualified_1000_plus':employees>=reviewMin?'review_500_999':'disqualified_under_500';const outBySize=sizeBand==='disqualified_under_500';const reviewBySize=sizeBand==='review_500_999';const dqHits=(fit.disqualifiers||[]).filter(d=>d&&notes.includes(lower(d)));const incumbents=(p.incumbent_tools||[]).filter(t=>t&&t.active!==false);const incumbentHits=incumbents.filter(t=>[t.name].concat(t.aliases||[]).some(a=>a&&hasWord(notes,a))).map(t=>({name:t.name,category:t.category||'unknown',matched_in:'booth_notes',renewal_trigger:t.renewal_trigger===true}));const u=p.urgency||{};const maxMonths=Number(u.renewal_max_months||6);const renewalM=rawNotes.match(/renewal[^.]{0,60}?(?:in|within|coming up in)?\\s*(\\d+)\\s*months?/i)||rawNotes.match(/(\\d+)\\s*months?[^.]{0,40}?renewal/i);const months=renewalM?Number(renewalM[1]):null;const renewalTool=incumbentHits.find(t=>t.renewal_trigger);const urgency=[];if(renewalTool&&months!==null&&months<=maxMonths)urgency.push({type:'incumbent_renewal',tool:renewalTool.name,value:months,quote:rawNotes.slice(0,400),source:'scanner'});const breachNegated=(i)=>rawNotes.slice(0,i).split(/[.;:!?,()\\n]/).pop().split(/\\s+/).filter(Boolean).slice(-3).some(w=>/^(never|no|not|without|zero|(?:have|has|had|did|was|were)n['’]?t)$/i.test(w.replace(/^[^a-z]+|[^a-z]+$/gi,'')));const breachStated=Array.from(rawNotes.matchAll(/\\bidentity breach\\b|\\bsecurity breach\\b|\\bbreached\\b/gi)).some(m=>!breachNegated(m.index));if(breachStated)urgency.push({type:'identity_breach',quote:rawNotes.slice(0,400),source:'scanner'});if(/audit[^.]{0,30}(deadline|due|active)|deadline[^.]{0,30}audit|sox[^.]{0,25}(deadline|due|active)/i.test(rawNotes))urgency.push({type:'audit_deadline',quote:rawNotes.slice(0,400),source:'scanner'});const targetPersona=persona!=='other';let classification='out_of_scope';let personaStatus='irrelevant';if(competitor){classification='competitor_intel';personaStatus='competitor';}else if(possibleNameHit){classification='needs_review';}else if(outBySize||dqHits.length){classification='out_of_scope';personaStatus=targetPersona?'matched_but_disqualified':'irrelevant';}else if(targetPersona&&reviewBySize){classification='needs_review';personaStatus='matched_fit_review';}else if(targetPersona){classification=urgency.length?'tier_1':'matched';personaStatus='matched';}else if(relevanceSignals.length){classification='needs_review';personaStatus='ambiguous';}const sc=p.scoring||{};const scoreMax=Number(sc.max||100);const personaPoints=targetPersona?Number(sc.persona_points||30):0;const sizePoints=sizeBand==='qualified_1000_plus'?Number(sc.company_size_points||15):0;const urgencyPoints=urgency.length?Number(sc.urgency_points||40):0;const score=Math.min(personaPoints+sizePoints+urgencyPoints,scoreMax);const reasons=[];const trace=[];const add=(code,detail,source)=>{reasons.push(detail);trace.push({code,detail,source});};if(competitor)add('competitor_identity','Active competitor match by '+competitor.matched_on.replace(/_/g,' ')+': '+competitor.name+'.','competitor_table');if(possibleNameHit)add('possible_competitor_name','The company name contains \"'+possibleNameHit+'\", which reads like an identity-security vendor. Flagged as a possible competitor for a human to confirm before any outreach.','company_name');if(outBySize)add('company_under_500',employees+' employees is below Oak’s stated 500-employee out-of-scope ceiling.','scanner');if(reviewBySize)add('company_500_999',employees+' employees is in the unresolved 500–999 band: not disqualified, but not verified against the 1,000+ ICP.','scanner');if(dqHits.length)add('environment_disqualifier','Explicit out-of-scope environment: '+dqHits.join(', ')+'.','scanner');if(targetPersona)add('persona_rule','Job title matches Oak’s '+persona.toUpperCase()+' target persona.','scanner');if(!targetPersona&&relevanceSignals.length)add('ambiguous_persona','Title or notes contain identity/compliance context, but the target persona is not yet clear: '+relevanceSignals.slice(0,3).join(', ')+'.','scanner');if(!targetPersona&&!relevanceSignals.length&&!competitor)add('irrelevant_persona','No Oak target persona or relevant identity/compliance context was found, so paid AI persona reasoning and public search are skipped; the free homepage read still runs so the company can be checked against the competitor list.','scanner');for(const ev of urgency){if(ev.type==='incumbent_renewal')add('incumbent_renewal',ev.tool+' renewal is '+ev.value+' months away, inside the task’s six-month Tier 1 window.','scanner');else if(ev.type==='identity_breach')add('identity_breach','Booth notes report an identity/security breach trigger.','scanner');else add('active_audit','Booth notes report an active audit deadline trigger.','scanner');}if(months!==null&&!renewalTool)add('unverified_renewal','A '+months+'-month renewal was mentioned, but no active incumbent tool matched; it did not trigger Tier 1.','scanner');if(sizePoints)add('company_1000_plus',employees+' employees meets Oak’s 1,000+ employee ICP.','scanner');if(targetPersona&&relevanceSignals.length)add('pain_evidence','Booth notes and title show Oak-relevant pain: '+relevanceSignals.slice(0,4).join(', ')+'. Recorded as conversation evidence; the ICP guide does not score it.','scanner');if(employees===null)add('company_size_unverified','Headcount was not stated in the booth notes, so no size points were awarded yet. Enrichment tries HubSpot, and identity-aligned public search when the lead is in scope; if it stays unresolved the rep confirms it at the booth.','unknown');const urgencyLabel=urgency[0]?(urgency[0].type==='incumbent_renewal'?(urgency[0].tool+' renewal ≤ '+maxMonths+' months'):urgency[0].type.replace(/_/g,' ')):'';const ruleSummary=classification==='competitor_intel'?'Competitor: '+competitor.name+' employee':classification==='tier_1'?'Tier 1: '+persona.toUpperCase()+' + '+urgencyLabel:classification==='matched'?'Matched: '+persona.toUpperCase()+' persona; no verified Tier 1 trigger':classification==='needs_review'?(possibleNameHit?'Review: possible competitor by name':(reviewBySize?'Review: '+persona.toUpperCase()+' + 500–999 employees':'Review: ambiguous task persona')):'Out of scope: '+(outBySize?'under 500 employees':(dqHits[0]||'no relevant persona/context'));const notif=(p.notifications||{})[classification]||{};const mentionTiers=(p.notifications||{}).mention_tiers||['tier_1'];const injectionPatterns=[/ignore\\s+(all\\s+)?(previous|prior|above)\\s+instructions/i,/disregard[^.]{0,30}instructions/i,/system\\s+prompt/i,/<\\/?system>/i,/pretend\\s+to\\s+be/i];return[{json:{...scan,policy_version:p.version||'unknown',policy:p,persona,persona_source:targetPersona?'rule_title_match':'none_from_rules',persona_status:personaStatus,persona_angle:personaCfg.oak_angle||'',listen_for:personaCfg.listen_for||[],relevance_signals:relevanceSignals,urgency_evidence:urgency,employee_count_observed:employees,company_size_band:sizeBand,renewal_months_observed:months,incumbent_tools_detected:incumbentHits,competitor,competitor_status:competitor?'confirmed':(possibleNameHit?'possible':'none'),classification,intelligence_required:['tier_1','matched','needs_review','competitor_intel','out_of_scope'].includes(classification),persona_reasoning_required:classification!=='competitor_intel'&&['tier_1','matched','needs_review'].includes(classification),score,score_breakdown:{persona:personaPoints,company_size:sizePoints,industry:0,urgency:urgencyPoints,total:score,max:scoreMax},decision_reasons:reasons,decision_trace:trace,rule_summary:ruleSummary,decision_basis:{rules_applied:true,llm_used:false,explicit_disqualifier:Boolean(outBySize||dqHits.length),persona_status:personaStatus,company_size_band:sizeBand},routing:{channel:String(notif.channel||''),owner_dm:notif.owner_dm===true,mention:mentionTiers.indexOf(classification)>=0},notes_untrusted:true,injection_suspected:injectionPatterns.some(r=>r.test(rawNotes)),competitor_dont_say:p.competitor_dont_say||[]}}];"
+      },
+      "id": "041290ac-6ccc-4567-996b-4dbae5d5b9e4",
+      "name": "Evaluate ICP Policy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_encounters"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_person_key",
+              "keyValue": "={{ $('Evaluate ICP Policy').item.json.event_person_key }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "11b15ccf-447f-4b2e-bf66-86915f45e290",
+      "name": "Load Prior Encounter",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1184,
+        320
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const d=$('Evaluate ICP Policy').first().json;\nconst prior=($json&&$json.event_person_key)?$json:null;\nconst n=Number((prior&&prior.scan_count)||0)+1;\nconst repeat=n>1;\nconst classChanged=Boolean(repeat&&prior.last_classification&&prior.last_classification!==d.classification);\nconst notesChanged=Boolean(repeat&&prior.last_notes_hash&&prior.last_notes_hash!==d.notes_hash);\nconst material=Boolean(classChanged||notesChanged);\nlet history=[];\nif(prior&&prior.scan_history_json){try{const h=JSON.parse(prior.scan_history_json);if(Array.isArray(h))history=h;}catch(e){history=[];}}\nif(!history.length&&prior&&prior.notes_from_booth){history=[{scan_id:null,scanned_at:prior.last_scanned_at||prior.first_scanned_at||null,notes:String(prior.notes_from_booth||''),classification:prior.last_classification||null,score:prior.last_score==null?null:Number(prior.last_score),job_title:prior.job_title||null}];}\nconst previous=history.length?history[history.length-1]:null;\nconst entry={scan_id:d.scan_id,scanned_at:d.scanned_at,notes:String(d.notes_from_booth||''),classification:d.classification,score:Number(d.score||0),job_title:d.job_title||null,recorded_at:new Date().toISOString()};\nconst nextHistory=history.concat([entry]).slice(-20);\nconst mode=repeat?(classChanged?'repeat_escalation':'repeat_thread'):'first_scan';\nconst repeatReason=repeat?(classChanged?('tier changed from '+String(prior.last_classification||'unknown').replace(/_/g,' ')+' to '+String(d.classification).replace(/_/g,' ')):(notesChanged?'new booth notes since the last scan':'same booth notes as the last scan')):null;\nreturn[{json:{...d,repeat_scan:repeat,scan_count:n,prior_classification:(prior&&prior.last_classification)||null,rep_override:(prior&&prior.override_classification)||null,rep_override_reason:(prior&&prior.downgrade_reason)||null,rep_override_by:(prior&&prior.last_action_by)||null,rep_override_at:(prior&&prior.last_action_at)||null,rep_excluded_from_outreach:Boolean(prior&&prior.exclude_from_outreach===true),classification_changed:classChanged,notes_changed:notesChanged,material_change:material,notification_mode:mode,repeat_reason:repeatReason,repeat_indicator:repeat?('RETURNING VISITOR — scan #'+n):null,previous_scan:previous,previous_notes_from_booth:previous?previous.notes:null,scan_history:nextHistory,scan_history_json:JSON.stringify(nextHistory),previous_slack_channel:(prior&&prior.last_slack_channel)||null,previous_slack_ts:(prior&&prior.last_slack_ts)||null,first_scanned_at:(prior&&prior.first_scanned_at)||d.scanned_at}}];"
+      },
+      "id": "321e5313-5950-48ae-9b2d-d734e80adb8a",
+      "name": "Build Visitor Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_enrichment_cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "company_domain",
+              "keyValue": "={{ $('Build Visitor Context').item.json.company_domain }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "8673aa23-ad0b-4cb1-b715-9bd1f0f7b9d9",
+      "name": "Load Company Cache",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1632,
+        320
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const v=$('Build Visitor Context').first().json;\nconst c=($json&&$json.company_domain)?$json:null;\nconst fresh=Boolean(c&&c.expires_at&&new Date(c.expires_at).getTime()>Date.now()&&String(c.status||'')==='complete');\nlet enrichment={};let evidence=[];\nif(fresh){\n  try{enrichment=JSON.parse(c.payload_json||'{}');}catch(e){enrichment={};}\n  try{evidence=JSON.parse(c.evidence_json||'[]');}catch(e){evidence=[];}\n}\nlet classification=v.classification;\nlet competitorStatus=v.competitor_status;\nlet routing=Object.assign({},v.routing||{});\nconst reasons=(v.decision_reasons||[]).slice();\nif(competitorStatus!=='confirmed'&&enrichment.possible_competitor===true&&classification!=='out_of_scope'&&classification!=='competitor_intel'){\n  competitorStatus='possible';\n  classification='needs_review';\n  const nr=((v.policy||{}).notifications||{}).needs_review||{};\n  routing={channel:String(nr.channel||'booth-review'),owner_dm:nr.owner_dm===true,mention:false};\n  reasons.push('Cached public-site language matches competitor terms, so a human decides before any outreach.');\n}\nconst crmContext={lookup_status:'pending',existing_contact:null,owner_id:null,open_deal:null,customer_status:null};\nconst why=reasons.join(' ');\nconst dontSay=(v.competitor_dont_say||['Do not discuss ConnectAny internals.']).join(' ');\nconst action=classification==='competitor_intel'?(dontSay+' Capture what they ask about and route to competitive intelligence.'):classification==='out_of_scope'?'Qualify politely, keep the CRM record, and do not escalate to sales.':'Qualify the environment first. Position: '+(v.persona_angle||'');\nreturn[{json:{...v,classification,competitor_status:competitorStatus,routing,decision_reasons:reasons,enrichment_cache_hit:fresh,needs_company_enrichment:!fresh,company_enrichment:enrichment,company_evidence:evidence,crm_context:crmContext,alert:{headline:v.repeat_scan?v.repeat_indicator:(classification.toUpperCase()+' — '+v.full_name),who:v.full_name+' — '+v.job_title+' at '+v.company_name,why_now:why,what_to_do:action,score:v.score,score_breakdown:v.score_breakdown,crm_context:crmContext,evidence:[...(v.urgency_evidence||[]),...evidence],repeat_scan:v.repeat_scan,scan_count:v.scan_count,delivery_mode:v.notification_mode,routing}}}];"
+      },
+      "id": "fbead8ed-2f48-4585-8e37-36357f74f3b9",
+      "name": "Build Alert Package",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_encounters"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_person_key",
+              "keyValue": "={{ $('Build Alert Package').item.json.event_person_key }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "event_person_key": "={{ $('Build Alert Package').item.json.event_person_key }}",
+            "event_id": "={{ $('Build Alert Package').item.json.event_id }}",
+            "email": "={{ $('Build Alert Package').item.json.email }}",
+            "scan_count": "={{ $('Build Alert Package').item.json.scan_count }}",
+            "first_scanned_at": "={{ $('Build Alert Package').item.json.first_scanned_at }}",
+            "last_scanned_at": "={{ $('Build Alert Package').item.json.scanned_at }}",
+            "last_notes_hash": "={{ $('Build Alert Package').item.json.notes_hash }}",
+            "last_classification": "={{ $('Build Alert Package').item.json.classification }}",
+            "last_slack_channel": "={{ $('Build Alert Package').item.json.previous_slack_channel ?? '' }}",
+            "last_slack_ts": "={{ $('Build Alert Package').item.json.previous_slack_ts ?? '' }}",
+            "updated_at": "={{ $now.toISO() }}",
+            "full_name": "={{ $('Build Alert Package').item.json.full_name }}",
+            "job_title": "={{ $('Build Alert Package').item.json.job_title }}",
+            "company_name": "={{ $('Build Alert Package').item.json.company_name }}",
+            "company_domain": "={{ $('Build Alert Package').item.json.company_domain }}",
+            "notes_from_booth": "={{ $('Build Alert Package').item.json.notes_from_booth }}",
+            "scan_history_json": "={{ $('Build Alert Package').item.json.scan_history_json }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "event_person_key",
+              "displayName": "event_person_key",
+              "type": "string"
+            },
+            {
+              "id": "event_id",
+              "displayName": "event_id",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "type": "string"
+            },
+            {
+              "id": "full_name",
+              "displayName": "full_name",
+              "type": "string"
+            },
+            {
+              "id": "job_title",
+              "displayName": "job_title",
+              "type": "string"
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "type": "string"
+            },
+            {
+              "id": "company_domain",
+              "displayName": "company_domain",
+              "type": "string"
+            },
+            {
+              "id": "notes_from_booth",
+              "displayName": "notes_from_booth",
+              "type": "string"
+            },
+            {
+              "id": "scan_count",
+              "displayName": "scan_count",
+              "type": "number"
+            },
+            {
+              "id": "first_scanned_at",
+              "displayName": "first_scanned_at",
+              "type": "date"
+            },
+            {
+              "id": "last_scanned_at",
+              "displayName": "last_scanned_at",
+              "type": "date"
+            },
+            {
+              "id": "last_notes_hash",
+              "displayName": "last_notes_hash",
+              "type": "string"
+            },
+            {
+              "id": "last_classification",
+              "displayName": "last_classification",
+              "type": "string"
+            },
+            {
+              "id": "last_slack_channel",
+              "displayName": "last_slack_channel",
+              "type": "string"
+            },
+            {
+              "id": "last_slack_ts",
+              "displayName": "last_slack_ts",
+              "type": "string"
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "type": "date"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "83f49b5e-f2d5-4322-93eb-9ba1a95019aa",
+      "name": "Upsert Encounter",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1280,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_deliveries"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "scan_id",
+              "keyValue": "={{ $('Build Alert Package').item.json.scan_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "value": {
+            "scan_id": "={{ $('Build Alert Package').item.json.scan_id }}",
+            "event_id": "={{ $('Build Alert Package').item.json.event_id }}",
+            "event_person_key": "={{ $('Build Alert Package').item.json.event_person_key }}",
+            "email": "={{ $('Build Alert Package').item.json.email }}",
+            "company_domain": "={{ $('Build Alert Package').item.json.company_domain }}",
+            "scanned_at": "={{ $('Build Alert Package').item.json.scanned_at }}",
+            "notes_hash": "={{ $('Build Alert Package').item.json.notes_hash }}",
+            "classification": "={{ $('Build Alert Package').item.json.classification }}",
+            "policy_version": "={{ $('Build Alert Package').item.json.policy_version }}",
+            "status": "accepted",
+            "created_at": "={{ $now.toISO() }}",
+            "full_name": "={{ $('Build Alert Package').item.json.full_name }}",
+            "job_title": "={{ $('Build Alert Package').item.json.job_title }}",
+            "company_name": "={{ $('Build Alert Package').item.json.company_name }}",
+            "notes_from_booth": "={{ $('Build Alert Package').item.json.notes_from_booth }}",
+            "score": "={{ $('Build Alert Package').item.json.score }}",
+            "raw_json": "={{ JSON.stringify({ scanner: $('Normalize Scan').first().json, decision: { classification: $('Build Alert Package').item.json.classification, persona: $('Build Alert Package').item.json.persona, company_size_band: $('Build Alert Package').item.json.company_size_band, score: $('Build Alert Package').item.json.score, score_breakdown: $('Build Alert Package').item.json.score_breakdown, rule_summary: $('Build Alert Package').item.json.rule_summary, reasons: $('Build Alert Package').item.json.decision_reasons, trace: $('Build Alert Package').item.json.decision_trace }, crm_context: $('Build Alert Package').item.json.crm_context, company_enrichment: $('Build Alert Package').item.json.company_enrichment, company_evidence: $('Build Alert Package').item.json.company_evidence, person_enrichment: $('Build Alert Package').item.json.person_enrichment, person_evidence: $('Build Alert Package').item.json.person_evidence }) }}"
+          },
+          "schema": [
+            {
+              "id": "scan_id",
+              "displayName": "scan_id",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "event_id",
+              "displayName": "event_id",
+              "type": "string"
+            },
+            {
+              "id": "event_person_key",
+              "displayName": "event_person_key",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "type": "string"
+            },
+            {
+              "id": "full_name",
+              "displayName": "full_name",
+              "type": "string"
+            },
+            {
+              "id": "job_title",
+              "displayName": "job_title",
+              "type": "string"
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "type": "string"
+            },
+            {
+              "id": "company_domain",
+              "displayName": "company_domain",
+              "type": "string"
+            },
+            {
+              "id": "scanned_at",
+              "displayName": "scanned_at",
+              "type": "date"
+            },
+            {
+              "id": "notes_from_booth",
+              "displayName": "notes_from_booth",
+              "type": "string"
+            },
+            {
+              "id": "notes_hash",
+              "displayName": "notes_hash",
+              "type": "string"
+            },
+            {
+              "id": "classification",
+              "displayName": "classification",
+              "type": "string"
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "type": "number"
+            },
+            {
+              "id": "policy_version",
+              "displayName": "policy_version",
+              "type": "string"
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "type": "string"
+            },
+            {
+              "id": "raw_json",
+              "displayName": "raw_json",
+              "type": "string"
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "type": "date"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3936f388-ed6b-4894-aba4-2338921397a2",
+      "name": "Upsert Scan Ledger",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1504,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const r=$('Build Alert Package').first().json;return[{json:{accepted:true,status:'accepted',scan_id:r.scan_id,event_id:r.event_id,note:'Decision fields below are provisional. Enrichment, AI synthesis and the final deterministic gate run after this reply; the stored decision in oak_deliveries is authoritative.',provisional_classification:r.classification,provisional_persona:r.persona,provisional_score:r.score,provisional_score_breakdown:r.score_breakdown,provisional_rule_summary:r.rule_summary,provisional_routing:r.routing,company_size_band:r.company_size_band,repeat_scan:r.repeat_scan,scan_count:r.scan_count,notification_mode:r.notification_mode,injection_suspected:r.injection_suspected,enrichment_cache_hit:r.enrichment_cache_hit,needs_company_enrichment:r.needs_company_enrichment,policy_version:r.policy_version,alert_preview:r.alert,downstream:['02A CRM Context','04 Company Enrichment','05 AI Lead Reasoning','02 HubSpot Sync','03 Slack Alerts']}}];"
+      },
+      "id": "ac9191af-03c8-4b43-8ad5-dfe3261991b9",
+      "name": "Build Accepted Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "142dad17-b66d-4be7-99c8-5d090401776a",
+      "name": "Respond Accepted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1952,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return{json:{accepted:false,status:'invalid',scan_id:$json.scan_id||null,errors:$json.validation_errors||[]}};"
+      },
+      "id": "2bb3fcbc-e9f3-42a9-afd3-348190ec6cd4",
+      "name": "Build Invalid Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "b7531861-b221-491e-87d6-1471cc7d9b36",
+      "name": "Respond Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1120,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const p=$('Build Alert Package').first().json;\nconst {policy,...payload}=p;\nreturn[{json:payload}];"
+      },
+      "id": "a1c9ea23-8faf-450c-abb5-511734d7fadb",
+      "name": "Prepare CRM Handoff",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "WQ2s5hFfpaE8P45o",
+          "cachedResultName": "Oak GTM - 02 HubSpot Sync [sub-flow]"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a55fb0ee-6705-4014-97ef-88c65c764211",
+      "name": "Sync to HubSpot",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2336,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gyCxnkoGkh3OJpz5",
+          "cachedResultName": "Oak GTM - 03 Slack Alerts [sub-flow]"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "2c8c1f50-5d81-4c8d-9275-83f1fbb8b8b6",
+      "name": "Notify Slack",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        3824,
+        816
+      ],
+      "notes": "Receives the alert package enriched with crm_context returned by the HubSpot sync."
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "K9MaVwjIoBmZ0oS9",
+          "cachedResultName": "Oak GTM - 04 Company & Person Enrichment [sub-flow]"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "6203fab8-a1fd-4a1d-92df-0c75679a7ac2",
+      "name": "Enrich Company",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2464,
+        480
+      ],
+      "notes": "Returns the payload with company_enrichment merged in, and may downgrade the classification when the public site reads as a competitor."
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_encounters"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_person_key",
+              "keyValue": "={{ $json.event_person_key }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "value": {
+            "event_person_key": "={{ $json.event_person_key }}",
+            "last_classification": "={{ $json.classification }}",
+            "last_score": "={{ $json.score }}",
+            "last_score_breakdown": "={{ JSON.stringify($json.score_breakdown || {}) }}",
+            "last_decision_reasons": "={{ JSON.stringify($json.decision_reasons || []) }}",
+            "last_rule_summary": "={{ $json.rule_summary || '' }}",
+            "updated_at": "={{ $now.toISO() }}",
+            "full_name": "={{ $json.full_name }}",
+            "job_title": "={{ $json.job_title }}",
+            "company_name": "={{ $json.company_name }}",
+            "company_domain": "={{ $json.company_domain }}",
+            "notes_from_booth": "={{ $json.notes_from_booth }}",
+            "hubspot_contact_id": "={{ ($json.crm_context || {}).hubspot_contact_id || '' }}",
+            "source_json": "={{ JSON.stringify({ name: 'scanner', title: $json.job_title ? 'scanner' : (($json.crm_context || {}).existing_contact ? 'hubspot' : 'unknown'), company: $json.company_name_source || 'unknown', domain: $json.company_domain_source || 'unknown', booth_notes: 'scanner', crm: 'hubspot', public_company: $json.enrichment_source || 'unavailable', public_person: (($json.person_enrichment || {}).status || 'unavailable') }) }}",
+            "person_evidence_json": "={{ JSON.stringify($json.person_evidence || []) }}",
+            "company_evidence_json": "={{ JSON.stringify($json.company_evidence || []) }}",
+            "crm_context_json": "={{ JSON.stringify($json.crm_context || {}) }}",
+            "last_payload_json": "={{ JSON.stringify(Object.fromEntries(Object.entries($json).filter(([k]) => k !== 'policy'))) }}"
+          },
+          "schema": [
+            {
+              "id": "event_person_key",
+              "displayName": "event_person_key",
+              "type": "string"
+            },
+            {
+              "id": "full_name",
+              "displayName": "full_name",
+              "type": "string"
+            },
+            {
+              "id": "job_title",
+              "displayName": "job_title",
+              "type": "string"
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "type": "string"
+            },
+            {
+              "id": "company_domain",
+              "displayName": "company_domain",
+              "type": "string"
+            },
+            {
+              "id": "notes_from_booth",
+              "displayName": "notes_from_booth",
+              "type": "string"
+            },
+            {
+              "id": "last_classification",
+              "displayName": "last_classification",
+              "type": "string"
+            },
+            {
+              "id": "last_score",
+              "displayName": "last_score",
+              "type": "number"
+            },
+            {
+              "id": "last_score_breakdown",
+              "displayName": "last_score_breakdown",
+              "type": "string"
+            },
+            {
+              "id": "last_decision_reasons",
+              "displayName": "last_decision_reasons",
+              "type": "string"
+            },
+            {
+              "id": "last_rule_summary",
+              "displayName": "last_rule_summary",
+              "type": "string"
+            },
+            {
+              "id": "hubspot_contact_id",
+              "displayName": "hubspot_contact_id",
+              "type": "string"
+            },
+            {
+              "id": "source_json",
+              "displayName": "source_json",
+              "type": "string"
+            },
+            {
+              "id": "person_evidence_json",
+              "displayName": "person_evidence_json",
+              "type": "string"
+            },
+            {
+              "id": "company_evidence_json",
+              "displayName": "company_evidence_json",
+              "type": "string"
+            },
+            {
+              "id": "crm_context_json",
+              "displayName": "crm_context_json",
+              "type": "string"
+            },
+            {
+              "id": "last_payload_json",
+              "displayName": "last_payload_json",
+              "type": "string"
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "type": "date"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6386e798-0395-4078-a123-fefb0c0bbd60",
+      "name": "Persist Final Classification",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3584,
+        320
+      ],
+      "notes": "Enrichment may downgrade a lead after the immediate 202 response. This second partial upsert makes the encounter's durable classification match what HubSpot and Slack receive."
+    },
+    {
+      "parameters": {
+        "jsCode": "const ai=$('Enforce Final Deterministic Gates').first().json;const enriched=$('Enrich Company').first().json;return[{json:(ai&&ai.scan_id)?ai:enriched}];"
+      },
+      "id": "ee3d2bfd-ca64-4240-b297-4720ead94011",
+      "name": "Restore Enriched Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3808,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_competitors"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "active",
+              "condition": "isTrue"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "id": "f07558a1-7020-470d-aa28-a03e018dd963",
+      "name": "Load Competitors",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        736,
+        320
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "The competitor register is data, not code: add a row and the next scan honours it with no workflow edit."
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "xnl1bav7McaQIwXC",
+          "cachedResultName": "Oak GTM - 02A CRM Context [sub-flow]"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "33d166ce-5cbf-4ea5-840f-f8eed2728c87",
+      "name": "Read CRM Context",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2240,
+        480
+      ],
+      "notes": "Read-only lookup before AI: existing person, company, owner, relationship and open deals."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3d792342-9529-469d-aa23-a0ab0952b513",
+              "leftValue": "={{ $json.persona_reasoning_required }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a7b01151-cd21-4a10-9a0d-35a52259d349",
+      "name": "Needs AI Synthesis?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2688,
+        480
+      ],
+      "notes": "Competitors receive sourced enrichment and a competitive-intel alert, but skip the sales-persona LLM."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "48e11296-61bc-4d68-9450-e7d875e9d055",
+              "leftValue": "={{ $json.email_valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "10865a09-7194-451b-831a-ab4eecdab616",
+      "name": "Can Sync Contact?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4032,
+        624
+      ],
+      "notes": "Missing email does not block intelligence or Slack. It only skips the HubSpot contact write because safe email deduplication is impossible."
+    },
+    {
+      "parameters": {
+        "jsCode": "const x=$('Reason with AI').first().json||{};\nlet p={};\ntry{p=JSON.parse((($('Load Gate Policy').first()||{}).json||{}).document_json||'{}');}catch(e){p={};}\nif(!p||!p.notifications)p=x.policy||{};\nconst notif=p.notifications||{};\nconst mentionTiers=notif.mention_tiers||['tier_1'];\nlet classification=String(x.classification||'needs_review');\nlet routing=Object.assign({},x.routing||{});\nconst reasons=(x.decision_reasons||[]).filter(r=>!/^null employees/i.test(String(r)));\nconst trace=(x.decision_trace||[]).filter(t=>!/^null employees/i.test(String((t||{}).detail||'')));\nlet rule=String(x.rule_summary||'');\nconst route=(key,fallback)=>{const n=notif[key]||{};routing={channel:String(n.channel!==undefined?n.channel:fallback),owner_dm:n.owner_dm===true,mention:mentionTiers.indexOf(key)>=0};};\nconst sizeUnverified=x.company_size_band==='unknown';\n// 05 may lift a needs_review or out_of_scope lead when it resolves an ambiguous title, without\n// knowing why the lead was parked. A possible competitor stays with a human, and a SaaS-only or\n// single-cloud disqualifier found on the company's own site keeps workflow 04's out_of_scope call.\nconst possibleCompetitor=x.competitor_status==='possible';\nconst siteDisq=(((x.company_enrichment||{}).disqualifier_signals)||[]).filter(Boolean);\nif(x.competitor_status==='confirmed'&&x.competitor){\n  classification='competitor_intel';route('competitor_intel','competitive-intel');routing.mention=false;\n  rule='Competitor: '+(x.competitor.name||'active competitor')+' employee';\n}else if(x.company_size_band==='disqualified_under_500'&&!possibleCompetitor){\n  classification='out_of_scope';route('out_of_scope','booth-out-of-scope');routing.mention=false;\n  rule='Out of scope: under 500 employees';\n}else if(siteDisq.length&&!possibleCompetitor&&classification!=='out_of_scope'&&classification!=='competitor_intel'){\n  classification='out_of_scope';route('out_of_scope','booth-out-of-scope');routing.mention=false;\n  rule='Out of scope: '+siteDisq[0];\n  const why='Public evidence indicates '+siteDisq.join(', ')+'.';\n  if(!reasons.includes(why))reasons.push(why);\n  const detail='Final deterministic gate kept the lead out of scope: the company website shows '+siteDisq.join(', ')+', which an AI persona read cannot lift.';\n  if(!reasons.includes(detail)){reasons.push(detail);trace.push({code:'environment_disqualifier_final_gate',detail,source:'deterministic_rule'});}\n}else if(x.company_size_band==='review_500_999'&&classification!=='out_of_scope'){\n  classification='needs_review';route('needs_review','booth-review');routing.mention=false;\n  rule='Review: '+String(x.persona||'persona').toUpperCase()+' + 500–999 employees';\n  const detail='Final deterministic gate kept the lead in review because 500–999 employees is below the qualified 1,000+ threshold.';\n  if(!reasons.includes(detail)){reasons.push(detail);trace.push({code:'company_500_999_final_gate',detail,source:'deterministic_rule'});}\n}else if(possibleCompetitor&&classification!=='needs_review'){\n  classification='needs_review';route('needs_review','booth-review');routing.mention=false;\n  rule='Review: possible competitor';\n  const detail='Final deterministic gate kept the lead in review: it is flagged as a possible competitor, and a human confirms that before any outreach.';\n  if(!reasons.includes(detail)){reasons.push(detail);trace.push({code:'possible_competitor_final_gate',detail,source:'deterministic_rule'});}\n}else if(classification==='out_of_scope'){\n  route('out_of_scope','booth-out-of-scope');routing.mention=false;\n}else{\n  route(classification,classification==='tier_1'?'booth-hot':(classification==='matched'?'booth-matched':'booth-review'));\n  if(!rule){const urg=(x.urgency_evidence||[])[0];rule=classification==='tier_1'?'Tier 1: '+String(x.persona||'persona').toUpperCase()+' + '+String((urg&&urg.type)||'verified urgency').replace(/_/g,' '):classification.replace(/_/g,' ')+': '+String(x.persona||'other').toUpperCase();}\n  if(sizeUnverified&&x.persona&&x.persona!=='other'){\n    const src=String(((x.company_enrichment||{}).employees_source)||'not_established').replace(/_/g,' ');\n    const detail='Headcount could not be established from booth notes, HubSpot, the official site or identity-aligned public search ('+src+'). The tier stands on persona and trigger, and the alert asks the rep to confirm 1,000+ at the booth.';\n    if(!reasons.includes(detail)){reasons.push(detail);trace.push({code:'company_size_unverified_confirm_at_booth',detail,source:'deterministic_rule'});}\n    if(rule.indexOf('headcount to confirm')<0)rule=rule+' (headcount to confirm)';\n  }\n}\n// A rep's triage press in workflow 06 (Promote, Matched, Not a fit, False alarm) is carried forward\n// on a re-scan of the same badge at the same event. It is the last word on classification. The one\n// exception is Not a fit: if the CRM or the visitor themselves (confidence >= 0.9) now put the\n// company in the qualified 1,000+ band, neither side wins silently and a human sees both.\nconst ovr=String(x.rep_override||'').trim();\nlet repOverrideApplied=false;let repOverrideContradicted=false;\nif(ovr){\n  const ovrLabel=ovr.replace(/_/g,' ');\n  const ovrReason=String(x.rep_override_reason||'').trim();\n  const ovrBy=String(x.rep_override_by||'').trim();\n  const ovrAt=String(x.rep_override_at||'').trim();\n  const who=ovrBy||'A rep';\n  const when=ovrAt?(' on '+ovrAt):'';\n  const because=ovrReason?(' Reason given: '+ovrReason.replace(/[. ]+$/,'')+'.'):'';\n  if(ovr===classification){\n    const detail=who+' had already marked this lead '+ovrLabel+when+', and the deterministic gates reached the same decision on this re-scan.'+because;\n    if(!reasons.includes(detail))reasons.push(detail);\n    repOverrideApplied=true;\n  }else{\n    const er=x.employee_resolution||{};\n    const contradicted=ovr==='out_of_scope'&&Number(er.confidence||0)>=0.9&&String(x.company_size_band||'')==='qualified_1000_plus';\n    if(!contradicted){\n      classification=ovr;route(ovr,ovr==='out_of_scope'?'booth-out-of-scope':'booth-review');routing.mention=false;\n      rule='Rep override: '+ovrLabel+(ovrReason?(' - '+ovrReason):'');\n      const detail=who+' overrode this lead to '+ovrLabel+when+'. No higher-confidence source contradicts that call, so it stands on this re-scan.'+because;\n      if(!reasons.includes(detail))reasons.push(detail);\n      trace.push({code:'rep_override_honoured',detail,source:'rep_override'});\n      repOverrideApplied=true;\n    }else{\n      const empRaw=er.employees;\n      const empNum=(empRaw===null||empRaw===undefined||empRaw==='')?null:Number(empRaw);\n      const empTxt=(empNum===null||!isFinite(empNum))?'a qualifying headcount':empNum.toLocaleString()+' employees';\n      const empSrc=String(er.source||'unknown source').replace(/_/g,' ');\n      const empConf=Math.round(Number(er.confidence||0)*100);\n      classification='needs_review';route('needs_review','booth-review');routing.mention=false;\n      rule='Conflict: rep marked this '+ovrLabel+', but '+empTxt+' from '+empSrc+' qualifies the company';\n      const detail=who+' marked this lead '+ovrLabel+when+'.'+because+' A higher-confidence source now contradicts that: '+empTxt+' from '+empSrc+' at '+empConf+'% confidence puts the company in the qualified 1,000+ band. Neither side wins silently - a human decides.';\n      if(!reasons.includes(detail))reasons.push(detail);\n      trace.push({code:'rep_override_contradicted',detail,source:'rep_override'});\n      repOverrideContradicted=true;\n    }\n  }\n}\nreturn[{json:{...x,classification,routing,decision_reasons:reasons,decision_trace:trace,rule_summary:rule,decision_basis:Object.assign({},x.decision_basis||{},{final_deterministic_gate:true,gate_policy_version:p.version||null,unknown_size_requires_review:false,unknown_size_confirm_at_booth:sizeUnverified,rep_override_applied:repOverrideApplied,rep_override_value:ovr||null,rep_override_contradicted:repOverrideContradicted})}}];"
+      },
+      "id": "f49c08c7-0fbd-4a4b-9a78-36b03872ea0f",
+      "name": "Enforce Final Deterministic Gates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "content": "# 01 - Intake & Decision\n\n**Start here.** This is the orchestrator: the booth webhook lands here, and it calls five sub-workflows - 02A for CRM context, 04 for enrichment, 05 for AI synthesis, 02 for the HubSpot write, 03 for the Slack card. Nothing else is in the chain: 00 is run by hand, 06 reacts to Slack buttons, 07 drives this webhook from outside, and 99 is the error handler named in this workflow's settings.\n\n## What this workflow does\n\nAccepts a badge scan, decides what the lead is, and drives everything that follows - CRM context, enrichment, AI synthesis, the HubSpot write and the Slack alert - then settles the final tier and records it.\n\n## Hypotheses this design rests on\n\n1. **A booth scanner cannot wait.** The rep is standing in front of the visitor, so the webhook answers in about two seconds with a provisional decision and finishes the expensive work afterwards. That is why the stored decision, not the HTTP reply, is authoritative.\n2. **Rules decide, models describe.** Every routing decision is deterministic code against a policy table. The LLM never picks a channel and is never trusted to judge fit - at most it reads a job title the rule matcher could not classify, and the tier that follows is computed from that persona plus urgency evidence found here.\n3. **Booth notes are untrusted input.** A human typed them and anyone can type anything, so they are pattern-matched for injection attempts and always quoted, never obeyed.\n4. **Absence of evidence is not evidence of absence.** The ICP disqualifies companies *known* to be under 500. An unknown headcount never demotes a lead; it becomes a question the rep asks.\n5. **The policy is data, not code.** Personas, thresholds, competitors, channels and scoring all live in the `oak_policies` Data Table. Changing the ICP is a row edit, not a workflow edit - which is what makes this scalable to a second event.\n6. **The cost gate is on the calls, not on the leads.** Every classified scan gets CRM context and the free homepage read, because competitor detection must not be gated behind lead fit. What is gated is spend: the paid AI step skips competitors and irrelevant scans, and the paid searches skip irrelevant scans.\n\n## The logic that is implemented\n\n**Classification, in priority order.** The first rule that matches wins:\n\n| # | Condition | Result |\n|---|---|---|\n| 1 | Domain or name matches the competitor table | `competitor_intel` |\n| 2 | Company name carries an identity-vendor token | `needs_review` |\n| 3 | Known < 500 employees, or a SaaS-only / single-cloud disqualifier | `out_of_scope` |\n| 4 | Target persona **and** 500-999 employees | `needs_review` |\n| 5 | Target persona **and** a Tier 1 trigger | `tier_1` |\n| 6 | Target persona, no trigger | `matched` |\n| 7 | No persona but identity/compliance context | `needs_review` |\n| 8 | Nothing relevant | `out_of_scope` |\n\nRow 2 is why the order matters: a company whose *name* reads like an identity vendor goes to a human even when the size rule would have disqualified it, because mistaking a competitor for a small bad fit is the expensive error. Tokens: `policy.competitors.possible_name_tokens`.\n\n**Scoring maps one-to-one onto the ICP summary** - persona 30, company size 15, industry 15, urgency 40. Nothing else earns points. Pain signals are recorded as conversation evidence but are deliberately *not* scored, because the ICP guide does not list them. The score emitted here is provisional: industry stays at 0 until enrichment resolves it, and competitor and out-of-scope leads never reach the code that awards industry points.\n\n**A Tier 1 trigger must be quoted from the notes**: an incumbent IGA renewal inside six months, a reported identity breach, or an active audit deadline. The same vendor can be either signal depending on the visitor: someone who works there is competitive intel, someone whose company renews there is a buying trigger.\n\n**Duplicate ≠ returning visitor.** The replay gate blocks a `scan_id` whose ledger row already reached `complete`, not every repeat. A scan that died mid-pipeline is still at `accepted`, so re-sending it runs again on purpose - a retry is how a half-finished scan is recovered, and a blanket block would strand it. Same person, *different* `scan_id` is a returning visitor - always alerted, in the thread of the first card, carrying what they said last time.\n\n**The final deterministic gate runs after AI.** It reloads the policy and re-applies the size, competitor and rep-override rules, so those always outrank anything the model produced. It sits after `Reason with AI`, so only the three classifications that call the model reach it; for competitor and out-of-scope leads workflow 04 has the last deterministic word instead.\n\n## Where it can fail\n\nEvery sub-workflow soft-fails. If enrichment, AI, HubSpot or Slack breaks, the lead is still classified, stored and - wherever possible - alerted, with an explicit warning naming what failed. The scanner always gets an answer. The one hard stop is a scan with no usable identity: it is rejected with HTTP 400 before any row is written, and the body carries the reason codes so the scanner app can tell the rep what is missing. Nothing is stored - `status: invalid` exists only in that response.\n\n## How a rep's override survives a re-scan\n\nA rep's *Not a fit* button is handled in workflow 06, which writes `override_classification` to the encounter row; a later scan of the same badge reads it back here. The rule: the rep wins, **unless a higher-confidence source now contradicts them**. Only the CRM or the visitor themselves can do that, never a web search. When one does, the lead goes to `needs_review` carrying both the rep's reason and the contradicting evidence, so neither side wins silently and a human decides.\n\nOverrides are scoped to the event, because the encounter row is keyed on event plus person. A new event starts clean - \"too small in July\" should not mute a good lead in October.",
+        "height": 2560,
+        "width": 1120,
+        "color": 5
+      },
+      "id": "983a1074-2862-423c-85c4-f29270d6de96",
+      "name": "Interview Guide - Intake",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -2360
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_encounters"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_person_key",
+              "keyValue": "={{ $json.event_person_key }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "value": {
+            "full_name": "={{ $json.full_name }}",
+            "job_title": "={{ $json.job_title }}",
+            "company_name": "={{ $json.company_name }}",
+            "company_domain": "={{ $json.company_domain }}",
+            "notes_from_booth": "={{ $json.notes_from_booth }}",
+            "last_classification": "={{ $json.classification }}",
+            "last_score": "={{ $json.score }}",
+            "last_score_breakdown": "={{ JSON.stringify($json.score_breakdown || {}) }}",
+            "last_decision_reasons": "={{ JSON.stringify($json.decision_reasons || []) }}",
+            "last_rule_summary": "={{ $json.rule_summary || '' }}",
+            "hubspot_contact_id": "={{ ($json.crm_context || {}).hubspot_contact_id || '' }}",
+            "source_json": "={{ JSON.stringify({ name: 'scanner', title: $json.job_title ? 'scanner' : (($json.crm_context || {}).existing_contact ? 'hubspot' : 'unknown'), company: $json.company_name_source || 'unknown', domain: $json.company_domain_source || 'unknown', booth_notes: 'scanner', crm: 'hubspot', public_company: $json.enrichment_source || 'unavailable', public_person: (($json.person_enrichment || {}).status || 'unavailable') }) }}",
+            "person_evidence_json": "={{ JSON.stringify($json.person_evidence || []) }}",
+            "company_evidence_json": "={{ JSON.stringify($json.company_evidence || []) }}",
+            "crm_context_json": "={{ JSON.stringify($json.crm_context || {}) }}",
+            "last_payload_json": "={{ JSON.stringify(Object.fromEntries(Object.entries($json).filter(([k]) => k !== 'policy'))) }}",
+            "updated_at": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "full_name",
+              "displayName": "full_name",
+              "type": "string"
+            },
+            {
+              "id": "job_title",
+              "displayName": "job_title",
+              "type": "string"
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "type": "string"
+            },
+            {
+              "id": "company_domain",
+              "displayName": "company_domain",
+              "type": "string"
+            },
+            {
+              "id": "notes_from_booth",
+              "displayName": "notes_from_booth",
+              "type": "string"
+            },
+            {
+              "id": "last_classification",
+              "displayName": "last_classification",
+              "type": "string"
+            },
+            {
+              "id": "last_score",
+              "displayName": "last_score",
+              "type": "number"
+            },
+            {
+              "id": "last_score_breakdown",
+              "displayName": "last_score_breakdown",
+              "type": "string"
+            },
+            {
+              "id": "last_decision_reasons",
+              "displayName": "last_decision_reasons",
+              "type": "string"
+            },
+            {
+              "id": "last_rule_summary",
+              "displayName": "last_rule_summary",
+              "type": "string"
+            },
+            {
+              "id": "hubspot_contact_id",
+              "displayName": "hubspot_contact_id",
+              "type": "string"
+            },
+            {
+              "id": "source_json",
+              "displayName": "source_json",
+              "type": "string"
+            },
+            {
+              "id": "person_evidence_json",
+              "displayName": "person_evidence_json",
+              "type": "string"
+            },
+            {
+              "id": "company_evidence_json",
+              "displayName": "company_evidence_json",
+              "type": "string"
+            },
+            {
+              "id": "crm_context_json",
+              "displayName": "crm_context_json",
+              "type": "string"
+            },
+            {
+              "id": "last_payload_json",
+              "displayName": "last_payload_json",
+              "type": "string"
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "type": "date"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "07c94663-a3b2-406f-82a9-a1cbd35b2a6b",
+      "name": "Persist Complete Encounter",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2688,
+        736
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Runs after HubSpot sync, unlike the early 202-response writes. This is the durable final encounter snapshot used for audit and action recovery."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_deliveries"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "scan_id",
+              "keyValue": "={{ $('Settle Final Payload').first().json.scan_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "value": {
+            "classification": "={{ $('Settle Final Payload').first().json.classification }}",
+            "score": "={{ $('Settle Final Payload').first().json.score }}",
+            "raw_json": "={{ JSON.stringify(Object.fromEntries(Object.entries($('Settle Final Payload').first().json).filter(([k]) => k !== 'policy'))) }}",
+            "status": "complete"
+          },
+          "schema": [
+            {
+              "displayName": "classification",
+              "id": "classification",
+              "type": "string"
+            },
+            {
+              "displayName": "score",
+              "id": "score",
+              "type": "number"
+            },
+            {
+              "displayName": "status",
+              "id": "status",
+              "type": "string"
+            },
+            {
+              "displayName": "raw_json",
+              "id": "raw_json",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c10d698f-09d9-4b42-9976-f02aee848dd2",
+      "name": "Persist Complete Delivery",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2912,
+        736
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Updates the fast intake ledger row with the final package after CRM, enrichment and AI complete."
+    },
+    {
+      "parameters": {
+        "jsCode": "return[{json:$('Settle Final Payload').first().json}];"
+      },
+      "id": "3a37270e-66f5-41fa-aa72-dffe14d288d7",
+      "name": "Restore Complete Package",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3136,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_policies"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "keyValue": "active"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "ade3a106-ad4b-4f46-9407-85abe99333fe",
+      "name": "Load Gate Policy",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3136,
+        320
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Reloads the active policy for the final gate. The payload deliberately drops the policy before the sub-workflow hops, so routing here would otherwise fall back to hardcoded channels."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ accepted: false, status: 'unauthorized', scan_id: $json.scan_id || null, message: 'Missing or incorrect x-oak-webhook-secret header.' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "2cada37d-7aec-44f6-abd6-7b8eb1bca743",
+      "name": "Respond Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        544,
+        880
+      ],
+      "notes": "Fails closed with 401 once a signing secret is configured. Nothing is stored, enriched or alerted."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_deliveries"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "scan_id",
+              "keyValue": "={{ $json.scan_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "displayName": "slack_json",
+              "id": "slack_json",
+              "type": "string"
+            }
+          ],
+          "value": {
+            "slack_json": "={{ JSON.stringify($json) }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "4fa6ae96-e39e-431b-bc4f-54bc410f5654",
+      "name": "Persist Slack Delivery",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        4048,
+        816
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Stores the delivery receipt workflow 03 returns: which targets were tried, what Slack answered, and every error. Slack failures are deliberately non-fatal, which is only safe because this row exists and the test harness asserts on it."
+    },
+    {
+      "id": "70d5bfcb-b92d-4784-9ef1-31260d46c7e1",
+      "name": "Needs Intelligence?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2016,
+        608
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "b661630d-f431-47dc-855d-cc52dd1b649f",
+              "leftValue": "={{ $json.intelligence_required }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "notes": "Every classified scan now buys CRM context and public enrichment: competitor detection must not be gated behind lead fit. The false branch is a safety net for a scan that arrives here unclassified, and no current classification takes it."
+    },
+    {
+      "id": "1bce8808-5b4c-45ae-a516-2fada7ba07c6",
+      "name": "Authorized?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        608
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.auth_ok }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "notes": "Enforces the x-oak-webhook-secret header, read as a literal in Normalize Scan because authentication has to run before the policy load. Set the OAK_WEBHOOK_SECRET n8n variable to turn enforcement on; until then every scan passes and auth_mode reports it."
+    },
+    {
+      "id": "ee73a457-cb86-4af4-b758-3a1b649bcf64",
+      "name": "Settle Final Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        896
+      ],
+      "parameters": {
+        "jsCode": "// Both branches of \"Can Sync Contact?\" land here, so the ledger always reaches\n// \"complete\" - even for a scan with no email, where the HubSpot sync is skipped.\n// With an email the sync ran and its return value is the richest package.\n// Without one it never ran, so the pre-CRM enriched payload is the final package.\nlet pkg = null;\ntry { const s = $('Sync to HubSpot').first().json; if (s && s.scan_id) pkg = s; } catch (e) { pkg = null; }\nif (!pkg) { const i = $input.first().json; if (i && i.scan_id) pkg = i; }\nif (!pkg) { try { const r = $('Restore Enriched Payload').first().json; if (r && r.scan_id) pkg = r; } catch (e) { pkg = null; } }\nif (!pkg) { pkg = $input.first().json; }\nreturn [{ json: pkg }];\n"
+      },
+      "notes": "Single meeting point for both branches of Can Sync Contact?. A scan without an email skips the HubSpot sync, so without this node it also skipped the two persist-complete writes and the delivery ledger never left its accepted status. Resolves the richest available final package and hands it to the persist chain."
+    },
+    {
+      "id": "b927e938-8b1b-4e36-9b28-7867a08a9b8f",
+      "name": "Reason with AI",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2912,
+        320
+      ],
+      "parameters": {
+        "options": {
+          "waitForSubWorkflow": true
+        },
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "Oak GTM - 05 AI Lead Reasoning [sub-flow]",
+          "mode": "id",
+          "value": "McoAVyLN6lxqmLeO"
+        }
+      },
+      "notes": "Runs after the 202 response, so a slow or failed model never delays the booth scanner. It can downgrade, and it can upgrade only by resolving an ambiguous title - to matched, or to tier_1 when the rules had already quoted an urgency trigger. It can never overrule a title the rules matched.",
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    }
+  ],
+  "connections": {
+    "Receive Booth Scan": {
+      "main": [
+        [
+          {
+            "node": "Normalize Scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Scan?": {
+      "main": [
+        [
+          {
+            "node": "Find Existing Scan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Invalid Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Existing Scan": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Delivery?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Delivery?": {
+      "main": [
+        [
+          {
+            "node": "Build Duplicate Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load Active Policy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Duplicate Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate ICP Policy": {
+      "main": [
+        [
+          {
+            "node": "Load Prior Encounter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Prior Encounter": {
+      "main": [
+        [
+          {
+            "node": "Build Visitor Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Visitor Context": {
+      "main": [
+        [
+          {
+            "node": "Load Company Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Company Cache": {
+      "main": [
+        [
+          {
+            "node": "Build Alert Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Alert Package": {
+      "main": [
+        [
+          {
+            "node": "Upsert Encounter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Encounter": {
+      "main": [
+        [
+          {
+            "node": "Upsert Scan Ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Scan Ledger": {
+      "main": [
+        [
+          {
+            "node": "Build Accepted Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Accepted Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Accepted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Invalid Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Accepted": {
+      "main": [
+        [
+          {
+            "node": "Prepare CRM Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Final Classification": {
+      "main": [
+        [
+          {
+            "node": "Restore Enriched Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Active Policy": {
+      "main": [
+        [
+          {
+            "node": "Load Competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Competitors": {
+      "main": [
+        [
+          {
+            "node": "Evaluate ICP Policy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read CRM Context": {
+      "main": [
+        [
+          {
+            "node": "Enrich Company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich Company": {
+      "main": [
+        [
+          {
+            "node": "Needs AI Synthesis?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs AI Synthesis?": {
+      "main": [
+        [
+          {
+            "node": "Reason with AI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Can Sync Contact?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Enriched Payload": {
+      "main": [
+        [
+          {
+            "node": "Can Sync Contact?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can Sync Contact?": {
+      "main": [
+        [
+          {
+            "node": "Sync to HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Settle Final Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enforce Final Deterministic Gates": {
+      "main": [
+        [
+          {
+            "node": "Persist Final Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Complete Encounter": {
+      "main": [
+        [
+          {
+            "node": "Persist Complete Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Complete Delivery": {
+      "main": [
+        [
+          {
+            "node": "Restore Complete Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Gate Policy": {
+      "main": [
+        [
+          {
+            "node": "Enforce Final Deterministic Gates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Slack": {
+      "main": [
+        [
+          {
+            "node": "Persist Slack Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Complete Package": {
+      "main": [
+        [
+          {
+            "node": "Notify Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare CRM Handoff": {
+      "main": [
+        [
+          {
+            "node": "Needs Intelligence?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Intelligence?": {
+      "main": [
+        [
+          {
+            "node": "Read CRM Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Can Sync Contact?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Scan": {
+      "main": [
+        [
+          {
+            "node": "Authorized?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authorized?": {
+      "main": [
+        [
+          {
+            "node": "Valid Scan?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync to HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Settle Final Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settle Final Payload": {
+      "main": [
+        [
+          {
+            "node": "Persist Complete Encounter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reason with AI": {
+      "main": [
+        [
+          {
+            "node": "Load Gate Policy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "binaryMode": "separate",
+    "errorWorkflow": "N4JW7CO6qjdLi6mq"
+  },
+  "pinData": {},
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  },
+  "tags": [],
+  "active": true,
+  "versionId": "095cb155-b6db-4ae5-942f-ae66ef0031f3",
+  "id": "9SzVHK4vdv7Z3UMH"
+}

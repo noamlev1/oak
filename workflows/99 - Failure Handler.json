@@ -1,0 +1,122 @@
+{
+  "name": "Oak GTM - 99 Failure Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e440e796-a170-48c0-b1f9-af692a825fab",
+      "name": "When an Oak Workflow Fails",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "notes": "Fires only for production executions. Manual test runs never reach here."
+    },
+    {
+      "parameters": {
+        "jsCode": "const e=$input.first().json||{};\nconst wf=e.workflow||{};\nconst ex=e.execution||e.trigger||{};\nconst err=ex.error||e.error||{};\nconst name=String(wf.name||'an unknown workflow');\nconst nodeName=(err.node&&err.node.name)?String(err.node.name):String(ex.lastNodeExecuted||'an unidentified node');\nconst msg=String(err.message||'No error message was reported.');\nconst url=String(ex.url||'');\nconst execId=String(ex.id||'');\nconst stageKey=(function(){const after=String(name).replace(/^[\\s\\S]*?GTM/i,'');const m=/(\\d{1,2}A?)/i.exec(after);return m?m[1].toUpperCase():'';})();\nconst stages={'00':'setup and seeding','01':'booth scan intake','02':'HubSpot sync','02A':'pre-write CRM lookup','03':'Slack delivery','04':'company enrichment','05':'AI synthesis','06':'Slack action handling','07':'the task test harness','99':'the failure handler itself'};\nconst impacts={'00':'Only setup and seeding broke. No booth scan is affected, but the policy, Data Tables, HubSpot properties or Slack channels may be half-provisioned - rerun this workflow, which is safe to repeat.','01':'A booth scan may not have been recorded at all. Re-send the same webhook payload: the ledger row is only marked complete at the end, so replaying an incomplete scan is safe.','02':'The lead was classified and the booth may already have been alerted, but HubSpot is likely out of date. Look the contact up by email and check the tier and booth conversation.','02A':'No CRM state was changed, but downstream synthesis and the Slack card lost owner, relationship and open-deal context. The tier itself is unaffected.','03':'HubSpot is up to date but nobody was notified. Tell the booth manually, and treat this as urgent while the event is live.','04':'Classification, CRM and the alert still ran. Only the company intel is missing, so the alert went out with less context and possibly without a verified headcount.','05':'Deterministic rules still decided the tier. The alert fell back to a grounded generic opening question instead of a synthesised one.','06':'A rep pressed a button and it did not take effect. The underlying lead data is unchanged, so ask them to try again.','07':'Only the test run broke. No production booth scan is affected.','99':'The failure handler itself failed, so another failure may have gone unreported. Check the execution list for errors around this time.'};\nconst stage=stages[stageKey]||'an Oak GTM stage';\nconst impact=impacts[stageKey]||'Check the execution to see which side effects completed before the failure.';\nconst hint=/401|403|unauthoriz|authenticat|credential/i.test(msg)?'This reads like a credential problem. Verify the token has not expired and still carries the required scopes.':/429|rate limit/i.test(msg)?'This reads like rate limiting. It should clear on its own; retry the execution once traffic settles.':/timeout|ETIMEDOUT|ECONNRESET|ENOTFOUND/i.test(msg)?'This reads like a network or timeout problem with an external service rather than a logic bug.':/property|does not exist|invalid/i.test(msg)?'This reads like a schema mismatch. Confirm the expected custom properties and Data Table columns exist, and rerun workflow 00.':'';\nconst trunc=(t,n)=>{const x=String(t==null?'':t);return x.length>n?x.slice(0,n-3)+'...':x;};\nconst lines=[':rotating_light: *Oak GTM failure - '+stage+'*','*Workflow:* '+name,'*Failed at:* '+nodeName,'*Error:* '+trunc(msg,600),'','*What this means:* '+impact];\nif(hint)lines.push('*Likely cause:* '+hint);\nif(url)lines.push('','<'+url+'|Open the failed execution>');\nelse if(execId)lines.push('','Execution id: '+execId);\nreturn[{json:{text:trunc(lines.join('\\n'),3500),workflow_name:name,workflow_id:String(wf.id||''),failed_node:nodeName,error_message:msg,execution_id:execId,execution_url:url,stage,likely_cause:hint||null,reported_at:new Date().toISOString()}}];"
+      },
+      "id": "f765ed98-10d2-47db-b3ad-85479119a7d6",
+      "name": "Explain the Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "notes": "Turns a raw stack trace into the one thing the on-call person needs: what broke, what it costs, and what to do about it."
+    },
+    {
+      "parameters": {
+        "content": "# 99 - Failure Handler\n\n**What this workflow handles**\nNothing calls this workflow. It has no webhook and no caller: the eight other active Oak GTM workflows each name it in `settings.errorWorkflow`, and n8n invokes it with the failure payload when one of them fails in production. It converts that raw failure into the only three things an on-call person needs mid-event: what broke, what it cost, and what to do now.\n\n**Assumptions I made**\n- At a live event the person reading the alert is a **GTM person on a show floor**, not an engineer at a laptop. A stack trace is useless to them; \"HubSpot is stale, look the contact up by email\" is not.\n- Each stage has a different blast radius. Intake failing means a scan may be lost. Enrichment failing means only the context is thinner. Those deserve different urgency.\n- Silence is the worst outcome. A failure nobody sees is a lead nobody follows up - so the Slack post retries three times and then fails this execution rather than reporting a success it did not achieve.\n- Retries and soft-fails belong on the nodes of the workflows being watched. This workflow is for what survives them.\n\n**The flow**\n1. Error Trigger receives the failure from whichever workflow named this one in its settings.\n2. Map the workflow to a **stage** and a plain-language **business impact**.\n3. Pattern-match the message to a likely cause: credential, rate limit, network, or schema mismatch.\n4. Post to `#oak-revops` with a link straight to the failed execution.\n\n**The lookup is keyed on the stage number, not the workflow name.** It parses `00`, `02A`, `99` and so on out of whatever the workflow happens to be called. Earlier versions keyed on the full literal name, and every rename silently broke the mapping - every alert quietly degraded to a generic message while still reporting success. Matching on the part that carries the meaning is what makes it survive a rename. An unrecognised stage still alerts, with a generic impact line and the right execution link, because a lookup miss must never swallow the alert.\n\n**Impact by stage**\n· *00 Setup* - no scan affected, but provisioning may be half-done. Safe to rerun.\n· *01 Intake* - the scan may not be recorded. Re-send it; the ledger row is only marked complete at the end, so replaying an incomplete scan is safe.\n· *02 HubSpot* - classified and possibly alerted, but the CRM is stale.\n· *02A CRM Context* - no CRM change; the card lost owner and deal context. Tier unaffected.\n· *03 Slack* - CRM is correct but **nobody was told**. Urgent while the event is live.\n· *04 Enrichment* - everything ran, just with less context and possibly no verified headcount.\n· *05 AI* - rules still decided the tier; the question fell back to a grounded generic one.\n· *06 Slack actions* - a rep pressed a button and it did not take effect. Lead data unchanged.\n· *07 Harness* - only the test run broke. No production scan affected.\n· *99 Here* - the handler itself failed, so another failure may have gone unreported.\n\n**Note:** error workflows fire for **production** executions only, so a manual test run never appears here. That makes the last two bullets defensive rather than live: 07 has a manual trigger, and n8n refuses to run a handler's own error workflow to avoid a loop. Both stay mapped so that a rename, or 07 gaining a real trigger, cannot quietly produce a generic alert instead.",
+        "height": 1160,
+        "width": 1120,
+        "color": 5
+      },
+      "id": "a966ed8b-c556-4216-b094-ffaec14d9dc7",
+      "name": "Interview Guide - Failures",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak-revops"
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true,
+          "unfurl_links": false
+        }
+      },
+      "id": "6807b8ca-a4b8-4a05-ab7c-4d73dc169dfa",
+      "name": "Report to RevOps",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        448,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "alwaysOutputData": true,
+      "webhookId": "2ab2771b-0ab7-4534-90f5-65ff57f7fddc",
+      "notes": "Posts to the channel the active policy declares as notifications.ops_alerts, #oak-revops. A failure alert has its own declared destination rather than borrowing a lead routing channel. Retries three times, and a Slack failure that survives the retries fails this execution rather than reporting a success it did not achieve - a lost alert must stay findable in the execution list.",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "MKbjIf2NuUnOT2H0",
+          "name": "Slack account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When an Oak Workflow Fails": {
+      "main": [
+        [
+          {
+            "node": "Explain the Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explain the Failure": {
+      "main": [
+        [
+          {
+            "node": "Report to RevOps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "binaryMode": "separate"
+  },
+  "pinData": {},
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  },
+  "tags": [],
+  "active": true,
+  "versionId": "61065589-cbdf-482e-a3a5-15ec6ee7f72c",
+  "id": "N4JW7CO6qjdLi6mq"
+}

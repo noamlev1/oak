@@ -1,0 +1,1949 @@
+{
+  "name": "Oak GTM - 06 Slack Actions",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "oak-slack/actions",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*",
+          "rawBody": true
+        }
+      },
+      "id": "dd03a9d2-fc1c-4a53-8882-a4f3d19c3a6e",
+      "name": "Receive Slack Action",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        -128
+      ],
+      "webhookId": "e6713c01-2626-4154-983d-cd888dfd2351"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item=$input.first();const headers=item.json.headers||{};let raw='';try{const buf=await this.helpers.getBinaryDataBuffer(0,'data');raw=buf.toString('utf8');}catch(e){raw='';}const timestamp=String(headers['x-slack-request-timestamp']||'');const received=String(headers['x-slack-signature']||'');const secret=String($vars.OAK_SLACK_SIGNING_SECRET||'');let verified=false;let error='';if(!secret)error='OAK_SLACK_SIGNING_SECRET is not configured';else if(!raw)error='Raw Slack request body is unavailable';else if(!timestamp||Math.abs(Date.now()/1000-Number(timestamp))>300)error='Slack request timestamp is stale';else{try{const crypto=require('crypto');const expected='v0='+crypto.createHmac('sha256',secret).update('v0:'+timestamp+':'+raw,'utf8').digest('hex');verified=received.length===expected.length&&crypto.timingSafeEqual(Buffer.from(received),Buffer.from(expected));if(!verified)error='Invalid Slack signature';}catch(e){error='Signature verification unavailable: '+String(e.message||e);}}\n// Decode the form body with ECMAScript globals only. URLSearchParams is not available in this sandbox,\n// and the old generic catch reported the resulting ReferenceError as \"Invalid Slack payload\".\n// encodeURIComponent escapes & as %26, so splitting on & cannot cut into the encoded JSON.\nlet payload={};if(verified){try{const m=/(?:^|&)payload=([^&]*)/.exec(raw);if(!m)throw new Error('the form body carried no payload field');payload=JSON.parse(decodeURIComponent(m[1].replace(/\\+/g,'%20')));}catch(e){verified=false;error='Invalid Slack payload: '+String(e.message||e);}}const parse=(t)=>{try{return JSON.parse(t||'{}');}catch(e){return{};}};const type=String(payload.type||'');const action=(payload.actions||[])[0]||{};const view=payload.view||{};let value={};let actionId='';let callbackId='';let selected='';const viewValues={};let channelId='';let messageTs='';let blocks=[];if(type==='view_submission'){callbackId=String(view.callback_id||'');value=parse(view.private_metadata);channelId=String(value.channel_id||'');messageTs=String(value.message_ts||'');const st=(view.state||{}).values||{};for(const b of Object.keys(st))for(const a of Object.keys(st[b]||{})){const f=st[b][a]||{};viewValues[a]=String((f.selected_option&&f.selected_option.value)||f.selected_date||f.value||'');}}else{actionId=String(action.action_id||'');value=parse(action.value);selected=String((action.selected_option&&action.selected_option.value)||'');channelId=String((payload.channel||{}).id||(payload.container||{}).channel_id||'');messageTs=String((payload.message||{}).ts||(payload.container||{}).message_ts||'');blocks=(payload.message||{}).blocks||[];}const responseCode=verified?200:(secret?401:503);return[{json:{verified,error,response_code:responseCode,response_body:verified?'':JSON.stringify({ok:false,error}),payload_type:type,action_id:actionId,callback_id:callbackId,selected_value:selected,view_values:viewValues,action_value:value,trigger_id:String(payload.trigger_id||''),slack_user_id:String((payload.user||{}).id||''),slack_user_name:String((payload.user||{}).name||''),channel_id:channelId,message_ts:messageTs,original_blocks:blocks,response_url:String(payload.response_url||'')}}];"
+      },
+      "id": "7f87494c-e991-4165-8120-0687124e0899",
+      "name": "Verify Signature and Parse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.response_body }}",
+        "options": {
+          "responseCode": "={{ $json.response_code }}"
+        }
+      },
+      "id": "51129b84-0bef-4900-b11d-d09a7e37fa28",
+      "name": "Acknowledge Slack",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const v=$('Verify Signature and Parse').first().json;return v.verified?[{json:v}]:[];"
+      },
+      "id": "291d2921-d302-4b7a-bd0f-94430e5d29cb",
+      "name": "Continue Only If Verified",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_encounters"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_person_key",
+              "keyValue": "={{ $('Verify Signature and Parse').first().json.action_value.event_person_key }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "ce03de7f-7b8f-49a1-a738-78e767976e6a",
+      "name": "Load Encounter",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        0
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "why",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Why score"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "claim",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Claim"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "modal",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Open modal"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "effects",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CRM and Slack effects"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Unsupported"
+        }
+      },
+      "id": "3ae04e7f-e0c0-4f4f-97ad-029a3adcea31",
+      "name": "Route Slack Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Build Action Context').first().json.channel_id }}"
+        },
+        "text": "={{ $('Build Action Context').first().json.why_text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "thread_ts": {
+            "replyValues": {
+              "thread_ts": "={{ String($('Build Action Context').first().json.message_ts) }}"
+            }
+          },
+          "mrkdwn": true,
+          "unfurl_links": false
+        }
+      },
+      "id": "423a6eff-a82e-4581-a89b-1af656c37d46",
+      "name": "Reply With Stored Score",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1680,
+        -240
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "webhookId": "7300c4f3-c864-4da4-9de1-67bf8f733ebb",
+      "credentials": {
+        "slackApi": {
+          "id": "146thVlAK0lscU75",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "user",
+        "user": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Build Action Context').first().json.slack_user_id }}"
+        }
+      },
+      "id": "a3c7a179-8da7-4a4a-bfba-185439d3e91e",
+      "name": "Get Claimant",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1680,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "webhookId": "46c06d67-b6f2-48d4-90ca-7a56b9295293",
+      "credentials": {
+        "slackApi": {
+          "id": "146thVlAK0lscU75",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_encounters"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_person_key",
+              "keyValue": "={{ $('Build Action Context').first().json.action_value.event_person_key }}"
+            },
+            {
+              "keyName": "claimed_by_slack_id",
+              "condition": "isEmpty"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "value": {
+            "claimed_by_slack_id": "={{ $('Build Action Context').first().json.slack_user_id }}",
+            "claimed_by_name": "={{ $json.profile?.real_name || $json.real_name || $json.name || $('Build Action Context').first().json.slack_user_name }}",
+            "claimed_at": "={{ $now.toISO() }}",
+            "booth_status": "claimed",
+            "updated_at": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "claimed_by_slack_id",
+              "displayName": "claimed_by_slack_id",
+              "type": "string"
+            },
+            {
+              "id": "claimed_by_name",
+              "displayName": "claimed_by_name",
+              "type": "string"
+            },
+            {
+              "id": "claimed_at",
+              "displayName": "claimed_at",
+              "type": "date"
+            },
+            {
+              "id": "booth_status",
+              "displayName": "booth_status",
+              "type": "string"
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "type": "date"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "490c475e-7036-4258-b129-65cf7917dc15",
+      "name": "Claim Encounter If Unowned",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1920,
+        0
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_encounters"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_person_key",
+              "keyValue": "={{ $('Build Action Context').first().json.action_value.event_person_key }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "66682f42-b227-4085-a890-195fad5e6ae4",
+      "name": "Reload Claim State",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        0
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const a=$('Build Action Context').first().json;const row=$input.first().json||{};const u=$('Get Claimant').first().json||{};const claimant=String((u.profile||{}).real_name||u.real_name||u.name||a.slack_user_name||a.slack_user_id);const email=String((u.profile||{}).email||'');const found=Boolean(row&&row.event_person_key);const success=found&&String(row.claimed_by_slack_id||'')===String(a.slack_user_id||'');return[{json:{...a,claim_success:success,claimant_name:claimant,claimant_email:email,claimed_by_slack_id:String(row.claimed_by_slack_id||''),claimed_by_name:String(row.claimed_by_name||''),claim_reply:success?('Claimed by <@'+a.slack_user_id+'>. CRM synchronization is running.'):(found?('Already claimed by '+(row.claimed_by_name||(row.claimed_by_slack_id?('<@'+row.claimed_by_slack_id+'>'):'someone else'))+'.'):'That badge is not in the booth record, so there is nothing to claim yet. Scan it at the booth first.')}}];"
+      },
+      "id": "52988deb-8c19-46a2-9327-f99adbb3055f",
+      "name": "Build Claim Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.claim_success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b561f9ef-624a-4876-8a0f-db0fdf73a7cd",
+      "name": "Claim Succeeded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Build Claim Result').first().json.channel_id }}"
+        },
+        "text": "={{ $('Build Claim Result').first().json.claim_reply }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "thread_ts": {
+            "replyValues": {
+              "thread_ts": "={{ String($('Build Claim Result').first().json.message_ts) }}"
+            }
+          },
+          "mrkdwn": true,
+          "unfurl_links": false
+        }
+      },
+      "id": "7e795c80-c9b5-4e2e-9d83-3ea6eb780a43",
+      "name": "Reply Already Claimed",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        2880,
+        240
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "webhookId": "f0897fac-d3bf-425e-8567-2d8cb783e2c8",
+      "credentials": {
+        "slackApi": {
+          "id": "146thVlAK0lscU75",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return[{json:{ignored:true,action_id:$json.action_id}}];"
+      },
+      "id": "d6a684a7-c890-4be0-b5e4-b0fb8503f2bd",
+      "name": "Ignore Unsupported Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.hubapi.com/crm/v3/owners/?email=' + encodeURIComponent($('Build Claim Result').first().json.claimant_email || '__no_email__') + '&limit=10' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {}
+      },
+      "id": "24dc6e45-c270-4545-84bc-6866f9ba1ebb",
+      "name": "Find HubSpot Owner by Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2880,
+        -80
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.hubapi.com/crm/v3/objects/contacts/' + $('Build Action Context').first().json.action_value.hubspot_contact_id + '?properties=hubspot_owner_id,oak_claimed_by,oak_claimed_at,oak_booth_status' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {}
+      },
+      "id": "75f7305e-4f26-4059-b85e-6b6cbfb542e5",
+      "name": "Read HubSpot Owner State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3120,
+        -80
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('Build Claim Result').first().json;const owners=$('Find HubSpot Owner by Email').first().json||{};const contact=$('Read HubSpot Owner State').first().json||{};const current=String((contact.properties||{}).hubspot_owner_id||'');const matches=(owners.results||[]).filter(o=>String(o.email||'').toLowerCase()===String(c.claimant_email||'').toLowerCase());const ownerId=!current&&matches.length?String(matches[0].id):'';const properties={oak_claimed_by:'<@'+c.slack_user_id+'> '+c.claimant_name,oak_claimed_at:new Date().toISOString(),oak_booth_status:'claimed'};if(ownerId)properties.hubspot_owner_id=ownerId;const ownerStatus=current?'preserved existing HubSpot owner':(ownerId?'set HubSpot owner from matching Slack email':'left HubSpot owner empty; no Slack-email owner match');return[{json:{...c,hubspot_contact_id:String(c.action_value.hubspot_contact_id||''),hubspot_properties:properties,hubspot_owner_status:ownerStatus}}];"
+      },
+      "id": "712624c7-ba1a-4afd-b711-f5790299d3b0",
+      "name": "Build HubSpot Claim Patch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://api.hubapi.com/crm/v3/objects/contacts/' + $json.hubspot_contact_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: $json.hubspot_properties }) }}",
+        "options": {}
+      },
+      "id": "76249a28-d6e1-44c4-b21e-4cefcf3f5f5f",
+      "name": "Write HubSpot Claim",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3600,
+        -80
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('Build HubSpot Claim Patch').first().json;const write=$('Write HubSpot Claim').first().json||{};const blocks=JSON.parse(JSON.stringify(c.original_blocks||[]));const status=write.error?'HubSpot claim fields failed: '+String(write.error):c.hubspot_owner_status;const context={type:'context',block_id:'oak_claim_status',elements:[{type:'mrkdwn',text:'✅ *Claimed by <@'+c.slack_user_id+'>* · '+status}]};const filtered=blocks.filter(b=>b.block_id!=='oak_claim_status');const headerIndex=filtered.findIndex(b=>b.type==='header');filtered.splice(headerIndex>=0?headerIndex+1:0,0,context);for(const b of filtered){if(b.type==='actions'&&Array.isArray(b.elements))b.elements=b.elements.filter(e=>e.action_id!=='oak_claim');}return[{json:{...c,updated_blocks:JSON.stringify({blocks:filtered}),claim_reply:'Claimed by <@'+c.slack_user_id+'>. '+status+'.'}}];"
+      },
+      "id": "215a2858-493a-485a-87ba-263cafcf25fd",
+      "name": "Build Claimed Card",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3840,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Build Claimed Card').first().json.channel_id }}"
+        },
+        "ts": "={{ Number($('Build Claimed Card').first().json.message_ts) }}",
+        "messageType": "block",
+        "blocksUi": "={{ $('Build Claimed Card').first().json.updated_blocks }}",
+        "text": "={{ $('Build Claimed Card').first().json.claim_reply }}",
+        "updateFields": {},
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "6ecc2823-fed9-48d7-b58d-d9d76e59cb05",
+      "name": "Mark Card Claimed",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        4080,
+        -80
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "webhookId": "447b1fc0-908a-4b5a-ac68-b388fa8131b6",
+      "credentials": {
+        "slackApi": {
+          "id": "146thVlAK0lscU75",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Build Claimed Card').first().json.channel_id }}"
+        },
+        "text": "={{ $('Build Claimed Card').first().json.claim_reply }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "thread_ts": {
+            "replyValues": {
+              "thread_ts": "={{ String($('Build Claimed Card').first().json.message_ts) }}"
+            }
+          },
+          "mrkdwn": true,
+          "unfurl_links": false
+        }
+      },
+      "id": "2445f9d6-164f-4d0c-a829-f53ae0226efa",
+      "name": "Confirm Claim in Thread",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        4320,
+        -80
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "webhookId": "053787e8-7b90-4fd7-8e87-7cced5d08d6e",
+      "credentials": {
+        "slackApi": {
+          "id": "146thVlAK0lscU75",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# 06 - Slack Actions\n\n## What this workflow does\n\nReceives the button clicks and modal submissions from the booth card that 03 posted, and turns them into CRM writes. It is the one workflow here that no other workflow calls: the caller is Slack's Interactivity endpoint and the trigger is a rep tapping a button, so it runs long after the scan pipeline has finished. What it leaves behind is a reply in the card's own thread, an attributed HubSpot note, and an updated encounter row that a later re-scan of the same badge reads back. It is a public webhook that writes to HubSpot, so verification comes before anything is read.\n\n## Hypotheses this design rests on\n\n1. **An alert a rep cannot act on is a notification, not a tool.** The loop has to close inside Slack, or the rep switches to HubSpot and stops reading alerts.\n2. **A public webhook that writes to the CRM is an open door.** Every request is HMAC-verified against Slack's signing secret before it is parsed, and the workflow is fail-closed until `OAK_SLACK_SIGNING_SECRET` is set.\n3. **Slack gives you three seconds.** Acknowledge first, then do the work.\n4. **Reps are the correction mechanism.** The rules will be wrong sometimes and the person standing there knows better. *Not a fit* and *Promote* both ask for a reason in a modal before they write, so moving a lead to an extreme is auditable rather than mysterious. *Matched* and *False alarm* deliberately do not: the middle outcome and undoing a keyword hit are not the calls a rep has to justify, and charging a form for them is how a correction mechanism stops being used. All of them record who acted, and when.\n5. **Two reps will tap Claim at the same moment.** Claiming is conditional on the lead being unowned, so simultaneous clicks give one owner and one honest \"already claimed\".\n6. **A human decision must never look like a model's.** Every CRM note written from here says *Source: Slack action button, not AI inference*.\n\n## The logic that is implemented\n\n| Button | HubSpot | Encounter | Reply + side effect |\n|---|---|---|---|\n| **Why this score?** | nothing | nothing | Posts the stored rule, score split and numbered reasons. Read-only by design: an explanation must never be able to change the thing it explains. |\n| **Claim** | `hubspot_owner_id` if your Slack email matches an owner · `oak_claimed_by` · `oak_claimed_at` · `oak_booth_status=claimed` | `claimed_by_slack_id`, `claimed_at` | Rewrites the card header with a green *Claimed by @you*. Conditional, so it cannot double-assign. |\n| **Add note** | note on the contact | `last_action` | Opens a modal and saves your text as an attributed CRM note. Free text, so it is stored, never interpreted. |\n| **Snooze** | creates a **task** due 09:00 tomorrow | `follow_up_at`, `booth_status=follow_up_later` | The only task creator in the system. |\n| **Send to owner** | nothing | `last_action` | DMs the card to the mapped owner, or says plainly that no owner is mapped. |\n| **Mark met** | `oak_booth_status=met` · **`hs_lead_status=CONNECTED`** | `booth_status=met` | Moves the standard field a rep filters on, not only an Oak-private one. |\n| **Meeting booked** | `oak_booth_status=meeting_booked` · **`hs_lead_status=OPEN_DEAL`** · **`lifecyclestage=salesqualifiedlead`** | `booth_status=meeting_booked`, `follow_up_at` | Asks for the meeting date in a modal first. The only action that promotes lifecycle stage, because a booked meeting is the first real pipeline event. |\n| **Promote to Tier 1** | `oak_lead_tier=tier_1` | `override_classification=tier_1` | Asks why in a modal, six reasons plus free text, then reposts through 03. For what the conversation revealed and the badge scan could not. |\n| **Matched** | `oak_lead_tier=matched` | `override_classification=matched` | One tap, no modal. The third destination a review card needs: this is an ordinary good lead, not a problem. |\n| **Not a fit** | `oak_lead_tier=out_of_scope` · `oak_exclude_from_outreach=true` · `oak_booth_status=not_a_fit` · **`hs_lead_status=UNQUALIFIED`** | `exclude_from_outreach`, `downgrade_reason` | Asks **why** in a modal first, suppresses outreach, and reposts through 03, which means one quiet card on the audit channel with no mention and no buttons. |\n| **Flag for intel** *(competitor)* | `oak_competitor_status=confirmed` · `oak_exclude_from_outreach=true` | `competitive_intel=true`, `exclude_from_outreach` | Confirms a competitor match a human verified, in the same `none`/`possible`/`confirmed` vocabulary workflow 02 writes, so a rep correction and a pipeline write mean the same thing on the field. |\n| **False alarm** *(competitor)* | `oak_competitor_status=none` · `oak_lead_tier=needs_review` · `oak_exclude_from_outreach=false` | `competitor_override=false_alarm` | Clears a wrong match, e.g. a partner, and reposts it into review. **Does not edit the competitor table** - one rep's call should not silently change policy for everyone. |\n\n**Ten of the twelve share one write path.** They differ in *what* they write, not *how*, so they are decided in one place (`Plan Action Effects`) and written once - the encounter update, the property patch, the attributed note and the thread reply cannot drift apart per button. The four modals do not branch off: their submissions come back through the same router and rejoin the planner, so asking a question first costs nothing structurally. Only *Why this score?* and *Claim* stay off the shared path, and the actions that need an extra call first - snooze, send to owner, and any reclassification - make it before rejoining it.\n\n**Reclassifying a lead does not build a card here; it replays the decision through 03.** `oak_deliveries.raw_json` holds the exact object 01 handed to 03, so this workflow reloads it, overrides the classification, drops `routing`, and calls 03 as a sub-workflow. 03 then looks the channel up for the *new* tier, renders the full card and attaches the buttons that tier is entitled to, and one banner line says who moved it and why. The version this replaced concatenated the blocks of the clicked message, which is empty for every modal - a `view_submission` payload has no `message` - so promoting to Tier 1 posted a heading and no lead. Nothing is reposted if the stored payload cannot be read: the CRM write and the reply still happen and the reply says the repost was skipped.\n\n**Why this needs a custom Slack app:** Slack delivers a click to the app that posted the message, so the same app must post the card (workflow 03) and receive the interaction here. That is why 03 uses the access-token credential - a requirement of interactivity, not an inconsistency.\n\n## Setup it depends on\n\n· `OAK_SLACK_SIGNING_SECRET` - fail-closed without it\n· `OAK_SLACK_ACTIONS_ENABLED=true` - 03 renders no buttons without it\n· Interactivity Request URL → this workflow's production webhook\n· The app must be a member of every channel it posts to, including private `#competitive-intel`\n\n## Where it can fail\n\nA bad signature or a stale timestamp fails closed before any lookup. A missing HubSpot contact or owner cannot block the encounter write; the thread reply names whichever CRM, DM or repost side effect failed. Modal actions additionally require Slack Interactivity and `views:open`.",
+        "height": 3320,
+        "width": 1120,
+        "color": 5
+      },
+      "id": "6a5d8a65-47bc-4b38-8787-de9f60339f06",
+      "name": "Interview Guide - Actions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -3600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('Build Action Context').first().json;const meta=JSON.stringify({event_person_key:c.event_person_key,hubspot_contact_id:c.contact_id,scan_id:String(c.scan_id||''),channel_id:c.channel_id,message_ts:c.message_ts,classification:String(c.action_value.classification||'')});const today=new Date().toISOString().slice(0,10);const k=String(c.action_key||c.action_id||'');const view=k==='oak_promote_tier1'?{type:'modal',callback_id:'oak_promote_modal',private_metadata:meta,title:{type:'plain_text',text:'Promote to Tier 1'},submit:{type:'plain_text',text:'Promote'},close:{type:'plain_text',text:'Cancel'},blocks:[{type:'input',block_id:'promote_reason_block',label:{type:'plain_text',text:'Why does this lead deserve Tier 1?'},element:{type:'static_select',action_id:'promote_reason',placeholder:{type:'plain_text',text:'Choose a reason'},options:[{text:{type:'plain_text',text:'Confirmed an upcoming renewal'},value:'confirmed_renewal'},{text:{type:'plain_text',text:'Reported a live identity incident'},value:'live_identity_incident'},{text:{type:'plain_text',text:'Confirmed an active audit deadline'},value:'active_audit_deadline'},{text:{type:'plain_text',text:'Named budget and timeline'},value:'budget_and_timeline'},{text:{type:'plain_text',text:'Senior decision maker engaged'},value:'senior_decision_maker'},{text:{type:'plain_text',text:'Other'},value:'other'}]}},{type:'input',block_id:'promote_detail_block',optional:true,label:{type:'plain_text',text:'Detail (optional)'},element:{type:'plain_text_input',action_id:'promote_detail',multiline:true,max_length:500,placeholder:{type:'plain_text',text:'They renew in March and asked for a security review.'}}}]}:k==='oak_booth_status_meeting_booked'?{type:'modal',callback_id:'oak_meeting_modal',private_metadata:meta,title:{type:'plain_text',text:'Meeting booked'},submit:{type:'plain_text',text:'Save'},close:{type:'plain_text',text:'Cancel'},blocks:[{type:'input',block_id:'meeting_date_block',label:{type:'plain_text',text:'When is the meeting?'},element:{type:'datepicker',action_id:'meeting_date',initial_date:today,placeholder:{type:'plain_text',text:'Pick the meeting date'}}},{type:'input',block_id:'meeting_note_block',optional:true,label:{type:'plain_text',text:'Note (optional)'},element:{type:'plain_text_input',action_id:'meeting_note',multiline:true,max_length:500,placeholder:{type:'plain_text',text:'Who is attending and what did they ask for?'}}}]}:k==='oak_add_note'?{type:'modal',callback_id:'oak_note_modal',private_metadata:meta,title:{type:'plain_text',text:'Add booth note'},submit:{type:'plain_text',text:'Save to HubSpot'},close:{type:'plain_text',text:'Cancel'},blocks:[{type:'input',block_id:'note_block',label:{type:'plain_text',text:'What did the visitor say?'},element:{type:'plain_text_input',action_id:'note_text',multiline:true,max_length:2000,placeholder:{type:'plain_text',text:'Budget is approved for next quarter.'}}}]}:{type:'modal',callback_id:'oak_downgrade_modal',private_metadata:meta,title:{type:'plain_text',text:'Not a fit'},submit:{type:'plain_text',text:'Downgrade lead'},close:{type:'plain_text',text:'Cancel'},blocks:[{type:'input',block_id:'reason_block',label:{type:'plain_text',text:'Why is this not a fit?'},element:{type:'static_select',action_id:'reason_choice',placeholder:{type:'plain_text',text:'Choose a reason'},options:[{text:{type:'plain_text',text:'Outside Oak ICP'},value:'outside_icp'},{text:{type:'plain_text',text:'Wrong persona'},value:'wrong_persona'},{text:{type:'plain_text',text:'Company too small'},value:'too_small'},{text:{type:'plain_text',text:'No timing or budget'},value:'no_timing_or_budget'},{text:{type:'plain_text',text:'Partner, reseller or vendor'},value:'partner_or_vendor'},{text:{type:'plain_text',text:'Student or job seeker'},value:'job_seeker'},{text:{type:'plain_text',text:'Other'},value:'other'}]}},{type:'input',block_id:'detail_block',optional:true,label:{type:'plain_text',text:'Detail (optional)'},element:{type:'plain_text_input',action_id:'reason_detail',multiline:true,max_length:500}}]};return[{json:{trigger_id:c.trigger_id,request_json:JSON.stringify({trigger_id:c.trigger_id,view})}}];"
+      },
+      "id": "e9ea7467-28c5-46a5-b342-0a7891d3f9a6",
+      "name": "Build Modal View",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        480
+      ],
+      "notes": "Carries the encounter key, contact id, channel and message ts in private_metadata so the submitted modal can still reply in the original thread."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.open",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.request_json }}",
+        "options": {}
+      },
+      "id": "30994971-9707-44ce-b63d-bee592c6d795",
+      "name": "Open Slack Modal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1920,
+        480
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "views.open must happen within Slack's three-second trigger_id window, which is why the webhook already acknowledged.",
+      "credentials": {
+        "slackApi": {
+          "id": "146thVlAK0lscU75",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Write only"
+        },
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.side }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "snooze"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                }
+              },
+              "outputKey": "Snooze task",
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.side }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "send_owner"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                }
+              },
+              "outputKey": "Send to owner",
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.side }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "repost"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                }
+              },
+              "outputKey": "Repost card",
+              "renameOutput": true
+            }
+          ]
+        }
+      },
+      "id": "9d458f8a-ca04-409f-a98a-796d2e169e2d",
+      "name": "Needs Side Effect?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1920,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/tasks",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: $json.task, associations: [{ to: { id: String($json.contact_id) }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 204 }] }] }) }}",
+        "options": {}
+      },
+      "id": "50e95e8b-e479-4bdb-a315-830163fddc58",
+      "name": "Create Snooze Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2160,
+        560
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Task to contact uses HubSpot association type 204. The task carries the rep who snoozed the lead.",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.hubapi.com/crm/v3/objects/contacts/' + (String($json.contact_id) || '0') + '?properties=hubspot_owner_id,email,firstname,lastname' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {}
+      },
+      "id": "785bf6ee-fbbc-4457-887b-b45eec29ca03",
+      "name": "Get Contact Owner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2160,
+        768
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.hubapi.com/crm/v3/owners/' + (String(($json.properties || {}).hubspot_owner_id || '') || '0') }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {}
+      },
+      "id": "63022d25-a339-4d3d-84eb-6c95158b3928",
+      "name": "Get Owner Record",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2384,
+        768
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Resolves the owner email, which is the only reliable bridge between a HubSpot owner and a Slack user.",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://slack.com/api/users.lookupByEmail?email=' + encodeURIComponent(String($json.email || 'unknown@example.invalid')) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "options": {}
+      },
+      "id": "1c40e3ef-46a9-46e2-8c5f-63998f972e06",
+      "name": "Lookup Slack User",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2608,
+        768
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Needs the users:read.email scope. A miss is reported in the thread instead of silently dropping the hand-off.",
+      "credentials": {
+        "slackApi": {
+          "id": "146thVlAK0lscU75",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: String((($json.user) || {}).id || ''), text: 'Oak booth lead forwarded by ' + $('Plan Action Effects').first().json.actor, blocks: [{ type: 'context', elements: [{ type: 'mrkdwn', text: 'Forwarded from the Oak booth by ' + $('Plan Action Effects').first().json.who + ' because you own this record in HubSpot.' }] }].concat(($('Plan Action Effects').first().json.original_blocks || []).filter(b => b.type !== 'actions')) }) }}",
+        "options": {}
+      },
+      "id": "5c7021d3-7e4b-4bd0-b893-32a4332d3f50",
+      "name": "DM Owner Card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2832,
+        768
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Forwards the card without its buttons, so the owner cannot double-write from a stale copy.",
+      "credentials": {
+        "slackApi": {
+          "id": "146thVlAK0lscU75",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_encounters"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_person_key",
+              "keyValue": "={{ $('Plan Action Effects').first().json.event_person_key }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "value": {
+            "booth_status": "={{ $('Plan Action Effects').first().json.eu.booth_status }}",
+            "exclude_from_outreach": "={{ $('Plan Action Effects').first().json.eu.exclude_from_outreach }}",
+            "override_classification": "={{ $('Plan Action Effects').first().json.eu.override_classification }}",
+            "competitor_override": "={{ $('Plan Action Effects').first().json.eu.competitor_override }}",
+            "follow_up_at": "={{ $('Plan Action Effects').first().json.eu.follow_up_at || null }}",
+            "downgrade_reason": "={{ $('Plan Action Effects').first().json.eu.downgrade_reason }}",
+            "competitive_intel": "={{ $('Plan Action Effects').first().json.eu.competitive_intel }}",
+            "last_action": "={{ $('Plan Action Effects').first().json.eu.last_action }}",
+            "last_action_by": "={{ $('Plan Action Effects').first().json.eu.last_action_by }}",
+            "last_action_at": "={{ $('Plan Action Effects').first().json.eu.last_action_at }}",
+            "updated_at": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "booth_status",
+              "displayName": "booth_status",
+              "type": "string"
+            },
+            {
+              "id": "exclude_from_outreach",
+              "displayName": "exclude_from_outreach",
+              "type": "boolean"
+            },
+            {
+              "id": "override_classification",
+              "displayName": "override_classification",
+              "type": "string"
+            },
+            {
+              "id": "competitor_override",
+              "displayName": "competitor_override",
+              "type": "string"
+            },
+            {
+              "id": "follow_up_at",
+              "displayName": "follow_up_at",
+              "type": "date"
+            },
+            {
+              "id": "downgrade_reason",
+              "displayName": "downgrade_reason",
+              "type": "string"
+            },
+            {
+              "id": "competitive_intel",
+              "displayName": "competitive_intel",
+              "type": "boolean"
+            },
+            {
+              "id": "last_action",
+              "displayName": "last_action",
+              "type": "string"
+            },
+            {
+              "id": "last_action_by",
+              "displayName": "last_action_by",
+              "type": "string"
+            },
+            {
+              "id": "last_action_at",
+              "displayName": "last_action_at",
+              "type": "date"
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "type": "date"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6ecd2d3c-23b4-4d27-8a0f-ff3423cb3b6d",
+      "name": "Apply Encounter Update",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3056,
+        800
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Values are pre-merged by the planner, so an action never blanks a field another action owns."
+    },
+    {
+      "parameters": {
+        "jsCode": "const p=$('Plan Action Effects').first().json;const grab=(n)=>{try{return $(n).first().json||{};}catch(e){return null;}};const notes=[];if(p.side==='snooze'){const t=grab('Create Snooze Task');if(!t||t.error)notes.push('The HubSpot follow-up task was not created'+(t&&t.error?': '+String(typeof t.error==='object'?JSON.stringify(t.error):t.error):'.'));else if(t.id)notes.push('HubSpot task '+t.id+' created.');}if(p.side==='send_owner'){const o=grab('Get Owner Record');const u=grab('Lookup Slack User');const d=grab('DM Owner Card');if(!o||o.error||!o.email)notes.push('No HubSpot owner email was found, so no DM was sent.');else if(!u||u.ok!==true)notes.push('No Slack user matches the HubSpot owner email '+o.email+', so no DM was sent.');else if(!d||d.ok!==true)notes.push('Slack refused the owner DM'+(d&&d.error?': '+d.error+'.':'.')+' The bot needs users:read.email and im:write.');else notes.push('The card was delivered to '+o.email+'.');}if(p.side==='repost'){const o=grab('Record Repost Outcome')||{};if(o.repost_attempted!==true)notes.push('The card was not reposted because '+String(o.repost_skip_reason||'the stored decision payload could not be read')+', so only the CRM and the row were updated.');else if(Number(o.repost_delivered||0)<1)notes.push('The reposted card was not delivered to Slack.');}const enc=grab('Apply Encounter Update');if(!enc||enc.error)notes.push('Encounter state may not have been stored in oak_encounters.');if(!p.contact_id)notes.push('No HubSpot contact id was on the card, so no CRM write was attempted.');return[{json:{...p,side_notes:notes,reply_text:p.reply_text+(notes.length?'\\n_'+notes.join(' ')+'_':''),note_body:p.note_body+(notes.length?'\\n\\nOperational notes: '+notes.join(' '):'')}}];"
+      },
+      "id": "d9d9a9c7-3f25-4297-892d-f0bc002bb823",
+      "name": "Summarize Action Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3280,
+        800
+      ],
+      "notes": "Reports a failed task, owner lookup or DM in the thread and the CRM note, instead of claiming an action succeeded."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.contact_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4cc2fb02-6f5f-4137-8c10-dae73e6264ff",
+      "name": "CRM Writable?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3504,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Summarize Action Result').first().json.channel_id }}"
+        },
+        "text": "={{ $('Summarize Action Result').first().json.reply_text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "thread_ts": {
+            "replyValues": {
+              "thread_ts": "={{ String($('Summarize Action Result').first().json.message_ts) }}"
+            }
+          },
+          "mrkdwn": true,
+          "unfurl_links": false
+        }
+      },
+      "id": "83856013-70c1-4195-82e4-e7a0035b65d7",
+      "name": "Reply Action Result",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        4400,
+        800
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "webhookId": "4406e925-39e8-410d-989c-5ba8ea622918",
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "slackApi": {
+          "id": "146thVlAK0lscU75",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "b1f0c9a4-7e52-4c8d-9a31-2f6d4e8b70c5",
+              "leftValue": "={{ Object.keys($('Summarize Action Result').first().json.properties || {}).length }}",
+              "operator": {
+                "operation": "gt",
+                "type": "number"
+              },
+              "rightValue": 0
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "id": "d69ff57d-53b8-4bbb-9609-d44e8763c16f",
+      "name": "Has Properties?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3728,
+        688
+      ],
+      "notes": "Snooze, Send to owner and Add note change no contact property, only the encounter row and a note. HubSpot rejects a PATCH with an empty properties object, so those actions skip it and go straight to the note."
+    },
+    {
+      "id": "761eb392-9cad-4ee5-b221-61d0046477da",
+      "name": "Patch Action Properties",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3952,
+        688
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "jsonBody": "={{ JSON.stringify({ properties: $('Summarize Action Result').first().json.properties }) }}",
+        "method": "PATCH",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "={{ 'https://api.hubapi.com/crm/v3/objects/contacts/' + $json.contact_id }}"
+      },
+      "notes": "Patches only the fields this action owns: its oak_* properties, plus hs_lead_status or lifecyclestage where the action is a real pipeline event. Nothing else on the contact is touched, so a rep correction never overwrites a human CRM field.",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "724541ce-8b67-41ea-a911-2be58b249be0",
+      "name": "Create Action Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        4176,
+        688
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "jsonBody": "={{ JSON.stringify({ properties: { hs_timestamp: new Date().toISOString(), hs_note_body: $('Summarize Action Result').first().json.note_body.replace(/\\n/g, '<br>') }, associations: [{ to: { id: String($('Summarize Action Result').first().json.contact_id) }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 202 }] }] }) }}",
+        "method": "POST",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "https://api.hubapi.com/crm/v3/objects/notes"
+      },
+      "notes": "Every action on the shared write path leaves an attributed CRM note, so the booth's decision history survives outside Slack. Claim is the exception: it records the claimant in oak_claimed_by instead.",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "f6d4256c-43af-4b51-b261-129696f215d4",
+      "name": "Plan Action Effects",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        800
+      ],
+      "parameters": {
+        "jsCode": "const c=$('Build Action Context').first().json;const row=c.encounter||{};const now=new Date().toISOString();const who='<@'+c.slack_user_id+'>';const actor=c.actor||c.slack_user_id;const key=c.action_key;const v=c.view_values||{};const eu={booth_status:String(row.booth_status||'scanned'),exclude_from_outreach:row.exclude_from_outreach===true,override_classification:String(row.override_classification||''),competitor_override:String(row.competitor_override||''),follow_up_at:row.follow_up_at||null,downgrade_reason:String(row.downgrade_reason||''),competitive_intel:row.competitive_intel===true,last_action:key,last_action_by:actor,last_action_at:now};let properties={};let note=[];let reply='';let side='direct';let task=null;let reclassReason='';const person=String(row.email||c.event_person_key||'this visitor');const head=(t)=>['OAK BOOTH ACTION - '+t,'Actor: '+actor+' (Slack '+c.slack_user_id+')','At: '+now,'Source: Slack action button, not AI inference.',''];if(key==='oak_booth_status'){const st=String(c.action_value.status||c.selected_value||'met')==='meeting_booked'?'meeting_booked':'met';eu.booth_status=st;const lead=st==='meeting_booked'?'OPEN_DEAL':'CONNECTED';properties={oak_booth_status:st,hs_lead_status:lead};if(st==='meeting_booked')properties.lifecyclestage='salesqualifiedlead';note=head('booth status').concat(['Booth status set to '+st+'.','HubSpot lead status set to '+lead+'.'].concat(st==='meeting_booked'?['Lifecycle stage promoted to sales qualified lead.']:[]));reply='Booth status set to *'+st.replace(/_/g,' ')+'* by '+who+'. HubSpot lead status is now *'+lead.replace(/_/g,' ').toLowerCase()+'*.';}else if(key==='oak_snooze'){const d=new Date();d.setUTCDate(d.getUTCDate()+1);d.setUTCHours(9,0,0,0);eu.follow_up_at=d.toISOString();if(eu.booth_status==='scanned')eu.booth_status='follow_up_later';side='snooze';task={hs_timestamp:d.toISOString(),hs_task_subject:'Oak booth follow-up: '+person,hs_task_body:'Snoozed at the booth by '+actor+'. Review the Oak booth note, then decide the next step.',hs_task_status:'NOT_STARTED',hs_task_priority:'HIGH',hs_task_type:'TODO'};note=head('snooze').concat(['Follow-up scheduled for '+d.toISOString()+'. A HubSpot task was requested.']);reply='Snoozed by '+who+'. HubSpot follow-up task due '+d.toISOString().slice(0,16).replace('T',' ')+' UTC.';}else if(key==='oak_send_owner'){side='send_owner';note=head('send to owner').concat(['The Slack card was forwarded to the HubSpot owner.']);reply='Forwarding this lead to the HubSpot owner, requested by '+who+'.';}else if(key==='oak_flag_intel'){eu.competitive_intel=true;eu.exclude_from_outreach=true;properties={oak_competitor_status:'confirmed',oak_exclude_from_outreach:'true'};note=head('competitive intel').concat(['A rep confirmed this person as competitor intelligence and excluded them from Oak event outreach.']);reply='Flagged for competitive intel by '+who+'. Excluded from outreach in HubSpot.';}else if(key==='oak_false_alarm'){eu.competitor_override='false_alarm';eu.competitive_intel=false;eu.exclude_from_outreach=false;eu.override_classification='needs_review';side='repost';reclassReason='a rep rejected the competitor match';properties={oak_competitor_status:'none',oak_lead_tier:'needs_review',oak_exclude_from_outreach:'false'};note=head('competitor false alarm').concat(['A rep rejected the competitor match, for example a partner or reseller. Classification moved to needs_review. The competitor table and policy were not edited.']);reply='Competitor match cleared by '+who+'. Moved to *needs review* and reposted to the review channel; the competitor list itself was not changed.';}else if(key==='oak_mark_matched'){eu.override_classification='matched';side='repost';properties={oak_lead_tier:'matched'};note=head('mark matched').concat(['A rep confirmed this is an ordinary in-scope lead rather than a review case. One click, no reason asked: the middle outcome is not the one a reviewer has to justify.']);reply='Moved to *matched* by '+who+' and reposted to the matched channel.';}else if(key==='oak_promote_modal'){const choice=String(v.promote_reason||'other');const detail=String(v.promote_detail||'').trim();const reason=choice.replace(/_/g,' ')+(detail?' - '+detail:'');eu.override_classification='tier_1';eu.last_action='oak_promote_tier1';side='repost';reclassReason=reason;properties={oak_lead_tier:'tier_1'};note=head('promote to Tier 1').concat(['A rep promoted this lead to Tier 1 from booth conversation that the scanner notes did not capture.','Reason: '+reason]);reply='Promoted to *Tier 1* by '+who+' and reposted to the hot channel. Reason: '+reason+'.';}else if(key==='oak_meeting_modal'){const picked=String(v.meeting_date||'').trim();const dated=/^\\d{4}-\\d{2}-\\d{2}$/.test(picked);const mnote=String(v.meeting_note||'').trim();eu.booth_status='meeting_booked';eu.last_action='oak_booth_status';if(dated)eu.follow_up_at=new Date(picked+'T09:00:00.000Z').toISOString();properties={oak_booth_status:'meeting_booked',hs_lead_status:'OPEN_DEAL',lifecyclestage:'salesqualifiedlead'};note=head('booth status').concat(['Booth status set to meeting_booked.','HubSpot lead status set to OPEN_DEAL.','Lifecycle stage promoted to sales qualified lead.','Meeting date: '+(dated?picked:'not provided')].concat(mnote?['Rep note: '+mnote]:[]));reply='Booth status set to *meeting booked* by '+who+' for *'+(dated?picked:'a date the rep did not supply')+'*. HubSpot lead status is now *open deal*.'+(mnote?' Note: '+mnote:'');}else if(key==='oak_note_modal'){const text=String(v.note_text||'').trim();eu.last_action='add_note';note=head('rep note').concat(['Rep note: '+(text||'(empty)')]);reply='Note saved to HubSpot by '+who+': “'+(text.length>200?text.slice(0,197)+'...':text)+'”';}else if(key==='oak_downgrade_modal'){const choice=String(v.reason_choice||'other');const detail=String(v.reason_detail||'').trim();const reason=choice.replace(/_/g,' ')+(detail?' - '+detail:'');eu.exclude_from_outreach=true;eu.override_classification='out_of_scope';eu.downgrade_reason=reason;eu.booth_status='not_a_fit';side='repost';reclassReason=reason;properties={oak_lead_tier:'out_of_scope',oak_exclude_from_outreach:'true',oak_booth_status:'not_a_fit',hs_lead_status:'UNQUALIFIED'};note=head('not a fit').concat(['Reason: '+reason,'A rep excluded this contact from Oak event outreach.']);reply='Marked *not a fit* by '+who+'. Reason: '+reason+'. Excluded from outreach and recorded on the out-of-scope audit channel.';}else{eu.last_action='unsupported:'+key;note=head('unsupported action').concat(['No handler exists for '+key+'.']);reply='That action is not implemented yet.';}return[{json:{route_key:key,side,actor,who,slack_user_id:c.slack_user_id,channel_id:c.channel_id,message_ts:c.message_ts,contact_id:c.contact_id,event_person_key:c.event_person_key,eu,properties,task,note_body:note.join('\\n'),reply_text:reply,reclass_reason:reclassReason,original_blocks:c.original_blocks||[]}}];"
+      },
+      "notes": "One planner for the nine buttons that write, which is everything except Why this score? and Claim. It computes the merged encounter row, the HubSpot patch, the audit note and the thread reply in one place, so no branch can drift. Modal submissions rejoin here rather than writing on their own."
+    },
+    {
+      "id": "6194eb3c-572f-45e8-a65f-a839d269a9c3",
+      "name": "Build Action Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const a=$('Verify Signature and Parse').first().json;const row=$input.first().json||{};let breakdown={};let reasons=[];try{breakdown=JSON.parse(row.last_score_breakdown||'{}');}catch(e){}try{reasons=JSON.parse(row.last_decision_reasons||'[]');}catch(e){}const parts=[];for(const k of ['persona','urgency','company_size','industry'])if(Number(breakdown[k]||0))parts.push(k.replace('_',' ')+': '+Number(breakdown[k])+' pts');const scored=(row.last_score!==undefined&&row.last_score!==null&&row.last_score!=='')||Object.keys(breakdown).length>0;const why='*Why this score?*\\n*Rule fired:* '+(row.last_rule_summary||'not recorded')+'\\n*Score:* '+(scored?(Number(row.last_score||breakdown.total||0)+'/'+Number(breakdown.max||100)+' ('+(parts.join(', ')||'breakdown unavailable')+')'):'not recorded')+'\\n*Deterministic reasons:*\\n'+(reasons.length?reasons.map((r,i)=>(i+1)+'. '+r).join('\\n'):'No stored reasons.');const map={oak_why_score:'why',oak_claim:'claim',oak_add_note:'modal',oak_downgrade:'modal',oak_snooze:'effects',oak_send_owner:'effects',oak_booth_status:'effects',oak_booth_status_meeting_booked:'modal',oak_flag_intel:'effects',oak_false_alarm:'effects',oak_promote_tier1:'modal',oak_mark_matched:'effects'};const rawActionId=String(a.action_id||'');const baseActionId=Object.keys(map).filter(function(k){return rawActionId===k||rawActionId.indexOf(k)===0;}).sort(function(x,y){return y.length-x.length;})[0]||rawActionId;const route=a.payload_type==='view_submission'?'effects':(map[baseActionId]||'unsupported');const actionKey=a.payload_type==='view_submission'?String(a.callback_id||''):baseActionId;return[{json:{...a,route,action_key:actionKey,encounter:row,why_text:why,scan_id:String(a.action_value.scan_id||''),contact_id:String(a.action_value.hubspot_contact_id||row.hubspot_contact_id||''),event_person_key:String(a.action_value.event_person_key||row.event_person_key||''),actor:a.slack_user_name||a.slack_user_id}}];"
+      },
+      "notes": "Maps the eleven button action_ids onto four routes - stored explanation, claim, open a modal, or the shared write path - and anything unmapped falls through to the unsupported branch. The match is longest-prefix, so the __2 suffix 03 appends when it has to de-duplicate an action_id still reaches the right handler. A view_submission bypasses the map entirely and routes straight to effects, which is how a modal's answer rejoins the write path."
+    },
+    {
+      "id": "92e9a452-4c0d-4d0b-96a9-2f0d9dcd27c8",
+      "name": "Mark Card Handled",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        4624,
+        360
+      ],
+      "parameters": {
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Build Action Context').first().json.channel_id }}"
+        },
+        "name": "white_check_mark",
+        "operation": "add",
+        "resource": "reaction",
+        "timestamp": "={{ String($('Build Action Context').first().json.message_ts) }}"
+      },
+      "notes": "Adds a check mark to the booth card once an action has actually been written, so anyone scrolling the channel sees the lead is handled without opening the thread. Both the claim path and the shared write path end here. A second press returns already_reacted, which is soft-failed rather than shown to the rep.",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "webhookId": "6062af06-68ba-4824-980d-fedee1f53102",
+      "credentials": {
+        "slackApi": {
+          "id": "146thVlAK0lscU75",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "id": "f2543738-4a66-48b0-bf44-ff6de7d44541",
+      "name": "Load Decision Payload",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        1008
+      ],
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_deliveries"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "scan_id",
+              "keyValue": "={{ $('Build Action Context').first().json.scan_id }}"
+            }
+          ]
+        },
+        "limit": 1,
+        "matchType": "allConditions",
+        "operation": "get"
+      },
+      "notes": "oak_deliveries.raw_json is the exact object 01 handed to 03, so a reclassified lead can be reposted from the stored decision rather than from whatever blocks the click happened to carry.",
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "5f284d72-b38d-44ce-ad75-508433968e6c",
+      "name": "Build Reclassified Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2384,
+        1008
+      ],
+      "parameters": {
+        "jsCode": "const p=$('Plan Action Effects').first().json;\nconst row=$input.first().json||{};\nlet enc={};try{enc=($('Build Action Context').first().json||{}).encounter||{};}catch(e){enc={};}\n// oak_deliveries.raw_json and oak_encounters.last_payload_json hold the same object: 01 writes both from\n// Settle Final Payload minus the policy, which is exactly what it hands to 03. The delivery row is keyed by\n// the scan the clicked card came from, so it wins; the encounter row is the fallback for a modal opened\n// before scan_id was carried in private_metadata, and holds the latest scan for this person.\nlet raw=String(row.raw_json||'');\nif(!raw)raw=String(enc.last_payload_json||'');\nlet base=null;\ntry{const o=JSON.parse(raw||'null');if(o&&typeof o==='object'&&!Array.isArray(o)&&o.scan_id)base=o;}catch(e){base=null;}\nconst to=String((p.eu||{}).override_classification||'');\n// Never call 03 with a half-built payload: it would post a card full of blanks. Flag it instead and let\n// the shared write path still record the decision and reply in the thread.\nif(!base||!to)return[{json:{repost_ok:false,repost_skip_reason:base?'no new classification was planned':'the stored decision payload for this lead could not be read'}}];\nconst CLS={tier_1:'Tier 1',matched:'Matched',needs_review:'Needs review',competitor_intel:'Competitor intel',out_of_scope:'Out of scope'};\nconst label=v=>CLS[String(v||'')]||String(v||'unknown').replace(/_/g,' ');\n// The reason is rep-typed free text. A stray angle bracket would break Slack's parsing of the whole block,\n// so everything except the Slack mention is stripped of < > and &.\nconst safe=v=>String(v==null?'':v).replace(/[<>&]/g,' ').replace(/\\s+/g,' ').trim();\nconst reason=safe(p.reclass_reason);\nconst actor=safe(p.actor)||'a rep';\nconst from=String(base.classification||'');\nconst out={...base};\nout.classification=to;\n// Drop routing so 03 resolves the channel from notifications[classification] in the active policy rather\n// than reusing the channel this lead was first sent to. That is the whole point of going back through 03.\ndelete out.routing;\n// The previous card lives in a different channel, so this is a new card and not a thread reply.\n// first_scan alone already makes Resolve Slack Targets compute use_thread false; clearing the anchors too\n// means a later change to that condition cannot resurrect a reply into the wrong channel.\nout.notification_mode='first_scan';\nout.previous_slack_ts=null;\nout.previous_slack_channel=null;\n// A card can be stale: the same person may have been rescanned into the tier the rep is now choosing,\n// so name a move only when there was one.\nout.override_banner=(from&&from!==to?('*Moved from '+label(from)+' to '+label(to)+'*'):('*Reclassified as '+label(to)+'*'))+' by '+String(p.who||actor)+(reason?(' - '+reason):'')+'.';\n// Out of scope is the one card that prints decision_reasons verbatim, and the rules' reasons would\n// contradict the human who has just overruled them.\nif(to==='out_of_scope')out.decision_reasons=['Marked not a fit at the booth by '+actor+'.'].concat(reason?['Reason: '+reason]:[]);\nout.repost_ok=true;\nout.repost_from_classification=from;\nout.repost_source=row.raw_json?'oak_deliveries.raw_json':'oak_encounters.last_payload_json';\nreturn[{json:out}];"
+      },
+      "notes": "Overrides the classification, drops routing so 03 re-resolves the channel from the policy, and forces a fresh card instead of a thread reply. If neither stored payload can be read it flags the run rather than posting a card full of blanks."
+    },
+    {
+      "id": "179efc69-27a3-4309-943d-e6d17b8edc7d",
+      "name": "Repost Payload Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2608,
+        1008
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.repost_ok === true }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "notes": "An unreadable payload, or a modal opened before scan_id was carried in private_metadata, falls straight through to the shared write path: the CRM and the row are still updated and the thread reply says the repost was skipped."
+    },
+    {
+      "id": "5cdde925-e557-478d-bcd6-319767780816",
+      "name": "Repost Card via Slack Alerts",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2832,
+        1008
+      ],
+      "parameters": {
+        "options": {
+          "waitForSubWorkflow": true
+        },
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "Oak GTM - 03 Slack Alerts [sub-flow]",
+          "mode": "id",
+          "value": "gyCxnkoGkh3OJpz5"
+        }
+      },
+      "notes": "Calls 03 exactly as 01 does, so the channel comes from the policy row for the new tier and the buttons are the ones that tier should have. Waits for the sub-workflow so its delivery receipt can be reported in the reply.",
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "ac2b354e-be71-4ee3-84b4-61afbeab155f",
+      "name": "Record Repost Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3056,
+        1008
+      ],
+      "parameters": {
+        "jsCode": "const b=$('Build Reclassified Payload').first().json||{};\nlet r=null;try{r=$('Repost Card via Slack Alerts').first().json||null;}catch(e){r=null;}\n// Both the reposted and the skipped branch land here, so everything downstream sees one shape and the\n// thread reply can say what happened without having to ask which branch ran.\nconst ok=b.repost_ok===true;\nreturn[{json:{repost_attempted:ok,repost_skip_reason:ok?null:String(b.repost_skip_reason||'unknown'),repost_classification:ok?String(b.classification||''):null,repost_source:ok?String(b.repost_source||''):null,repost_delivered:(ok&&r)?Number(r.delivered_count||0):0,repost_channel:(ok&&r&&r.channel)||null,repost_warnings:(ok&&r&&Array.isArray(r.warnings))?r.warnings:[]}}];"
+      },
+      "notes": "Both branches of the guard land here, so the shared write path sees one shape and the thread reply can say what happened without asking which branch ran."
+    }
+  ],
+  "connections": {
+    "Receive Slack Action": {
+      "main": [
+        [
+          {
+            "node": "Verify Signature and Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Signature and Parse": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acknowledge Slack": {
+      "main": [
+        [
+          {
+            "node": "Continue Only If Verified",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continue Only If Verified": {
+      "main": [
+        [
+          {
+            "node": "Load Encounter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Slack Action": {
+      "main": [
+        [
+          {
+            "node": "Reply With Stored Score",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Claimant",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Modal View",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Plan Action Effects",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignore Unsupported Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Claimant": {
+      "main": [
+        [
+          {
+            "node": "Claim Encounter If Unowned",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim Encounter If Unowned": {
+      "main": [
+        [
+          {
+            "node": "Reload Claim State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reload Claim State": {
+      "main": [
+        [
+          {
+            "node": "Build Claim Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claim Result": {
+      "main": [
+        [
+          {
+            "node": "Claim Succeeded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim Succeeded?": {
+      "main": [
+        [
+          {
+            "node": "Find HubSpot Owner by Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply Already Claimed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find HubSpot Owner by Email": {
+      "main": [
+        [
+          {
+            "node": "Read HubSpot Owner State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read HubSpot Owner State": {
+      "main": [
+        [
+          {
+            "node": "Build HubSpot Claim Patch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build HubSpot Claim Patch": {
+      "main": [
+        [
+          {
+            "node": "Write HubSpot Claim",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write HubSpot Claim": {
+      "main": [
+        [
+          {
+            "node": "Build Claimed Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claimed Card": {
+      "main": [
+        [
+          {
+            "node": "Mark Card Claimed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Card Claimed": {
+      "main": [
+        [
+          {
+            "node": "Confirm Claim in Thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Modal View": {
+      "main": [
+        [
+          {
+            "node": "Open Slack Modal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Side Effect?": {
+      "main": [
+        [
+          {
+            "node": "Create Snooze Task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Contact Owner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load Decision Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apply Encounter Update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Create Snooze Task": {
+      "main": [
+        [
+          {
+            "node": "Apply Encounter Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Contact Owner": {
+      "main": [
+        [
+          {
+            "node": "Get Owner Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Owner Record": {
+      "main": [
+        [
+          {
+            "node": "Lookup Slack User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Slack User": {
+      "main": [
+        [
+          {
+            "node": "DM Owner Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DM Owner Card": {
+      "main": [
+        [
+          {
+            "node": "Apply Encounter Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Encounter Update": {
+      "main": [
+        [
+          {
+            "node": "Summarize Action Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Action Result": {
+      "main": [
+        [
+          {
+            "node": "CRM Writable?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM Writable?": {
+      "main": [
+        [
+          {
+            "node": "Has Properties?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply Action Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Properties?": {
+      "main": [
+        [
+          {
+            "node": "Patch Action Properties",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Action Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Patch Action Properties": {
+      "main": [
+        [
+          {
+            "node": "Create Action Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Action Note": {
+      "main": [
+        [
+          {
+            "node": "Reply Action Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Encounter": {
+      "main": [
+        [
+          {
+            "node": "Build Action Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Action Context": {
+      "main": [
+        [
+          {
+            "node": "Route Slack Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Action Effects": {
+      "main": [
+        [
+          {
+            "node": "Needs Side Effect?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Action Result": {
+      "main": [
+        [
+          {
+            "node": "Mark Card Handled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Claim in Thread": {
+      "main": [
+        [
+          {
+            "node": "Mark Card Handled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Decision Payload": {
+      "main": [
+        [
+          {
+            "node": "Build Reclassified Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Reclassified Payload": {
+      "main": [
+        [
+          {
+            "node": "Repost Payload Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Repost Payload Ready?": {
+      "main": [
+        [
+          {
+            "node": "Repost Card via Slack Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record Repost Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Repost Card via Slack Alerts": {
+      "main": [
+        [
+          {
+            "node": "Record Repost Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Repost Outcome": {
+      "main": [
+        [
+          {
+            "node": "Apply Encounter Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "N4JW7CO6qjdLi6mq",
+    "binaryMode": "separate"
+  },
+  "pinData": {},
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  },
+  "tags": [],
+  "active": true,
+  "versionId": "87d50258-f92d-46e9-97bf-78bf9e8ed6ea",
+  "id": "VsKr9HAqOrtOlxZC"
+}

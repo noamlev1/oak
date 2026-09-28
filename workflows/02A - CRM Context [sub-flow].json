@@ -1,0 +1,297 @@
+{
+  "name": "Oak GTM - 02A CRM Context [sub-flow]",
+  "nodes": [
+    {
+      "id": "666eacd2-a879-45e8-828a-d2bc7cadad03",
+      "name": "When Called for CRM Context",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "42f66d79-e9a3-4915-b95f-d542c80e5157",
+      "name": "Read HubSpot Portal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.hubapi.com/integrations/v1/me",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "979e5606-1180-4fc7-ae7e-b04ea5c7a8ec",
+      "name": "Find Company by Domain",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "company",
+        "operation": "searchByDomain",
+        "domain": "={{ $('When Called for CRM Context').first().json.company_domain || '' }}",
+        "limit": 1,
+        "options": {
+          "properties": [
+            "name",
+            "domain",
+            "industry",
+            "numberofemployees",
+            "annualrevenue",
+            "hubspot_owner_id",
+            "lifecyclestage"
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "98671683-3606-460a-bf93-7d208dac8d69",
+      "name": "Find Contact by Email",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "search",
+        "limit": 1,
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "email|string",
+                    "type": "string",
+                    "value": "={{ $('When Called for CRM Context').first().json.email || '__missing_email__' }}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "properties": [
+            "email",
+            "firstname",
+            "lastname",
+            "jobtitle",
+            "company",
+            "lifecyclestage",
+            "hs_lead_status",
+            "hubspot_owner_id",
+            "createdate",
+            "hs_object_id"
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "aa66a9cb-6fe4-49a9-b59e-db362643e6bf",
+      "name": "Find Deals by Company",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "deal",
+        "operation": "search",
+        "limit": 10,
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "associations.company|string",
+                    "type": "string",
+                    "value": "={{ $('Find Company by Domain').first().json.companyId || $('Find Company by Domain').first().json.id || '__no_company__' }}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "direction": "DESCENDING",
+          "properties": [
+            "dealname",
+            "dealstage",
+            "pipeline",
+            "amount",
+            "closedate",
+            "hubspot_owner_id"
+          ],
+          "sortBy": "createdate"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "ba9f82db-7513-4836-be9a-3c5c48ff2116",
+      "name": "Interview Guide - CRM Context",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -420
+      ],
+      "parameters": {
+        "content": "# 02A - CRM Context (read-only)\n\n**What this workflow handles**\nEverything HubSpot already knows about this person and company, fetched **before** anything is enriched, reasoned about or written. Workflow 01 calls it first, for every scan it managed to classify - an irrelevant badge included. The cost gates sit further down: 04 drops its paid public search when the scan is out of scope, and 05's AI synthesis is skipped for competitors and out-of-scope leads. Reading the CRM is never gated.\n\n**This is the read half of a deliberate pair.** 02A only reads; workflow 02 makes every CRM write, after the decision is made. This workflow adds one `crm_context` object to the payload it was handed, and everything downstream - the AI prompt, the Slack card, the write plan - reads it from there.\n\n**Assumptions I made**\n- **The CRM is the record of truth.** A headcount, industry or owner already in HubSpot outranks whatever a public source claims. Enrichment only fills gaps.\n- Knowing someone is already a customer, or already owned by a rep, changes the booth conversation more than any public fact - so it must arrive before the AI writes a question.\n- Reading and writing must be separated. A lookup that accidentally mutates a record is the fastest way to lose trust in an automation.\n\n**The flow**\n1. Read the portal id, so Slack can link to the correct HubSpot region.\n2. Company by exact domain - industry, headcount, owner, lifecycle.\n3. Contact by email - job title, lifecycle, lead status, owner.\n4. Open deals associated to that company.\n5. Return a single `crm_context` object: relationship (`net_new` / `known_prospect` / `open_opportunity` / `customer`), owner and where the owner came from, open deal count, and the canonical contact URL.\n\n**Nothing here changes a CRM record.** All four HubSpot calls are a GET or a search. Every write the automated pipeline makes lives in workflow 02; workflow 06 writes too, but only when a rep clicks a button - never automatically.\n\n**Where it can fail**\nEach lookup soft-fails independently. A missing company or contact is a normal outcome, not an error - it is exactly what `net_new` means.\n\nOpen deals come from a deal *search* filtered on `associations.company`, which is index-backed, so a deal created moments earlier can be missed; workflow 02 uses the authoritative v4 associations endpoint for the same job. The read path accepts the looser guarantee deliberately - a missed brand-new deal thins the AI's context, whereas a write must not be wrong.",
+        "height": 410,
+        "width": 900,
+        "color": 5
+      }
+    },
+    {
+      "id": "b13e4b21-d2ef-4a31-8541-b7bbf2586742",
+      "name": "Build CRM Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const s=$('When Called for CRM Context').first().json;\nconst one=(name)=>{try{return $(name).first().json||{};}catch(e){return{};}};\nconst portal=one('Read HubSpot Portal');\nconst companyRows=$('Find Company by Domain').all().map(i=>i.json).filter(x=>x&&(x.companyId||x.id));\nconst company=companyRows.length?companyRows[0]:null;\nconst cp=(company&&company.properties)||{};\nconst cv=(k)=>{const v=cp[k];return v&&typeof v==='object'?String(v.value==null?'':v.value):String(v==null?'':v);};\nconst companyId=company?String(company.companyId||company.id):'';\nconst contactRows=$('Find Contact by Email').all().map(i=>i.json).filter(x=>x&&x.id);\nconst contact=contactRows.length?contactRows[0]:null;\nconst ctp=(contact&&contact.properties)||{};\nconst deals=companyId?$('Find Deals by Company').all().map(i=>i.json).filter(x=>x&&x.id):[];\nconst closed=['closedwon','closedlost'];\nconst openDeals=deals.filter(d=>!closed.includes(String((d.properties&&d.properties.dealstage)||'').toLowerCase()));\nconst contactOwner=String(ctp.hubspot_owner_id||'');\nconst companyOwner=cv('hubspot_owner_id');\nconst ownerId=contactOwner||companyOwner||'';\nconst lifecycle=String(ctp.lifecyclestage||'').toLowerCase();\nconst customerStatus=!contact?'net_new':lifecycle==='customer'?'customer':lifecycle==='opportunity'?'open_opportunity':'known_prospect';\nconst portalId=String(portal.portalId||(company&&company.portalId)||'');\nconst contactId=contact?String(contact.id):'';\nconst contactUrl=contact&&contact.url?String(contact.url):(portalId&&contactId?'https://app.hubspot.com/contacts/'+portalId+'/record/0-1/'+contactId:'');\nreturn[{json:{...s,crm_context:{lookup_status:'complete',portal_id:portalId||null,hubspot_contact_id:contactId||null,hubspot_contact_url:contactUrl||null,is_net_new:!contact,existing_contact:contact?{id:contactId,email:ctp.email||s.email||null,first_name:ctp.firstname||null,last_name:ctp.lastname||null,job_title:ctp.jobtitle||null,company:ctp.company||null,lifecycle_stage:ctp.lifecyclestage||null,lead_status:ctp.hs_lead_status||null}:null,company:companyId?{id:companyId,name:cv('name')||null,domain:cv('domain')||null,industry:cv('industry')||null,employees:cv('numberofemployees')?Number(cv('numberofemployees')):null,annual_revenue:cv('annualrevenue')||null,owner_id:companyOwner||null}:null,company_match:companyId?'domain_exact':'not_found_by_domain',owner_id:ownerId||null,owner_source:contactOwner?'contact':(companyOwner?'company':'none'),customer_status:customerStatus,open_deal:openDeals.length?{id:String(openDeals[0].id),name:(openDeals[0].properties||{}).dealname||null,stage:(openDeals[0].properties||{}).dealstage||null,amount:(openDeals[0].properties||{}).amount||null,close_date:(openDeals[0].properties||{}).closedate||null}:null,open_deal_count:openDeals.length,related_deals:openDeals.map(d=>({id:String(d.id),name:(d.properties||{}).dealname||null,stage:(d.properties||{}).dealstage||null,amount:(d.properties||{}).amount||null,close_date:(d.properties||{}).closedate||null})),warnings:[]}}}];",
+        "language": "javaScript",
+        "mode": "runOnceForAllItems"
+      },
+      "notes": "Derives the two things downstream actually branches on: `customer_status` from the contact's lifecycle stage, and `owner_id` from the contact's owner falling back to the company's, with `owner_source` recording which one answered. Deals are filtered to open here, so a company whose only deals are closed reads as zero open deals rather than as having none."
+    }
+  ],
+  "connections": {
+    "When Called for CRM Context": {
+      "main": [
+        [
+          {
+            "node": "Read HubSpot Portal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read HubSpot Portal": {
+      "main": [
+        [
+          {
+            "node": "Find Company by Domain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Company by Domain": {
+      "main": [
+        [
+          {
+            "node": "Find Contact by Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Contact by Email": {
+      "main": [
+        [
+          {
+            "node": "Find Deals by Company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Deals by Company": {
+      "main": [
+        [
+          {
+            "node": "Build CRM Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "N4JW7CO6qjdLi6mq"
+  },
+  "pinData": {},
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  },
+  "tags": [],
+  "active": true,
+  "versionId": "d1d32bc2-67d9-47f4-b1b3-cf1445786fdc",
+  "id": "xnl1bav7McaQIwXC"
+}

@@ -1,0 +1,648 @@
+{
+  "name": "Oak GTM - 02 HubSpot Sync [sub-flow]",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "272ace93-ca8d-473c-99aa-0ec0d58209e5",
+      "name": "When Called by Intake",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "search",
+        "limit": 1,
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "email|string",
+                    "type": "string",
+                    "value": "={{ $('When Called by Intake').first().json.email }}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "properties": [
+            "email",
+            "firstname",
+            "lastname",
+            "jobtitle",
+            "company",
+            "website",
+            "lifecyclestage",
+            "hs_lead_status",
+            "hubspot_owner_id",
+            "createdate",
+            "hs_object_id",
+            "oak_booth_status",
+            "oak_exclude_from_outreach",
+            "oak_claimed_by",
+            "oak_claimed_at"
+          ]
+        }
+      },
+      "id": "0da3b123-2a41-49ee-94cd-28ef7b1184fc",
+      "name": "Find HubSpot Contact",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        208
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const s=$('When Called by Intake').first().json;const pre=s.crm_context||{};\nconst comp=$('Resolve Company Id').first().json||{};\nconst companyId=String(comp.company_id||'');\nconst companies=$('Find Company by Domain').all().map(i=>i.json).filter(c=>c&&(c.companyId||c.id));\nconst company=companies.length?companies[0]:null;\nconst cp=(company&&company.properties)||{};\nconst cv=(k)=>{const v=cp[k];return v&&typeof v==='object'?String(v.value==null?'':v.value):String(v==null?'':v);};\nconst contacts=$('Find HubSpot Contact').all().map(i=>i.json).filter(r=>r&&r.id);const existing=contacts.length?contacts[0]:null;const ex=(existing&&existing.properties)||{};\nlet dealRows=[];try{const br=$('Read Associated Deals').first().json;if(br&&Array.isArray(br.results))dealRows=br.results;}catch(e){dealRows=[];}\nconst deals=dealRows.filter(d=>d&&d.id);\nconst openDeals=deals.filter(d=>!['closedwon','closedlost'].includes(String((d.properties&&d.properties.dealstage)||'').toLowerCase()));\nconst keep=(current,incoming)=>String(current==null?'':current).trim()||String(incoming==null?'':incoming).trim();\nconst reasons=(s.decision_reasons||[]).slice(0,12);const trace=Array.isArray(s.decision_trace)?s.decision_trace:reasons.map(x=>({source:'legacy',detail:x}));\nconst ai=s.ai||{};const enr=s.company_enrichment||{};const ir=enr.industry_resolution||{};const er=s.employee_resolution||enr.employee_resolution||{};\nconst personEvidence=Array.isArray(s.person_evidence)?s.person_evidence:[];const companyEvidence=Array.isArray(s.company_evidence)?s.company_evidence:[];\nconst safeCompanyEvidence=companyEvidence.filter(e=>e&&e.url&&e.quote&&!/breach|ransom|cybercriminal|attack claim|reported security incident/i.test(String(e.quote))).slice(0,3);\nconst incumbentNames=(s.incumbent_tools_detected||[]).map(x=>x.name||x).filter(Boolean);\nconst competitorLabel=s.competitor?('confirmed: '+(s.competitor.name||s.competitor)):String(s.competitor_status||'none');\nconst competitorEnum=s.competitor?'confirmed':(['none','possible','confirmed'].indexOf(String(s.competitor_status||'none'))>=0?String(s.competitor_status||'none'):'possible');\nconst breakdown=JSON.stringify(s.score_breakdown||{});const decisionText=trace.map(t=>'['+(t.source||'unknown')+'] '+(t.detail||'')).join('\\n');\nconst writtenEmp=(comp.company_props_written||{}).numberofemployees;\nconst companyEmployees=cv('numberofemployees')?Number(cv('numberofemployees')):(writtenEmp?Number(writtenEmp):(er.employees==null?null:Number(er.employees)));\nconst note=[];note.push('OAK BOOTH ENCOUNTER');note.push('Classification: '+String(s.classification||'unclassified').replace(/_/g,' ').toUpperCase()+' | Persona: '+String(s.persona||'unknown').toUpperCase()+' | Score: '+Number(s.score||0)+'/'+Number((s.score_breakdown||{}).max||100));note.push('Rule fired: '+(s.rule_summary||'not recorded'));note.push('Persona decided by: '+String(s.persona_source||'rule_title_match').replace(/_/g,' ')+' (AI can only resolve an ambiguous title, never override a clear one)');note.push('Event: '+(s.event_id||'unknown')+' | Scan: '+(s.scan_id||'unknown')+' | Scanned: '+(s.scanned_at||'unknown'));note.push('');\nnote.push('PERSON [Scanner + HubSpot]');note.push((s.full_name||s.email||'Unknown')+' | '+(s.job_title||'title missing')+' | '+(s.company_name||s.company_domain||'company missing')+' | '+(s.email||'email missing'));note.push('CRM relationship: '+String(pre.customer_status||'unknown').replace(/_/g,' ')+' | Owner: '+(pre.owner_id||'unassigned')+' | Open deals: '+openDeals.length);note.push('Public person lookup: '+(personEvidence.length?'verified result(s) below':'no identity-aligned result; no public biography inferred'));for(const e of personEvidence.slice(0,2))note.push('- '+e.quote+' | '+e.url);note.push('');\nnote.push('BOOTH NOTES [Scanner]');note.push(s.notes_from_booth||'(none captured)');note.push('');\nnote.push('COMPANY RECORD');note.push('HubSpot company: '+(companyId?(companyId+(comp.company_created?' (created by this scan)':(comp.company_updated?' (enriched by this scan)':' (existing)'))):'none associated'));note.push('Headcount: '+(er.employees==null?'not established':Number(er.employees).toLocaleString())+' | source: '+String(er.source||'not established').replace(/_/g,' ')+' | confidence: '+Math.round(Number(er.confidence||0)*100)+'%'+(er.needs_verification?' | VERIFY AT BOOTH':' | CRM record of truth'));if(er.evidence_url)note.push('Headcount evidence: '+er.evidence_url);note.push('Resolved industry: '+(ir.industry||'unknown')+' | source: '+String(ir.source||'unknown').replace(/_/g,' ')+(ir.evidence_url?(' | '+ir.evidence_url):'')+' (not written to HubSpot industry, which is a fixed enumeration)');for(const n of (comp.company_write_notes||[]))note.push('Company write: '+n);for(const w of (comp.company_warnings||[]))note.push('Company warning: '+w);note.push('');\nnote.push('DECISION PROVENANCE');for(const t of trace)note.push('- ['+(t.source||'unknown')+'] '+(t.detail||''));note.push('Score breakdown: '+breakdown);note.push('Company size band: '+(s.company_size_band||'unknown'));note.push('Incumbent tools detected: '+(incumbentNames.join(', ')||'none'));note.push('Competitor match: '+competitorLabel);note.push('ICP pain signals (evidence, not scored): '+((s.relevance_signals||[]).join(', ')||'none'));note.push('');\nnote.push('RECOMMENDED CONVERSATION [AI synthesis, not fact]');note.push('Do now: '+(s.recommended_action||'Verify fit before follow-up.'));note.push('Ask: '+(s.opening_question||'(none)'));note.push('Why ask: '+(s.question_reasoning||'Grounded in the strongest available context.'));if(Array.isArray(ai.unknowns)&&ai.unknowns.length)note.push('Still unknown: '+ai.unknowns.join('; '));note.push('');\nnote.push('VERIFIED COMPANY CONTEXT');if(enr.headline&&(ir.evidence_url||enr.fetch_url))note.push('- [official/source] '+enr.headline+' | '+(ir.evidence_url||enr.fetch_url));for(const e of safeCompanyEvidence)note.push('- ['+(e.source||'public')+'] '+e.quote+' | '+e.url);if(!enr.headline&&!safeCompanyEvidence.length)note.push('(no verified public company context retained)');if(Array.isArray(s.ai_warnings)&&s.ai_warnings.length)note.push('Guardrail notes: '+s.ai_warnings.join(' '));note.push('Policy: '+(s.policy_version||'unknown')+'.');\nconst contactOwner=String(ex.hubspot_owner_id||'');const companyOwner=cv('hubspot_owner_id');const ownerId=contactOwner||companyOwner||pre.owner_id||'';\nconst lifecycle=String(ex.lifecyclestage||'').toLowerCase();const customerStatus=!existing?'net_new':lifecycle==='customer'?'customer':lifecycle==='opportunity'?'open_opportunity':'known_prospect';\nconst scanned=new Date(s.scanned_at||Date.now());const pad=(n)=>String(n).padStart(2,'0');const fmt=(d)=>d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate())+' '+pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())+':'+pad(d.getUTCSeconds());\nconst boothStatus=String(ex.oak_booth_status||'').trim()||'scanned';const exclude=String(ex.oak_exclude_from_outreach||'').toLowerCase()==='true'||Boolean(s.competitor);\nreturn[{json:{source:s,existing_contact_id:existing?String(existing.id):'',contact_write:{firstname:keep(ex.firstname,s.first_name),lastname:keep(ex.lastname,s.last_name),jobtitle:keep(ex.jobtitle,s.job_title),company:keep(ex.company,cv('name')||s.company_name),website:keep(ex.website,s.company_domain?'https://'+s.company_domain:''),lifecyclestage:existing?String(ex.lifecyclestage||'lead'):'lead',hs_lead_status:existing?String(ex.hs_lead_status||'NEW'):'NEW',associated_company_id:companyId},oak_properties:{oak_person_key:s.event_person_key||'',oak_lead_tier:s.classification||'',oak_lead_score:Number(s.score||0),oak_persona:s.persona||'other',oak_competitor_status:competitorEnum,oak_incumbent_tools:incumbentNames.join(', '),oak_company_size_band:s.company_size_band||'unknown',oak_industry:ir.industry||'unknown',oak_industry_source:ir.source||'unknown',oak_decision_reasons:decisionText.slice(0,65000),oak_score_breakdown:breakdown,oak_rule_summary:s.rule_summary||'',oak_booth_status:boothStatus,oak_exclude_from_outreach:exclude,oak_claimed_by:ex.oak_claimed_by||'',oak_claimed_at:ex.oak_claimed_at||'',oak_last_event:s.event_id||'',oak_last_scan_at:s.scanned_at||'',oak_scan_count:Number(s.scan_count||1),oak_policy_version:s.policy_version||''},meeting:{title:'Oak booth scan - '+(s.full_name||s.email||'unknown visitor')+' ('+s.classification+')',start_time:fmt(scanned),end_time:fmt(new Date(scanned.getTime()+15*60*1000)),notes:note.join('\\n')},note_body:note.join('\\n'),needs_follow_up_task:false,task:{subject:'',body:'',due_date:''},crm_snapshot:{portal_id:pre.portal_id||null,existing_contact:existing?{id:String(existing.id),email:ex.email||s.email,lifecycle_stage:ex.lifecyclestage||null}:null,company:companyId?{id:companyId,name:cv('name')||s.company_name||null,domain:cv('domain')||s.company_domain||null,employees:companyEmployees,industry:cv('industry')||null,owner_id:companyOwner||null,created_by_this_scan:comp.company_created===true,enriched_by_this_scan:comp.company_updated===true}:null,company_match:companyId?(comp.company_created?'created_from_scan':'domain_exact'):'not_found_by_domain',company_warnings:comp.company_warnings||[],owner_id:ownerId||null,owner_source:contactOwner?'contact':(companyOwner?'company':(pre.owner_id?'pre_lookup':'none')),customer_status:customerStatus,related_deals:openDeals.map(d=>({id:String(d.id),name:(d.properties||{}).dealname||null,stage:(d.properties||{}).dealstage||null,amount:(d.properties||{}).amount||null,close_date:(d.properties||{}).closedate||null})),open_deal_count:openDeals.length}}}];"
+      },
+      "id": "12194319-9d99-46ec-8ee4-ef04dbd93c59",
+      "name": "Resolve CRM Write",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "email": "={{ $('When Called by Intake').first().json.email }}",
+        "additionalFields": {
+          "associatedCompanyId": "={{ $('Resolve CRM Write').first().json.contact_write.associated_company_id }}",
+          "companyName": "={{ $('Resolve CRM Write').first().json.contact_write.company }}",
+          "firstName": "={{ $('Resolve CRM Write').first().json.contact_write.firstname }}",
+          "jobTitle": "={{ $('Resolve CRM Write').first().json.contact_write.jobtitle }}",
+          "lastName": "={{ $('Resolve CRM Write').first().json.contact_write.lastname }}",
+          "leadStatus": "={{ $('Resolve CRM Write').first().json.contact_write.hs_lead_status }}",
+          "lifeCycleStage": "={{ $('Resolve CRM Write').first().json.contact_write.lifecyclestage }}",
+          "websiteUrl": "={{ $('Resolve CRM Write').first().json.contact_write.website }}"
+        },
+        "options": {
+          "resolveData": false
+        }
+      },
+      "id": "ec743302-ec51-4af4-978d-0f2750a034d9",
+      "name": "Upsert Contact",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        2016,
+        208
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "engagement",
+        "type": "meeting",
+        "metadata": {
+          "endTime": "={{ $('Resolve CRM Write').first().json.meeting.end_time }}",
+          "internalMeetingNotes": "={{ $('Resolve CRM Write').first().json.meeting.notes }}",
+          "startTime": "={{ $('Resolve CRM Write').first().json.meeting.start_time }}",
+          "title": "={{ $('Resolve CRM Write').first().json.meeting.title }}"
+        },
+        "additionalFields": {
+          "associations": {
+            "contactIds": "={{ $('Upsert Contact').first().json.vid }}"
+          }
+        }
+      },
+      "id": "50efc0e3-11c3-43f2-86ba-24f9377aa12c",
+      "name": "Log Booth Conversation",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        2464,
+        208
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r=$('Resolve CRM Write').first().json;const s=r.source;const snap=r.crm_snapshot;const pick=(name)=>{try{return $(name).first().json||{};}catch(e){return{};}};const up=pick('Upsert Contact');const tag=pick('Write Oak Properties API');const meet=pick('Log Booth Conversation');const note=pick('Create Associated Booth Note');const warnings=[].concat(snap.company_warnings||[]);const contactId=up.vid?String(up.vid):(r.existing_contact_id||null);if(up.error)warnings.push('Contact upsert failed: '+up.error);if(!contactId)warnings.push('No HubSpot contact ID was returned.');if(tag.error)warnings.push('Oak property write failed: '+(typeof tag.error==='object'?JSON.stringify(tag.error):tag.error));if(meet.error)warnings.push('Booth conversation logging failed: '+meet.error);if(note.error)warnings.push('Associated booth note creation failed: '+note.error);if(snap.company_match==='not_found_by_domain')warnings.push('No HubSpot company could be matched or created for '+(s.company_domain||'the available identity')+'.');if(snap.owner_source==='none')warnings.push('No HubSpot owner is assigned.');\n// A raw owner id means nothing to a rep at a booth, so resolve it to a person.\nlet ownerName='';let ownerEmail='';\ntry{const ow=pick('List HubSpot Owners');const list=Array.isArray(ow.results)?ow.results:[];const want=String(snap.owner_id||'');const hit=want?list.find(function(o){return String(o.id)===want;}):null;if(hit){ownerName=[hit.firstName,hit.lastName].filter(Boolean).join(' ').trim()||String(hit.email||'');ownerEmail=String(hit.email||'');}}catch(e){}\nconst portal=String(snap.portal_id||'');const canonical=((s.crm_context||{}).hubspot_contact_id===contactId&&(s.crm_context||{}).hubspot_contact_url)?String(s.crm_context.hubspot_contact_url):'';const url=canonical||(portal&&contactId?'https://app.hubspot.com/contacts/'+portal+'/record/0-1/'+contactId:null);const companyUrl=(portal&&snap.company&&snap.company.id)?('https://app.hubspot.com/contacts/'+portal+'/record/0-2/'+snap.company.id):null;return[{json:{...s,crm_context:{lookup_status:contactId&&!up.error?'complete':'failed',portal_id:portal||null,hubspot_contact_id:contactId,hubspot_contact_url:url,hubspot_company_url:companyUrl,is_net_new:up.vid!==undefined?Boolean(up.isNew):!snap.existing_contact,existing_contact:snap.existing_contact,company:snap.company,company_match:snap.company_match,company_created:Boolean(snap.company&&snap.company.created_by_this_scan),company_enriched:Boolean(snap.company&&snap.company.enriched_by_this_scan),owner_id:snap.owner_id,owner_name:ownerName||null,owner_email:ownerEmail||null,owner_source:snap.owner_source,customer_status:snap.customer_status,open_deal:(snap.related_deals||[])[0]||null,open_deal_count:snap.open_deal_count,related_deals:snap.related_deals,oak_properties_written:!tag.error&&Boolean(tag.id||tag.properties),booth_conversation_engagement_id:(meet.engagement&&meet.engagement.id)?String(meet.engagement.id):null,booth_note_id:note.id?String(note.id):null,follow_up_task_engagement_id:null,synced_at:new Date().toISOString(),warnings}}}];"
+      },
+      "id": "82735932-1b0f-4d8a-aa82-848b936f6fa5",
+      "name": "Build CRM Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "company",
+        "operation": "searchByDomain",
+        "domain": "={{ $('When Called by Intake').first().json.company_domain }}",
+        "limit": 1,
+        "options": {
+          "properties": [
+            "name",
+            "domain",
+            "industry",
+            "numberofemployees",
+            "annualrevenue",
+            "hubspot_owner_id",
+            "lifecyclestage"
+          ]
+        }
+      },
+      "id": "b46b263b-48d8-4f29-bc88-b1c80bfe59c6",
+      "name": "Find Company by Domain",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        208
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Domain is the unique company identifier. Everything company-scoped downstream keys off this match.",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/notes",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: { hs_timestamp: $('When Called by Intake').first().json.scanned_at || new Date().toISOString(), hs_note_body: $('Resolve CRM Write').first().json.note_body.replace(/\\n/g, '<br>') }, associations: [{ to: { id: String($('Upsert Contact').first().json.vid || $('Resolve CRM Write').first().json.existing_contact_id) }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 202 }] }] }) }}",
+        "options": {}
+      },
+      "id": "b8a8163e-8d6d-46cb-bfa8-45d80af3fef0",
+      "name": "Create Associated Booth Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2688,
+        208
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Creates a visible CRM note containing booth notes, score provenance, sourced context and recommendation.",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "jsonBody": "={{ JSON.stringify({ properties: (() => { const p = Object.assign({}, $('Resolve CRM Write').first().json.oak_properties); const rule = p.oak_rule_summary || 'not recorded'; const split = p.oak_score_breakdown || ''; delete p.oak_rule_summary; delete p.oak_score_breakdown; p.oak_decision_reasons = ('Rule fired: ' + rule + '\\nScore breakdown: ' + split + '\\n\\n' + (p.oak_decision_reasons || '')).slice(0, 65000); return Object.fromEntries(Object.entries(p).map(([k, v]) => [k, typeof v === 'boolean' ? String(v) : v])); })() }) }}",
+        "method": "PATCH",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "={{ 'https://api.hubapi.com/crm/v3/objects/contacts/' + String($('Upsert Contact').first().json.vid || $('Resolve CRM Write').first().json.existing_contact_id) }}"
+      },
+      "id": "98330a14-b211-4e0f-94ae-d85d126be0b4",
+      "name": "Write Oak Properties API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2240,
+        208
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Writes all provisioned Oak properties through the HubSpot API so field-level validation errors remain visible.",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# 02 - HubSpot Sync\n\n## What this workflow does\n\nThe **only** place the automated pipeline writes to the CRM. (Workflow 06 also writes, but only when a rep clicks a button - never automatically.) Workflow 01 calls it once the lead has been classified and synthesised, and only when the scan carried a valid email: without one there is no safe dedupe key, so the write is skipped rather than guessed.\n\n**02A is the read half of this pair.** It runs earlier in the same pipeline to gather CRM context *before* enrichment and AI; 02 performs every write *after*. Separating them is what stops a lookup from mutating a record, and what lets the model see the CRM without being able to touch it.\n\nThis workflow makes the contact, the company and the booth history correct and deduplicated, then hands the resolved `crm_context` back so the Slack card can link to the real record and show the real owner.\n\n## Hypotheses this design rests on\n\n1. **Email is the contact identity.** Scanning the same badge twice must never create a second contact. This is the task's explicit dedupe requirement, and it is enforced by upserting on email rather than creating.\n2. **Domain is the company identity.** One company per domain, which is what makes \"two people from one company\" cheap in enrichment too.\n3. **A human in HubSpot beats a scanner.** Anything a person already typed is preserved; the automation only fills blanks. A booth scanner should never overwrite a rep's own work.\n4. **An orphaned contact is not a clean CRM.** Post-event playbooks segment by company, so a company record is created when the domain is new.\n5. **The CRM beats enrichment.** A headcount found on the web is written only when HubSpot has none.\n\n## The logic that is implemented\n\n**Order matters, and it is company-first:** find company by exact domain → create it or enrich it → find contact by email → read genuinely associated deals → resolve owner names → upsert the contact and associate it → patch the Oak properties → log a meeting and a readable note.\n\n**What is written, precisely:**\n\n| Target | Fields | Rule |\n|---|---|---|\n| Contact | `firstname`, `lastname`, `jobtitle`, `company`, `website`, `lifecyclestage`, `hs_lead_status` | only when HubSpot is blank |\n| Contact | 18 `oak_*` properties incl. `oak_lead_tier`, `oak_persona`, `oak_lead_score`, `oak_decision_reasons` | always |\n| Company | `name`, `domain` | on create |\n| Company | `numberofemployees` | only when the CRM has none |\n| Engagements | one meeting + one associated note | every scan |\n\n**Deals use the documented v4 associations endpoint**, then a v3 batch read - so \"open deals\" means deals genuinely associated to this company, not a text search that happens to match.\n\n**Industry is deliberately not written to the company.** HubSpot's `industry` is a fixed enumeration (`BANKING`, `COMPUTER_SOFTWARE`, …). Mapping a resolved value onto it would be a guess that silently corrupts segmentation, so resolved industry lives on the contact as `oak_industry` with `oak_industry_source`, and in the note with its URL.\n\n**No follow-up task is created here.** The Slack *Snooze* action is the only task creator in the whole system, so nothing invents an SLA nobody agreed to.\n\n## Where it can fail\n\nEvery HubSpot call soft-fails and reports. A failed company create becomes a visible warning rather than a silent orphaned contact; a failed property patch is reported in `crm_context.warnings` and surfaces on the Slack card. The contact write is the one step whose failure means the lead is not in the CRM, and that is stated explicitly in the delivery receipt.\n\n**The Oak property patch is all-or-nothing.** All 18 go out in one PATCH, so one value HubSpot refuses loses all 18. That is not hypothetical: `oak_competitor_status` is an enumeration accepting only `none` / `possible` / `confirmed`, and while this node sent a decorated `confirmed: Veza` HubSpot answered `400 INVALID_OPTION` and discarded the tier, persona, score and reasons along with it. A competitor's actual name belongs in the booth note, not in an enum. For the same reason `oak_rule_summary` and `oak_score_breakdown` are computed but never sent - they are not provisioned in the portal, so their content is prepended to `oak_decision_reasons`, which is written. That whole class of failure is only visible because `crm_context.oak_properties_written` is asserted from the response body rather than assumed from the node having run.\n\n## What a rep has already done survives the next scan\n\nThis is hypothesis 3 as code rather than as intent. Five free-text contact fields go through a single `keep()` helper - the existing HubSpot value wins and the scan only fills a blank - and `lifecyclestage` and `hs_lead_status` reach the same result their own way, defaulting only for a contact that does not exist yet.\n\nThe rep's own event fields are carried forward rather than reset: `oak_booth_status`, `oak_claimed_by` and `oak_claimed_at` are read off the existing contact and written straight back, so a lead somebody claimed and marked *met* does not quietly return to `scanned` on the next badge scan. `oak_exclude_from_outreach` is sticky in one direction only - a competitor match can set it and a rep can set it, but no scan ever clears it.",
+        "height": 640,
+        "width": 620,
+        "color": 5
+      },
+      "id": "132aa9d5-d3ae-4c96-a110-69a7d0381455",
+      "name": "Interview Guide - HubSpot",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        16,
+        -784
+      ]
+    },
+    {
+      "id": "1d872ea0-94e4-4b98-90b1-7a185135c6e8",
+      "name": "Resolve Company Write",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        208
+      ],
+      "parameters": {
+        "jsCode": "const s=$('When Called by Intake').first().json;\nconst rows=$('Find Company by Domain').all().map(i=>i.json).filter(c=>c&&(c.companyId||c.id));\nconst existing=rows.length?rows[0]:null;\nconst companyId=existing?String(existing.companyId||existing.id):'';\nconst cp=(existing&&existing.properties)||{};\nconst cv=(k)=>{const v=cp[k];return v&&typeof v==='object'?String(v.value==null?'':v.value):String(v==null?'':v);};\nconst enr=s.company_enrichment||{};\nconst er=s.employee_resolution||enr.employee_resolution||{};\nconst domain=String(s.company_domain||'').trim().toLowerCase();\nconst name=String(s.company_name||'').trim()||(domain?domain.split('.')[0]:'');\nconst props={};\nconst notes=[];\nif(!companyId){if(name)props.name=name;if(domain)props.domain=domain;}\nconst crmEmp=cv('numberofemployees');\nconst resolved=er.employees==null?null:Number(er.employees);\nif(resolved!=null&&String(er.source||'')!=='hubspot_company'&&!crmEmp){props.numberofemployees=String(resolved);notes.push('numberofemployees='+resolved+' written from '+String(er.source||'enrichment').replace(/_/g,' ')+' at '+Math.round(Number(er.confidence||0)*100)+'% confidence'+(er.needs_verification?' (unverified, confirm at the booth)':''));}\nconst canCreate=Boolean(!companyId&&(domain||name));\nconst hasProps=Object.keys(props).length>0;\nlet method='PATCH';let url='https://api.hubapi.com/crm/v3/objects/companies/'+(companyId||'0');let action='skipped_no_identity';let body={properties:{}};\nif(canCreate){method='POST';url='https://api.hubapi.com/crm/v3/objects/companies';body={properties:props};action='create';}\nelse if(companyId&&hasProps){method='PATCH';url='https://api.hubapi.com/crm/v3/objects/companies/'+companyId;body={properties:props};action='update';}\nelse if(companyId){action='no_change';}\nreturn[{json:{company_method:method,company_url:url,company_body:JSON.stringify(body),existing_company_id:companyId,company_action:action,company_props:props,company_write_notes:notes}}];",
+        "language": "javaScript",
+        "mode": "runOnceForAllItems"
+      },
+      "notes": "Decides whether the company must be created, updated with enriched headcount, or left alone. HubSpot's industry field is a fixed enumeration, so resolved industry is deliberately not written here; it lives on the contact as oak_industry and in the booth note."
+    },
+    {
+      "id": "9de3bddd-26dc-4655-a08f-773e5896da8c",
+      "name": "Create or Update Company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        208
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "jsonBody": "={{ $json.company_body }}",
+        "method": "={{ $json.company_method }}",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "={{ $json.company_url }}"
+      },
+      "notes": "One node handles create, enrich-update and no-op by taking its method, URL and body from the planner above. A no-identity scan targets company 0 and 404s harmlessly.",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1500,
+      "alwaysOutputData": true,
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "bb34de1a-8ac8-44e9-a2b1-b5cb6ce5ee71",
+      "name": "Resolve Company Id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        208
+      ],
+      "parameters": {
+        "jsCode": "const plan=$('Resolve Company Write').first().json;\nlet res={};try{res=$('Create or Update Company').first().json||{};}catch(e){res={};}\nconst err=res&&res.error?String(typeof res.error==='object'?(res.error.message||JSON.stringify(res.error)):res.error):'';\nconst newId=res&&res.id?String(res.id):'';\nconst companyId=newId||plan.existing_company_id||'';\nconst created=Boolean(plan.company_action==='create'&&newId);\nconst updated=Boolean(plan.company_action==='update'&&!err);\nconst warnings=[];\nif(plan.company_action==='create'&&!newId)warnings.push('Could not create the HubSpot company for '+((plan.company_props||{}).domain||'this domain')+': '+(err||'no id returned')+'. The contact will not be associated to a company.');\nif(plan.company_action==='update'&&err)warnings.push('Could not write enriched company fields: '+err);\nif(plan.company_action==='skipped_no_identity')warnings.push('No company domain or name on the scan, so no company record was created.');\nreturn[{json:{company_id:companyId,company_created:created,company_updated:updated,company_action:plan.company_action,company_props_written:plan.company_props||{},company_write_notes:plan.company_write_notes||[],company_warnings:warnings}}];",
+        "language": "javaScript",
+        "mode": "runOnceForAllItems"
+      },
+      "notes": "Settles the company id the contact will be associated to, and turns a failed company write into a visible warning rather than a silent orphan."
+    },
+    {
+      "id": "2f767e57-65dc-4f63-8386-4ea11d112c52",
+      "name": "Get Company Deal Associations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1344,
+        208
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "method": "GET",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "url": "={{ 'https://api.hubapi.com/crm/v4/objects/companies/' + ($('Resolve Company Id').first().json.company_id || '0') + '/associations/deals' }}"
+      },
+      "notes": "Documented v4 associations endpoint. Replaces the associations.company search filter, which n8n flagged because it is a search key rather than a real deal property.",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1500,
+      "alwaysOutputData": true,
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "964b8fcc-12af-4cc6-bb4c-abb5d2e13e0c",
+      "name": "Read Associated Deals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1568,
+        208
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "jsonBody": "={{ JSON.stringify({ properties: ['dealname','dealstage','pipeline','amount','closedate','hubspot_owner_id'], inputs: ((($('Get Company Deal Associations').first().json) || {}).results || []).slice(0, 20).map(r => ({ id: String(r.toObjectId || r.id) })) }) }}",
+        "method": "POST",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/batch/read"
+      },
+      "notes": "Batch-reads only the deals actually associated to this company. A company with no deals sends no ids and soft-fails to an empty result.",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1500,
+      "alwaysOutputData": true,
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "93e7f9fd-7c0e-4df6-8e5b-422b1b87dfc0",
+      "name": "List HubSpot Owners",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1680,
+        352
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "method": "GET",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "url": "https://api.hubapi.com/crm/v3/owners/?limit=100"
+      },
+      "notes": "One cheap call per sync. Free portals have a handful of owners, so fetching the list beats a lookup per id and gives the card a name instead of a number.",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "MtwoEydnh0AL7Kqv",
+          "name": "HubSpot account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Resolve CRM Write": {
+      "main": [
+        [
+          {
+            "node": "Upsert Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Called by Intake": {
+      "main": [
+        [
+          {
+            "node": "Find Company by Domain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Booth Conversation": {
+      "main": [
+        [
+          {
+            "node": "Create Associated Booth Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Contact": {
+      "main": [
+        [
+          {
+            "node": "Write Oak Properties API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Oak Properties API": {
+      "main": [
+        [
+          {
+            "node": "Log Booth Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Associated Booth Note": {
+      "main": [
+        [
+          {
+            "node": "Build CRM Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Company by Domain": {
+      "main": [
+        [
+          {
+            "node": "Resolve Company Write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Company Write": {
+      "main": [
+        [
+          {
+            "node": "Create or Update Company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create or Update Company": {
+      "main": [
+        [
+          {
+            "node": "Resolve Company Id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Company Id": {
+      "main": [
+        [
+          {
+            "node": "Find HubSpot Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find HubSpot Contact": {
+      "main": [
+        [
+          {
+            "node": "Get Company Deal Associations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Company Deal Associations": {
+      "main": [
+        [
+          {
+            "node": "Read Associated Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Associated Deals": {
+      "main": [
+        [
+          {
+            "node": "List HubSpot Owners",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List HubSpot Owners": {
+      "main": [
+        [
+          {
+            "node": "Resolve CRM Write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "binaryMode": "separate",
+    "errorWorkflow": "N4JW7CO6qjdLi6mq"
+  },
+  "pinData": {},
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  },
+  "tags": [],
+  "active": true,
+  "versionId": "f13df11d-f091-4cc7-893d-7a5e78389e6e",
+  "id": "WQ2s5hFfpaE8P45o"
+}

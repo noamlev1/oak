@@ -1,0 +1,833 @@
+{
+  "name": "Oak GTM - 04 Company & Person Enrichment [sub-flow]",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "0a13b0fd-eccc-47a4-9353-4310b56c171f",
+      "name": "When Called for Enrichment",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_enrichment_cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "company_domain",
+              "keyValue": "={{ $('When Called for Enrichment').first().json.company_domain }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "3c40a046-aec7-4d0b-b7bb-3022f7e1cd2a",
+      "name": "Load Company Cache",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_policies"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "keyValue": "active"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "4f7e92bf-8b2b-4c66-9925-f0c082ee81bb",
+      "name": "Load Active Policy",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        0
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const s=$('When Called for Enrichment').first().json;let p={};try{p=JSON.parse(($json&&$json.document_json)||'{}');}catch(e){}const rows=$('Load Company Cache').all().map(i=>i.json).filter(r=>r&&r.company_domain);const row=rows.length?rows[0]:null;const ttl=Number((p.enrichment&&p.enrichment.company_cache_ttl_days)||30);let cachedPayload={};let cachedEvidence=[];if(row){try{cachedPayload=JSON.parse(row.payload_json||'{}');}catch(e){}try{cachedEvidence=JSON.parse(row.evidence_json||'[]');}catch(e){}}const parking=/domain (?:is |)(?:for sale|parked)|buy this domain|website steht zum verkauf|sedo|parkingcrew|dan\\.com/i;const rejected=Boolean(cachedPayload.site_quality==='parked'||parking.test(String(cachedPayload.headline||''))||cachedPayload.evidence_identity_checked!==true);const notExpired=Boolean(row&&row.expires_at&&new Date(row.expires_at).getTime()>Date.now());const fresh=Boolean(row&&String(row.status||'')==='complete'&&notExpired&&!rejected);const domain=String(s.company_domain||'').trim().toLowerCase();const companyName=String(s.company_name||'').trim();const hasCompanyIdentity=Boolean(domain||companyName);const personalEmail=s.personal_email===true;return[{json:{domain,company_name:companyName,has_company_identity:hasCompanyIdentity,personal_email:personalEmail,identity_note:hasCompanyIdentity?null:(personalEmail?'Personal email domain and no company name on the scan, so there is nothing to enrich against. Company search is skipped.':'No company domain or name on the scan, so company search is skipped.'),cache_fresh:fresh,cache_row_found:Boolean(row),cache_expired:Boolean(row&&!notExpired),cache_rejected_reason:rejected?'legacy_or_unverified_evidence':null,cached_payload:cachedPayload,cached_evidence:cachedEvidence,ttl_days:ttl,fetch_url:domain?'https://'+domain:'',policy:p}}];"
+      },
+      "id": "54f9d626-ea89-42b1-8711-21121fbe40cc",
+      "name": "Assess Cache",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.cache_fresh }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bfb4efbe-aa30-4b85-a042-5dad00eaa792",
+      "name": "Cache Fresh?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1024,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const s=$('When Called for Enrichment').first().json;const a=$('Assess Cache').first().json;const p=a.policy||{};let fresh=null;try{const cand=$('Add Name-Only Size Candidates').first().json;if(cand&&cand.payload)fresh=cand;}catch(e){}if(!fresh){try{fresh=$('Extract Search Signals').first().json;}catch(e){}}if(!fresh){try{fresh=$('Extract Company Signals').first().json;}catch(e){}}const hit=Boolean(a.cache_fresh);const enrichment=hit?(a.cached_payload||{}):((fresh&&fresh.payload)||{});const evidence=hit?(a.cached_evidence||[]):((fresh&&fresh.evidence)||[]);const status=hit?'cache_hit':((fresh&&fresh.status)||'unavailable');const source=hit?'company_cache':((fresh&&fresh.source)||'unavailable');const warnings=[];if(!hit&&fresh&&fresh.fetch_error)warnings.push('Official website enrichment was incomplete: '+fresh.fetch_error);if(!hit&&fresh&&fresh.search_error)warnings.push('Public search was unavailable: '+fresh.search_error);if(!hit&&!fresh)warnings.push('Company enrichment did not run.');const crm=s.crm_context||{};const crmCompany=crm.company||{};const fit=p.company_fit||{};const targets=fit.target_industries||[];const mapIndustry=(v)=>{const x=String(v||'').toLowerCase();if(/bank|financ|insurance|wealth|capital market/.test(x))return'financial_services';if(/fintech|payment/.test(x))return'fintech';if(/technology|software|computer|semiconductor|internet/.test(x))return'technology';if(/health|hospital|pharma|life science/.test(x))return'healthcare';return'';};const crmIndustry=mapIndustry(crmCompany.industry);const official=((enrichment.industry_sources||{}).official_site||[])[0]||'';const searched=((enrichment.industry_sources||{}).public_search||[])[0]||'';let resolvedIndustry='unknown';let industrySource='unknown';let industryConfidence=0;let industryUrl='';if(crmIndustry){resolvedIndustry=crmIndustry;industrySource='hubspot_company';industryConfidence=1;}else if(official){resolvedIndustry=official;industrySource='official_website';industryConfidence=.9;industryUrl=enrichment.fetch_url||'';}else if(searched){resolvedIndustry=searched;industrySource='public_search';industryConfidence=.7;const ev=evidence.find(e=>e.type==='industry'&&e.source==='brave_search'&&e.url);industryUrl=ev?ev.url:'';}enrichment.industry_resolution={industry:resolvedIndustry,source:industrySource,confidence:industryConfidence,evidence_url:industryUrl,matches_icp:targets.includes(resolvedIndustry)};\nconst empCfg=((p.enrichment||{}).employee_confidence)||{hubspot_company:1,booth_notes:0.9,official_website:0.85,domain_matched_public_search:0.7};const crmEmp=typeof crmCompany.employees==='number'?crmCompany.employees:null;const pubEmp=typeof enrichment.employees_observed==='number'?enrichment.employees_observed:null;const scannerEmp=typeof s.employee_count_observed==='number'?s.employee_count_observed:null;let empVal=null;let empSrc='not_established';let empConf=0;let empUrl='';const pubSrc=String(enrichment.employees_source||'');const pubIsOfficial=pubSrc==='official_website';\n// Order: CRM, booth notes, official website, domain-matched search. The visitor is first-party\n// and present, and can be asked to confirm; an About page can carry a stale or global figure.\n// The decision this feeds is a coarse band (>=1000 / 500-999 / <500), and a human's rough answer\n// lands on the correct side of a band boundary far more reliably than an outdated page. Booth\n// notes are the one source with no URL, which is why they still sit below the CRM.\nif(crmEmp!==null){empVal=crmEmp;empSrc='hubspot_company';empConf=Number(empCfg.hubspot_company||1);}else if(scannerEmp!==null){empVal=scannerEmp;empSrc='booth_notes';empConf=Number(empCfg.booth_notes||0.9);}else if(pubEmp!==null&&pubIsOfficial){empVal=pubEmp;empSrc='official_website';empConf=Number(empCfg.official_website||0.85);empUrl=String(enrichment.employees_evidence_url||'');}else if(pubEmp!==null){empVal=pubEmp;empSrc=pubSrc||'domain_matched_public_search';empConf=Number(empCfg[empSrc]||0.7);empUrl=String(enrichment.employees_evidence_url||'');}const verifyBelow=Number((p.enrichment||{}).employee_verification_required_below||1);const empVerify=empVal===null||empConf<verifyBelow;enrichment.employee_resolution={employees:empVal,source:empSrc,confidence:empConf,evidence_url:empUrl,needs_verification:empVerify,verification_note:empVal===null?'No headcount could be established. Confirm 1,000+ at the booth.':(empVerify?('Headcount '+empVal.toLocaleString()+' came from '+empSrc.replace(/_/g,' ')+' at '+Math.round(empConf*100)+'% confidence. Confirm it with the visitor before relying on it.'):('Headcount '+empVal.toLocaleString()+' is the CRM record of truth.'))};\nlet classification=String(s.classification||'needs_review');let competitorStatus=String(s.competitor_status||'none');let routing=Object.assign({},s.routing||{});const reasons=Array.isArray(s.decision_reasons)?s.decision_reasons.slice():[];const trace=Array.isArray(s.decision_trace)?s.decision_trace.slice():[];let reclassified=false;const employeeCount=empVal;const reviewMin=Number(fit.review_employee_min||500);const qualifiedMin=Number(fit.qualified_employee_min||1000);const sizeBand=employeeCount==null?(s.company_size_band||'unknown'):employeeCount>=qualifiedMin?'qualified_1000_plus':employeeCount>=reviewMin?'review_500_999':'disqualified_under_500';const sizeOut=sizeBand==='disqualified_under_500';const sizeReview=sizeBand==='review_500_999';const sizeSrc=empSrc;const sizePhrase=employeeCount==null?'The headcount carried in from the scanner notes places the company':employeeCount.toLocaleString()+' employees places the company';const disq=(enrichment.disqualifier_signals||[]);if(enrichment.possible_competitor===true&&competitorStatus!=='confirmed'&&classification!=='competitor_intel'){competitorStatus='possible';classification='needs_review';const nc=(p.notifications||{}).needs_review||{};routing={channel:String(nc.channel||'booth-review'),owner_dm:nc.owner_dm===true,mention:false};reasons.push('Public evidence resembles competitor language, so a human must verify before outreach.');trace.push({code:'possible_competitor_language',detail:reasons[reasons.length-1],source:'public_enrichment'});reclassified=true;}if((sizeOut||disq.length)&&classification!=='competitor_intel'&&competitorStatus!=='possible'){classification='out_of_scope';const why=sizeOut?(sizePhrase+' below the task’s 500-employee minimum, per '+sizeSrc.replace(/_/g,' ')+'.'):('Public evidence indicates '+disq.join(', ')+'.');reasons.push(why);trace.push({code:sizeOut?'company_under_500':'environment_disqualifier',detail:why,source:sizeOut?sizeSrc:'public_enrichment'});const nos=(p.notifications||{}).out_of_scope||{};routing={channel:String(nos.channel!==undefined&&nos.channel!==null?nos.channel:'booth-out-of-scope'),owner_dm:nos.owner_dm===true,mention:false};reclassified=true;}else if(sizeReview&&classification!=='competitor_intel'){classification='needs_review';const why=sizePhrase+' in the 500–999 review band, per '+sizeSrc.replace(/_/g,' ')+': not disqualified, but below the task’s qualified 1,000+ threshold.';if(!reasons.some(r=>/500[–-]999/.test(String(r))))reasons.push(why);trace.push({code:'company_500_999',detail:why,source:sizeSrc});const n=(p.notifications||{}).needs_review||{};routing={channel:String(n.channel||'booth-review'),owner_dm:n.owner_dm===true,mention:false};reclassified=true;}else if(employeeCount!=null&&sizeBand==='qualified_1000_plus'&&empSrc!=='booth_notes'){const why=employeeCount.toLocaleString()+' employees, resolved from '+empSrc.replace(/_/g,' ')+' at '+Math.round(empConf*100)+'% confidence, meets Oak’s 1,000+ ICP.'+(empVerify?' Confirm it at the booth before treating it as fact.':'');if(!reasons.includes(why)){reasons.push(why);trace.push({code:'company_1000_plus_enriched',detail:why,source:empSrc,url:empUrl||null});}}const sc=p.scoring||{};const scoreMax=Number(sc.max||100);let score=Number(s.score||0);const breakdown=Object.assign({},s.score_breakdown||{});if(sizeBand==='qualified_1000_plus'&&classification!=='out_of_scope'&&classification!=='competitor_intel'){const cur=Number(breakdown.company_size||0);const add=Math.max(Number(sc.company_size_points||15)-cur,0);if(add){breakdown.company_size=cur+add;score=Math.min(score+add,scoreMax);}}if(enrichment.industry_resolution.matches_icp&&classification!=='out_of_scope'&&classification!=='competitor_intel'){const current=Number(breakdown.industry||0);const add=Math.max(Number(sc.industry_points||15)-current,0);if(add){breakdown.industry=current+add;score=Math.min(score+add,scoreMax);const why='Industry resolved as '+resolvedIndustry.replace(/_/g,' ')+' from '+industrySource.replace(/_/g,' ')+'.';reasons.push(why);trace.push({code:'target_industry',detail:why,source:industrySource,url:industryUrl||null});}}breakdown.total=score;breakdown.max=scoreMax;const corpus=([s.notes_from_booth||''].concat(evidence.map(e=>e.quote||''),((enrichment.search_results||[]).map(r=>(r.title||'')+' '+(r.snippet||''))))).join(' ').toLowerCase();const activeTools=(p.incumbent_tools||[]).filter(t=>t&&t.active!==false);const existingTools=Array.isArray(s.incumbent_tools_detected)?s.incumbent_tools_detected.slice():[];for(const t of activeTools){const aliases=[t.name].concat(t.aliases||[]).map(x=>String(x).toLowerCase());if(aliases.some(x=>x&&corpus.includes(x))&&!existingTools.some(x=>x.name===t.name))existingTools.push({name:t.name,category:t.category||'unknown',matched_in:'notes_or_sourced_enrichment',renewal_trigger:t.renewal_trigger===true});}\n// A rep's triage press in workflow 06 (Promote, Matched, Not a fit, False alarm) is carried forward\n// on a re-scan of the same badge. Enforce Final Deterministic Gates in workflow 01 honours it, but that node sits\n// behind Reason with AI, gated on persona_reasoning_required: 01's pre-enrichment verdict, which\n// nothing recomputes. So the gate follows the classification 01 reached, not the one this node\n// reaches. A lead 01 called out_of_scope or competitor_intel never reaches it; a lead 01 called\n// matched that this node downgrades does, and 05 re-derives routing from the policy on the way.\n// A field this node sets is therefore final on the first kind of lead and overwritable on the\n// second, which is why a wrong value here can look correct on most of them. This node is the\n// last word on the paths the gate does not cover, so the same agreed rule is applied here,\n// guarded on that same flag so the override is never applied twice. The rep is the last word,\n// except on Not a fit: if the CRM or the visitor themselves (confidence >= 0.9) now put the company\n// in the qualified 1,000+ band, neither side wins silently and a human sees both.\nif(!s.persona_reasoning_required&&String(s.rep_override||'').trim()){const ovr=String(s.rep_override||'').trim();const notif=p.notifications||{};const routeTo=(key,fallback)=>{const nn=notif[key]||{};routing={channel:String(nn.channel!==undefined&&nn.channel!==null?nn.channel:fallback),owner_dm:nn.owner_dm===true,mention:false};};const ovrLabel=ovr.replace(/_/g,' ');const ovrReason=String(s.rep_override_reason||'').trim();const ovrBy=String(s.rep_override_by||'').trim();const ovrAt=String(s.rep_override_at||'').trim();const who=ovrBy||'A rep';const when=ovrAt?(' on '+ovrAt):'';const because=ovrReason?(' Reason given: '+ovrReason.replace(/[. ]+$/,'')+'.'):'';const er=enrichment.employee_resolution||s.employee_resolution||{};const contradicted=ovr==='out_of_scope'&&Number(er.confidence||0)>=0.9&&String(sizeBand||'')==='qualified_1000_plus';if(ovr===classification){const detail=who+' had already marked this lead '+ovrLabel+when+', and this enrichment pass reached the same decision on the re-scan.'+because;if(!reasons.includes(detail))reasons.push(detail);}else if(!contradicted){classification=ovr;routeTo(ovr,ovr==='out_of_scope'?'booth-out-of-scope':'booth-review');const detail=who+' overrode this lead to '+ovrLabel+when+'. No higher-confidence source contradicts that call, so it stands on this re-scan.'+because;if(!reasons.includes(detail))reasons.push(detail);trace.push({code:'rep_override_honoured',detail,source:'rep_override'});reclassified=true;}else{const empRaw=er.employees;const empNum=(empRaw===null||empRaw===undefined||empRaw==='')?null:Number(empRaw);const empTxt=(empNum===null||!isFinite(empNum))?'a qualifying headcount':empNum.toLocaleString()+' employees';const empSource=String(er.source||'unknown source').replace(/_/g,' ');const empPct=Math.round(Number(er.confidence||0)*100);classification='needs_review';routeTo('needs_review','booth-review');const detail=who+' marked this lead '+ovrLabel+when+'.'+because+' A higher-confidence source now contradicts that: '+empTxt+' from '+empSource+' at '+empPct+'% confidence puts the company in the qualified 1,000+ band. Neither side wins silently - a human decides.';if(!reasons.includes(detail))reasons.push(detail);trace.push({code:'rep_override_contradicted',detail,source:'rep_override'});reclassified=true;}}\nconst finalChanged=Boolean(s.repeat_scan&&s.prior_classification&&s.prior_classification!==classification);const mode=s.repeat_scan?((finalChanged||s.classification_changed===true)?'repeat_escalation':'repeat_thread'):'first_scan';return[{json:{...s,classification,competitor_status:competitorStatus,routing,score,score_breakdown:breakdown,decision_reasons:reasons,decision_trace:trace,company_size_band:sizeBand,employee_resolution:enrichment.employee_resolution,incumbent_tools_detected:existingTools,reclassified_by_enrichment:reclassified,classification_changed:Boolean(s.classification_changed||finalChanged),material_change:Boolean(s.material_change||finalChanged),notification_mode:mode,company_enrichment:enrichment,company_evidence:evidence,enrichment_cache_hit:hit,enrichment_status:status,enrichment_source:source,enrichment_warnings:warnings,needs_company_enrichment:false,enriched_at:new Date().toISOString()}}];"
+      },
+      "id": "ae495720-957b-4c09-b536-39223e9073c9",
+      "name": "Build Enrichment Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2416,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Assess Cache').first().json.fetch_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "user-agent",
+              "value": "Mozilla/5.0 (compatible; OakGTMLeadEngine/1.0)"
+            },
+            {
+              "name": "accept",
+              "value": "text/html,application/xhtml+xml"
+            },
+            {
+              "name": "accept-language",
+              "value": "en-US,en;q=0.9"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 5
+            }
+          },
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 8000
+        }
+      },
+      "id": "b512a97c-1469-4083-9023-542100ada259",
+      "name": "Fetch Company Homepage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1248,
+        208
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1500,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Public homepage only. No paid data provider, no API key, so enrichment stays zero-cost."
+    },
+    {
+      "parameters": {
+        "jsCode": "const s=$('When Called for Enrichment').first().json;\nconst a=$('Assess Cache').first().json;\nconst p=a.policy||{};\nconst raw=$input.first().json||{};\nconst html=String(raw.data||'');\nconst errorText=(v)=>{if(!v)return'';if(typeof v==='string')return v;if(v.message)return String(v.message);try{return JSON.stringify(v);}catch(e){return String(v);}};\nconst noScript=html.replace(/<script[\\s\\S]*?<\\/script>/gi,' ').replace(/<style[\\s\\S]*?<\\/style>/gi,' ');\nconst grab=(re)=>{const m=html.match(re);return m&&m[1]?String(m[1]).trim():'';};\nconst title=grab(/<title[^>]*>([\\s\\S]*?)<\\/title>/i);\nconst metaDesc=grab(/<meta[^>]+name=[\"']description[\"'][^>]*content=[\"']([^\"']*)[\"']/i);\nconst ogDesc=grab(/<meta[^>]+property=[\"']og:description[\"'][^>]*content=[\"']([^\"']*)[\"']/i);\nconst text=noScript.replace(/<[^>]+>/g,' ').replace(/&[a-z]+;/g,' ').replace(/\\s+/g,' ').trim();\nconst corpus=(title+' '+metaDesc+' '+ogDesc+' '+text).slice(0,20000);\nconst lower=corpus.toLowerCase();\nconst summaryLower=(title+' '+metaDesc+' '+ogDesc).toLowerCase();\nconst esc=(x)=>String(x).replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&');\nconst has=(hay,needle)=>new RegExp('(?:^|[^a-z0-9])'+esc(String(needle).toLowerCase())+'(?:$|[^a-z0-9])','i').test(hay);\nconst parkingPattern=/domain (?:is |)(?:for sale|parked)|buy this domain|website steht zum verkauf|sedo|parkingcrew|dan\\.com/i;\nconst parked=parkingPattern.test(corpus);\nlet fetchError=errorText(raw.error)||(html?'':'Empty response from '+(a.fetch_url||'the company website'));\nif(parked)fetchError='The domain resolves to a parked or for-sale page, not a usable company website.';\nconst sentences=corpus.split('. ').map(x=>x.trim()).filter(x=>x.length>20&&x.length<400);\nconst evidence=[];\nconst quoteFor=(kw)=>{const hit=sentences.find(x=>has(x.toLowerCase(),kw));return hit?hit.slice(0,300):'';};\nconst seen=new Set();\nconst addEvidence=(type,kw)=>{const q=quoteFor(kw);const key=type+'|'+kw;if(seen.has(key))return;seen.add(key);evidence.push({type,keyword:kw,quote:q||('Matched \"'+kw+'\" on '+(a.domain||'the company website')+'.'),source:'public_website'});};\nconst comp=p.competitors||{};\nconst confirmedNames=(comp.confirmed_names||[]).map(x=>String(x).toLowerCase());\nconst possibleKeywords=(comp.possible_keywords||[]).map(x=>String(x).toLowerCase());\nconst confirmedHit=parked?[]:confirmedNames.filter(n=>n&&has(lower,n));\nconst possibleHit=parked?[]:possibleKeywords.filter(k=>k&&has(lower,k));\nfor(const k of possibleHit)addEvidence('competitor_language',k);\nfor(const n of confirmedHit)addEvidence('competitor_named',n);\nconst industryMap={financial_services:['banking','financial services','insurance','wealth management'],fintech:['fintech','payments platform','digital banking'],technology:['software company','saas platform','cloud platform','technology company'],healthcare:['healthcare','hospital system','patient care','life sciences']};\nconst industries=[];\nif(!parked)for(const key of Object.keys(industryMap)){const kw=industryMap[key].find(k=>has(summaryLower,k));if(kw){industries.push(key);addEvidence('industry',kw);}}\nconst targetIndustries=(p.company_fit&&p.company_fit.target_industries)||[];\nconst industryMatch=industries.filter(i=>targetIndustries.includes(i));\nconst identityKeywords=['identity governance','access management','provisioning','single sign-on','sso','zero trust','privileged access','non-human identities','service accounts'];\nconst identityHits=parked?[]:identityKeywords.filter(k=>has(lower,k));\nfor(const k of identityHits)addEvidence('identity_stack',k);\nconst complianceKeywords=['sox','hipaa','pci dss','iso 27001','soc 2','gdpr','dora','nis2'];\nconst complianceHits=parked?[]:complianceKeywords.filter(k=>has(lower,k));\nfor(const k of complianceHits)addEvidence('compliance',k);\nconst empMatch=parked?null:corpus.match(/([0-9][0-9,]{1,8})\\+?\\s*(?:employees|people|team members)/i);\nlet employees=null;\nif(empMatch){const n=Number(String(empMatch[1]).replace(/,/g,''));if(!isNaN(n)&&n>0&&n<5000000){employees=n;addEvidence('employee_count','employees');}}\nconst disqualifiers=((p.company_fit&&p.company_fit.disqualifiers)||[]).map(x=>String(x).toLowerCase());\nconst disqualifierHits=parked?[]:disqualifiers.filter(d=>d&&has(lower,d));\nfor(const d of disqualifierHits)addEvidence('disqualifier',d);\nconst fetched=Boolean(html&&!raw.error&&!parked);\nconst status=fetched?'complete':'partial';\nconst ttl=Number(a.ttl_days||30);\nconst expires=new Date(Date.now()+ttl*24*3600*1000).toISOString();\nconst payload={company_name:parked?(s.company_name||''):(title?title.split('|')[0].split('-')[0].trim():(s.company_name||'')),domain:a.domain||'',headline:parked?'':(metaDesc||ogDesc||'').slice(0,400),site_quality:parked?'parked':(fetched?'usable':'unavailable'),industries,industry_match:industryMatch,employees_observed:employees,identity_signals:identityHits,compliance_signals:complianceHits,disqualifier_signals:disqualifierHits,possible_competitor:confirmedHit.length>0||possibleHit.length>0,competitor_terms:[...confirmedHit,...possibleHit],fetched,fetch_url:a.fetch_url||'',evidence_count:evidence.length,enriched_from:'public_website_homepage'};\nreturn[{json:{payload,evidence:evidence.slice(0,12),status,source:fetched?'public_website':(parked?'parked_domain':'unavailable'),fetch_error:fetchError,expires_at:expires,company_name:payload.company_name||s.company_name||'',domain:a.domain||''}}];"
+      },
+      "id": "63984620-3772-4909-bdee-d9281c280a3d",
+      "name": "Extract Company Signals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_enrichment_cache"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "company_domain",
+              "keyValue": "={{ $('Assess Cache').first().json.domain }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "value": {
+            "company_domain": "={{ $('Assess Cache').first().json.domain }}",
+            "company_name": "={{ $json.company_name }}",
+            "enriched_at": "={{ $now.toISO() }}",
+            "expires_at": "={{ $json.expires_at }}",
+            "source": "={{ $json.source }}",
+            "payload_json": "={{ JSON.stringify($json.payload) }}",
+            "evidence_json": "={{ JSON.stringify($json.evidence) }}",
+            "status": "={{ $json.status }}"
+          },
+          "schema": [
+            {
+              "id": "company_domain",
+              "displayName": "company_domain",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "enriched_at",
+              "displayName": "enriched_at",
+              "type": "date",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "expires_at",
+              "displayName": "expires_at",
+              "type": "date",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payload_json",
+              "displayName": "payload_json",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "evidence_json",
+              "displayName": "evidence_json",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "798a65b4-7b68-49b8-ba1d-eb633d167934",
+      "name": "Write Company Cache",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2224,
+        208
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "One row per domain with a TTL, so the same company is never re-fetched during an event."
+    },
+    {
+      "parameters": {
+        "query": "={{ $('When Called for Enrichment').first().json.classification === 'competitor_intel' ? (($json.company_name || $('Assess Cache').first().json.domain) + ' company overview product launch AI agents non-human identity funding acquisition leadership') : (($json.company_name || $('Assess Cache').first().json.domain) + ' identity governance access management compliance audit company employees') }}",
+        "count": 5,
+        "additionalParameters": {
+          "country": "US",
+          "search_lang": "en",
+          "safesearch": "moderate",
+          "freshness": "py",
+          "result_filter": [
+            "web",
+            "news"
+          ]
+        }
+      },
+      "id": "b1cf2b4f-740d-4029-afb3-feebf0281a67",
+      "name": "Search Company Web",
+      "type": "@brave/n8n-nodes-brave-search.braveSearch",
+      "typeVersion": 1.1,
+      "position": [
+        1840,
+        368
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Global search, not just the company homepage. Soft-fails: if Brave is unavailable the lead still gets site-only enrichment."
+    },
+    {
+      "parameters": {
+        "jsCode": "const s=$('When Called for Enrichment').first().json;const a=$('Assess Cache').first().json;const p=a.policy||{};const site=$('Extract Company Signals').first().json;const cfg=p.enrichment||{};let results=[];let searchError='';if(cfg.search_enabled!==false){try{for(const r of $('Search Company Web').all().map(i=>i.json)){if(!r)continue;if(r.error){searchError=typeof r.error==='string'?r.error:'Brave Search returned an error.';continue;}const web=(r.web&&Array.isArray(r.web.results))?r.web.results:(Array.isArray(r.results)?r.results:[]);for(const w of web)results.push({title:(w&&w.title)||'',url:(w&&w.url)||'',snippet:(w&&(w.description||w.snippet))||'',age:(w&&(w.age||w.page_age))||''});if(!web.length&&r.title)results.push({title:r.title||'',url:r.url||'',snippet:r.description||r.snippet||'',age:r.age||''});}}catch(e){searchError='Company search did not run.';}}\nconst clean=(t)=>String(t==null?'':t).replace(/<[^>]+>/g,' ').replace(/[\\r\\n\\t]+/g,' ').replace(/\\s+/g,' ').trim();const normalize=(t)=>clean(t).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();const raw=results.filter(r=>r.url).slice(0,Number(cfg.max_results||5)*2).map(r=>({title:clean(r.title).slice(0,200),url:String(r.url),snippet:clean(r.snippet).slice(0,300),age:clean(r.age).slice(0,40)}));const domain=String(a.domain||'').toLowerCase().replace(/^www\\./,'');const companyName=normalize(s.company_name||'');\nconst scored=raw.map(function(r){let host='';try{host=new URL(r.url).hostname.toLowerCase().replace(/^www\\./,'');}catch(e){}const domainMatch=Boolean(domain&&(host===domain||host.endsWith('.'+domain)));const text=normalize(r.title+' '+r.snippet);const nameMatch=Boolean(companyName&&companyName.length>=4&&text.includes(companyName));return{row:r,domainMatch:domainMatch,nameMatch:nameMatch};}).filter(function(a){return a.domainMatch||a.nameMatch;});const aligned=scored.map(function(a){return a.row;}).slice(0,Number(cfg.max_results||5));\n// A headcount may only come from a page on the company's own domain. A name match is not entity\n// resolution: \"Apex Financial Services\" returns three unrelated companies, one of them 29 people.\n// Name-only hits still provide evidence and industry, and appear on the card as labelled candidates.\nconst domainAligned=scored.filter(function(a){return a.domainMatch;}).map(function(a){return a.row;});const nameOnlyCount=scored.filter(function(a){return !a.domainMatch;}).length;if(raw.length&&!aligned.length)searchError='Search returned results, but none matched the resolved company name or domain; no public company claim was retained.';\nconst corpus=aligned.map(r=>r.title+' '+r.snippet).join(' ').toLowerCase();const esc=(x)=>String(x).replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&');const has=(x)=>new RegExp('(?:^|[^a-z0-9])'+esc(String(x).toLowerCase())+'(?:$|[^a-z0-9])','i').test(corpus);const triggerMap={breach_reported:['identity breach','data breach','security breach','ransomware','cyberattack'],audit_pressure:['material weakness','audit finding','regulatory fine','consent order'],identity_program:['identity governance','access management','zero trust','okta','entra id','sailpoint'],growth_event:['acquisition','acquires','merger','ipo','funding round'],ai_adoption:['ai agents','copilot','genai','ai rollout']};const newsSignals=[];for(const k of Object.keys(triggerMap)){const kw=triggerMap[k].find(x=>has(x));if(kw)newsSignals.push({signal:k,keyword:kw});}\nconst industryMap={financial_services:['bank','banking','financial services','insurance','wealth management','capital markets'],fintech:['fintech','payments company','payments platform','digital banking'],technology:['technology company','software company','cloud platform','semiconductor'],healthcare:['healthcare','hospital system','patient care','life sciences','pharmaceutical']};const searchIndustries=[];const industryEvidence=[];for(const key of Object.keys(industryMap)){const kw=industryMap[key].find(x=>has(x));if(!kw)continue;const row=aligned.find(r=>(r.title+' '+r.snippet).toLowerCase().includes(kw));searchIndustries.push(key);if(row)industryEvidence.push({type:'industry',keyword:kw,quote:(row.title+' — '+row.snippet).slice(0,300),source:'brave_search',url:row.url});}\nconst base=site.payload||{};const siteEmployees=(typeof base.employees_observed==='number')?base.employees_observed:null;let searchEmployees=null;const employeeEvidence=[];if(siteEmployees===null&&cfg.employee_search_enabled!==false){const empRe=/([0-9][0-9,\\.]{0,9})\\s*(k|thousand)?\\s*\\+?\\s*(?:employees|staff|people|team members|workforce|headcount)/i;for(const r of domainAligned){const text=r.title+' '+r.snippet;const m=text.match(empRe);if(!m)continue;let n=Number(String(m[1]).replace(/,/g,''));if(m[2])n=n*1000;if(isNaN(n)||n<10||n>5000000)continue;searchEmployees=Math.round(n);employeeEvidence.push({type:'employee_count',keyword:'headcount',quote:text.slice(0,300),source:'brave_search',url:r.url});break;}}\nconst resolvedEmployees=siteEmployees!==null?siteEmployees:searchEmployees;const employeesSource=siteEmployees!==null?'official_website':(searchEmployees!==null?'domain_matched_public_search':'not_established');\nconst evidence=Array.isArray(site.evidence)?site.evidence.slice():[];for(const r of aligned.slice(0,3))evidence.push({type:'web_search',keyword:'',quote:(r.title+' — '+r.snippet).slice(0,300),source:'brave_search',url:r.url});for(const n of newsSignals){const row=aligned.find(r=>(r.title+' '+r.snippet).toLowerCase().includes(n.keyword));if(row)evidence.push({type:'news_signal',keyword:n.keyword,quote:(row.title+' — '+row.snippet).slice(0,300),source:'brave_search',url:row.url});}for(const e of industryEvidence)evidence.push(e);for(const e of employeeEvidence)evidence.push(e);\nconst industries=Array.from(new Set([].concat(base.industries||[],searchIndustries)));const targets=(p.company_fit&&p.company_fit.target_industries)||[];const payload=Object.assign({},base,{industries,industry_match:industries.filter(i=>targets.includes(i)),industry_sources:{official_site:base.industries||[],public_search:searchIndustries},employees_observed:resolvedEmployees,employees_source:employeesSource,employees_evidence_url:employeeEvidence.length?employeeEvidence[0].url:'',search_results:aligned,discarded_unaligned_results:raw.length-aligned.length,name_only_results_barred_from_headcount:nameOnlyCount,domain_matched_result_count:domainAligned.length,news_signals:newsSignals.map(n=>n.signal),search_result_count:aligned.length,search_provider:aligned.length?'brave_search':(cfg.search_enabled===false?'disabled':'unavailable'),evidence_identity_checked:true});const sources=[];if(base.fetched)sources.push('public_website');if(aligned.length)sources.push('brave_search');return[{json:Object.assign({},site,{payload,evidence:evidence.slice(0,20),source:sources.length?sources.join('+'):site.source,search_error:searchError})}];"
+      },
+      "id": "9c125e07-10d4-4dc5-ba9a-f13840a194fb",
+      "name": "Extract Search Signals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2032,
+        208
+      ],
+      "notes": "Turns search hits into quoted evidence with source URLs, so a rep can verify any claim the alert makes."
+    },
+    {
+      "parameters": {
+        "jsCode": "const s=$('Build Enrichment Result').first().json;const clean=(t)=>String(t==null?'':t).replace(/<[^>]+>/g,' ').replace(/[\\r\\n\\t]+/g,' ').replace(/\\s+/g,' ').trim();let results=[];let err='';try{for(const r of $('Search Relevant Person').all().map(i=>i.json)){if(r.error){err=typeof r.error==='string'?r.error:'Person search failed.';continue;}const web=(r.web&&Array.isArray(r.web.results))?r.web.results:(Array.isArray(r.results)?r.results:[]);for(const w of web)results.push({title:clean(w.title).slice(0,200),url:String(w.url||''),snippet:clean(w.description||w.snippet).slice(0,300)});if(!web.length&&r.title)results.push({title:clean(r.title),url:String(r.url||''),snippet:clean(r.description||r.snippet)});}}catch(e){err='Person search did not run.';}const nameParts=String(s.full_name||'').toLowerCase().split(/\\s+/).filter(x=>x.length>2);const surname=nameParts.length?nameParts[nameParts.length-1]:'';const companyTokens=String(s.company_name||s.company_domain||'').toLowerCase().split(/[^a-z0-9]+/).filter(x=>x.length>3);const domain=String(s.company_domain||'').toLowerCase();const verified=results.filter(r=>{if(!r.url)return false;const text=(r.title+' '+r.snippet+' '+r.url).toLowerCase();const nameOk=surname&&text.includes(surname);const companyOk=(domain&&text.includes(domain.split('.')[0]))||companyTokens.some(t=>text.includes(t));return nameOk&&companyOk;}).slice(0,3);const evidence=verified.map(r=>({type:'person_public_profile',quote:(r.title+' — '+r.snippet).slice(0,300),source:'brave_search',url:r.url,identity_check:'surname_and_company'}));const warnings=(s.enrichment_warnings||[]).slice();let status='unavailable';let explanation='Public search returned no results for the person query.';if(verified.length){status='verified_search_results';explanation='Retained only results matching both surname and company/domain.';}else if(results.length){status='no_identity_aligned_result';explanation='Search returned results, but none matched both surname and company/domain; no person claim was retained.';}if(err)warnings.push(err+' No person-level claim was made.');return[{json:{...s,person_enrichment:{status,explanation,query_identity:{name:s.full_name||null,title:s.job_title||null,company:s.company_name||s.company_domain||null},results:verified,search_result_count:results.length,verified_result_count:verified.length},person_evidence:evidence,enrichment_warnings:warnings}}];"
+      },
+      "id": "dbd3d576-6867-4f63-95ee-988c8c57f298",
+      "name": "Attach Person Evidence",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3056,
+        128
+      ],
+      "notes": "A result is retained only when it aligns to both the person's surname and company/domain. Every retained claim keeps its URL."
+    },
+    {
+      "parameters": {
+        "content": "# 04 - Company & Person Enrichment\n\n## What this workflow does\n\nLearns what it can, **for free**, about the company and the person - headcount, industry, identity stack, a public profile - and refuses to claim anything it cannot source. It is the only place that fetches third-party data about the lead. Workflow 01 calls it for every classified scan and gets the payload back with the company and person evidence merged in, a resolved headcount and industry - and, in the cases below, a changed classification.\n\n## Hypotheses this design rests on\n\n1. **Zero cost is a constraint, not a preference.** The task says free tiers only, so: the company's own homepage plus Brave Search through n8n gateway credits. No paid provider. It all sits behind this one sub-workflow, so swapping in Clearbit later is one node and a policy flag - routing and scoring do not change.\n2. **Company names are not unique, and a near-name match is worse than no answer.** \"Apex Financial Services\" returns a 29-person advisory in Minnesota, a 1,000-person fintech, and a 19,379-person group - three different companies. Confidently wrong in front of a rep is the failure mode to avoid.\n3. **A rep will be asked \"how do you know that?\"**, so every public claim keeps a quote and a URL.\n4. **An unverified fact is a question to ask, not a reason to downgrade.** Unknown headcount never disqualifies; it becomes a question on the card.\n5. **Public incident claims are not booth facts.** Breach and allegation language is stripped before it can reach Slack or the model.\n\n## The logic that is implemented\n\n**The free read runs for everyone; the paid searches do not.** The homepage fetch costs nothing, so every classified scan gets it, `out_of_scope` included. Both Brave gates, `Search Enabled?` and `Need Headcount Search?`, additionally require `classification !== 'out_of_scope'`: nobody is going to pursue that lead, so a credit spent on it is wasted. That is the real cost control in this build.\n\n**Headcount ladder - first hit wins, and each rung carries its own confidence:**\n\n| Rung | Source | Confidence |\n|---|---|---|\n| 1 | The HubSpot company record | 1.0 |\n| 2 | What the visitor said at the booth | 0.9 |\n| 3 | The company's own website | 0.85 |\n| 4 | Domain-matched public search | 0.7 |\n| - | nothing | not established, confirm at booth |\n\nThe visitor is first-party, present and can be asked to confirm, while an About page can carry a stale or global figure; the decision is a coarse band, so a human's rough answer is more reliable than an outdated page, and booth notes still sit below the CRM because they are the one source with no URL. These numbers come from the active policy's `employee_confidence` block, not from code.\n\n**Identity alignment is the gate on every public result.** A search hit is retained only if the host matches the resolved domain, or the text names the full company. Everything else is discarded and counted.\n\n**Two-tier size resolution.** Whenever no public source has produced a headcount yet, a second search asks a plain company-profile question instead of an identity one, and any name-only match with a quoted headcount is kept as a **labelled candidate**: shown on the card with its own company name and URL, and never written to `employees_observed`. So a name-only match can be seen by a rep but can never move the score or the tier.\n\n**Person search is skipped twice over, then strict.** It does not run for `competitor_intel`, where the card is about their product rather than one contact, nor for `out_of_scope`. When it does run, a result is kept only when **both** the surname and the company or domain appear. Otherwise the card says plainly that no profile was verified - it never guesses a biography.\n\n**Competitor language rescues a lead that the size rule would have dropped.** A fit gate asks \"is this company big enough to sell to\", which is the wrong question about a competitor: their site reads as a small identity vendor and the under-500 rule would file them away unseen. So a competitor-language hit on that free read sets `competitor_status` to `possible` and routes to `needs_review` - before the size and disqualifier rule, which is then suppressed. A language hit is not a verdict; it buys a human look.\n\n**One cache row per domain, with a TTL.** Two people from the same company in one event cost one enrichment, not two. Parked and for-sale domains are detected and never cached as usable.\n\n## Where it can fail\n\nBrave quota, a dead domain, a site that blocks bots. All soft-fail: the lead is still classified, scored and alerted, just with less context and an explicit warning on the card. Nothing is invented to fill the gap.",
+        "height": 1820,
+        "width": 1120,
+        "color": 5
+      },
+      "id": "2f6a3f98-e80c-4f7c-8d5b-a308704edfda",
+      "name": "Interview Guide - Enrichment",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -1880
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const s=$input.first().json||{};const official=String((s.company_enrichment||{}).fetch_url||'');const unsafe=/\\b(breach|breached|ransom|cybercriminal|attack(?:er)? claims?|alleged|unconfirmed|data leak|customer data exposed|security incident)\\b/i;const retained=[];const rejected=[];for(const raw of (Array.isArray(s.company_evidence)?s.company_evidence:[])){const e={...raw};if(!e.url&&e.source==='public_website'&&official)e.url=official;if(!e.quote){rejected.push({...e,rejection_reason:'missing_quote'});continue;}if(unsafe.test(String(e.quote||''))){rejected.push({...e,rejection_reason:'public_incident_claim_not_allowed'});continue;}if(!e.url){rejected.push({...e,rejection_reason:'missing_source_url'});continue;}retained.push(e);}const pe=Array.isArray(s.person_evidence)?s.person_evidence.filter(e=>e&&e.url&&e.quote):[];return[{json:{...s,company_evidence:retained,person_evidence:pe,evidence_review:{company_retained:retained.length,company_rejected:rejected.length,person_retained:pe.length,rejected_reasons:Array.from(new Set(rejected.map(e=>e.rejection_reason)))},unsafe_company_evidence_rejected:rejected.length}}];"
+      },
+      "id": "16b19c7d-885f-4819-a929-772a80f59895",
+      "name": "Sanitize Public Evidence",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3280,
+        128
+      ],
+      "notes": "Public incident claims are excluded from both Slack and Gemini unless Oak later defines a trusted-source policy. Contradictory or allegation language never becomes a booth fact."
+    },
+    {
+      "id": "572bfe39-4839-4899-8397-795d3dbfa7b4",
+      "name": "Add Name-Only Size Candidates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        368
+      ],
+      "parameters": {
+        "jsCode": "const s=$('When Called for Enrichment').first().json;\nconst a=$('Assess Cache').first().json;\n// This node has two inbound paths: straight from the IF, or via the headcount search. On the\n// second, $input is the Brave response, not the enrichment payload, so read it by node name.\nlet x={};\ntry{x=$('Extract Search Signals').first().json||{};}catch(e){x=$input.first().json||{};}\nif(!x||!x.payload)x=$input.first().json||{};\nconst payload=Object.assign({},x.payload||{});\n// Two sources: the identity-flavoured company search, and the dedicated headcount search that\n// only runs when size is still unresolved. The first is tuned for IGA signals and rarely quotes\n// a headcount, which is why the second exists.\nfunction collect(nodeName){\n  const out=[];\n  try{\n    for(const r of $(nodeName).all().map(function(i){return i.json;})){\n      if(!r||r.error)continue;\n      const web=(r.web&&Array.isArray(r.web.results))?r.web.results:(Array.isArray(r.results)?r.results:[]);\n      for(const w of web)out.push({title:String((w&&w.title)||''),url:String((w&&w.url)||''),snippet:String((w&&(w.description||w.snippet))||''),extra:Array.isArray(w&&w.extra_snippets)?w.extra_snippets.join(' '):''});\n    }\n  }catch(e){}\n  return out;\n}\nconst rows=collect('Search Company Web').concat(collect('Search Company Headcount'));\nconst strip=function(t){return String(t==null?'':t).replace(/<[^>]+>/g,' ').replace(/\\s+/g,' ').trim();};\nconst norm=function(t){return strip(t).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();};\n// Generic words carry no identity: \"Apex Financial Services\" is distinctive only on \"apex\".\nconst GENERIC=['financial','finance','services','service','group','holdings','holding','technologies','technology','solutions','systems','international','global','company','companies','corporation','corp','inc','ltd','llc','plc','limited','partners','capital','bank','banking','insurance','the','and','of'];\nconst tokens=norm(s.company_name||'').split(' ').filter(function(t){return t.length>2&&GENERIC.indexOf(t)<0;});\nconst domain=String(a.domain||'').toLowerCase().replace(/^www\\./,'');\n// Several shapes: \"19,379 employees\", \"Employees: 19,379\", \"employs over 19,379\", \"10,001+ employees\".\nconst PATTERNS=[\n  /([0-9][0-9,\\.]{0,9})\\s*(k|thousand)?\\s*\\+?\\s*(?:employees|staff|people|team members|workforce|headcount)/i,\n  /(?:employees|staff|headcount|workforce|company size)\\s*[:\\-–]?\\s*([0-9][0-9,\\.]{0,9})\\s*(k|thousand)?/i,\n  /employs\\s+(?:over\\s+|more than\\s+|about\\s+|around\\s+|approximately\\s+)?([0-9][0-9,\\.]{0,9})\\s*(k|thousand)?/i\n];\nfunction readCount(text){\n  for(const re of PATTERNS){\n    const m=text.match(re);\n    if(!m)continue;\n    let n=Number(String(m[1]).replace(/,/g,''));\n    if(m[2])n=n*1000;\n    if(isNaN(n)||n<10||n>5000000)continue;\n    return {n:Math.round(n),quote:m[0]};\n  }\n  return null;\n}\nconst candidates=[];\nconst seenUrl={};\nif(tokens.length){\n  for(const r of rows){\n    if(!r.url||seenUrl[r.url])continue;\n    let host='';try{host=new URL(r.url).hostname.toLowerCase().replace(/^www\\./,'');}catch(e){}\n    if(domain&&(host===domain||host.endsWith('.'+domain)))continue;\n    const blob=r.title+' '+r.snippet+' '+r.extra;\n    const text=norm(blob);\n    if(!tokens.every(function(t){return text.indexOf(t)>=0;}))continue;\n    const hit=readCount(blob);\n    if(!hit)continue;\n    seenUrl[r.url]=true;\n    candidates.push({employees:hit.n,name_in_source:strip(r.title).slice(0,120),quote:strip(hit.quote).slice(0,160),url:r.url,match_basis:'company_name_only'});\n    if(candidates.length>=3)break;\n  }\n}\npayload.headcount_name_only_candidates=candidates;\npayload.headcount_name_only_tokens=tokens;\npayload.headcount_search_pool=rows.length;\nreturn[{json:Object.assign({},x,{payload:payload})}];"
+      },
+      "notes": "A parked domain leaves headcount unresolved. This keeps name-only matches as labelled candidates a rep can confirm, never as facts: they never set employees_observed, so they cannot change the score or the tier."
+    },
+    {
+      "id": "399f0dde-ff1c-4cd8-9894-4ba4fdf2ba4b",
+      "name": "Search Company Headcount",
+      "type": "@brave/n8n-nodes-brave-search.braveSearch",
+      "typeVersion": 1.1,
+      "position": [
+        2320,
+        320
+      ],
+      "parameters": {
+        "additionalParameters": {
+          "country": "US",
+          "result_filter": [
+            "web"
+          ],
+          "safesearch": "moderate",
+          "search_lang": "en"
+        },
+        "count": 8,
+        "query": "={{ ($('When Called for Enrichment').first().json.company_name || $('Assess Cache').first().json.domain) + ' company number of employees headcount' }}"
+      },
+      "notes": "A plain company-profile query. The main company search is tuned for identity signals, which pulls vendor articles instead of headcount pages.",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "85c624bc-c8e0-49b9-a6f4-9ba3bfb4fa98",
+      "name": "Search Enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1648,
+        208
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $('Assess Cache').first().json.policy?.enrichment?.search_enabled !== false && $('Assess Cache').first().json.has_company_identity === true }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": true
+            },
+            {
+              "leftValue": "={{ $('When Called for Enrichment').first().json.classification !== 'out_of_scope' }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "notes": "Three gates on the paid search: the policy's enrichment.search_enabled, whether the scan gave any company identity at all, and classification !== 'out_of_scope'. A personal email with no company name skips it, and so does a lead nobody will pursue. The free homepage fetch has already run either way, and that is what feeds possible_competitor."
+    },
+    {
+      "id": "fa607044-0d8b-48b3-8587-af42710cc164",
+      "name": "Need Headcount Search?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2128,
+        208
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.payload?.employees_observed == null && $('Assess Cache').first().json.policy?.enrichment?.search_enabled !== false && $('Assess Cache').first().json.has_company_identity === true }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": true
+            },
+            {
+              "leftValue": "={{ $('When Called for Enrichment').first().json.classification !== 'out_of_scope' }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "notes": "Only pays for a second search when no public source has produced a headcount yet. The HubSpot figure is not visible at this gate - it is read downstream in Build Enrichment Result, where it outranks everything - so a company already known in the CRM can still spend this credit."
+    },
+    {
+      "id": "ab16c69d-20f9-4297-a264-8faaab32ae27",
+      "name": "Person Search Worth It?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2608,
+        128
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.classification }}",
+              "operator": {
+                "operation": "notEquals",
+                "type": "string"
+              },
+              "rightValue": "competitor_intel"
+            },
+            {
+              "leftValue": "={{ $json.classification }}",
+              "operator": {
+                "operation": "notEquals",
+                "type": "string"
+              },
+              "rightValue": "out_of_scope"
+            },
+            {
+              "leftValue": "={{ $('Assess Cache').first().json.policy?.enrichment?.person_search_enabled !== false }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      },
+      "notes": "Skips the person search for competitor_intel and out_of_scope. A competitor card is about their product, moves and hiring, not one contact; and a lead nobody will pursue is not worth a Brave credit or a profile quote either."
+    },
+    {
+      "id": "4550f656-ff62-4376-ae10-c0e2999ff753",
+      "name": "Search Relevant Person",
+      "type": "@brave/n8n-nodes-brave-search.braveSearch",
+      "typeVersion": 1.1,
+      "position": [
+        2832,
+        32
+      ],
+      "parameters": {
+        "additionalParameters": {
+          "country": "US",
+          "result_filter": [
+            "web"
+          ],
+          "safesearch": "moderate",
+          "search_lang": "en"
+        },
+        "count": 3,
+        "query": "={{ '\"' + ($json.full_name || '') + '\" ' + ($json.company_name || $json.company_domain || '') + ' ' + ($json.job_title || '') + ' identity security governance LinkedIn' }}"
+      },
+      "notes": "Only reached for tier_1, matched and needs_review: the gate before it drops competitors and out-of-scope leads. Every result is identity-checked on surname plus company before any of it is used.",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
+    }
+  ],
+  "connections": {
+    "When Called for Enrichment": {
+      "main": [
+        [
+          {
+            "node": "Load Company Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Company Cache": {
+      "main": [
+        [
+          {
+            "node": "Load Active Policy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Active Policy": {
+      "main": [
+        [
+          {
+            "node": "Assess Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assess Cache": {
+      "main": [
+        [
+          {
+            "node": "Cache Fresh?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cache Fresh?": {
+      "main": [
+        [
+          {
+            "node": "Build Enrichment Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Company Homepage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Company Homepage": {
+      "main": [
+        [
+          {
+            "node": "Extract Company Signals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Company Cache": {
+      "main": [
+        [
+          {
+            "node": "Build Enrichment Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Company Web": {
+      "main": [
+        [
+          {
+            "node": "Extract Search Signals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Person Evidence": {
+      "main": [
+        [
+          {
+            "node": "Sanitize Public Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Name-Only Size Candidates": {
+      "main": [
+        [
+          {
+            "node": "Write Company Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Company Headcount": {
+      "main": [
+        [
+          {
+            "node": "Add Name-Only Size Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Company Signals": {
+      "main": [
+        [
+          {
+            "node": "Search Enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Enabled?": {
+      "main": [
+        [
+          {
+            "node": "Search Company Web",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Search Signals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Search Signals": {
+      "main": [
+        [
+          {
+            "node": "Need Headcount Search?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Need Headcount Search?": {
+      "main": [
+        [
+          {
+            "node": "Search Company Headcount",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add Name-Only Size Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Enrichment Result": {
+      "main": [
+        [
+          {
+            "node": "Person Search Worth It?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Person Search Worth It?": {
+      "main": [
+        [
+          {
+            "node": "Search Relevant Person",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Attach Person Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Relevant Person": {
+      "main": [
+        [
+          {
+            "node": "Attach Person Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "N4JW7CO6qjdLi6mq",
+    "binaryMode": "separate"
+  },
+  "pinData": {},
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  },
+  "tags": [],
+  "active": true,
+  "versionId": "8010d822-11e5-467a-bbc9-4cbbd12caedf",
+  "id": "K9MaVwjIoBmZ0oS9"
+}

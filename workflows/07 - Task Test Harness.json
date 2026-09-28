@@ -1,0 +1,405 @@
+{
+  "name": "Oak GTM - 07 Task Test Harness",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "f3976bd7-2ee4-4a0f-8fb0-e5828f7b1ace",
+      "name": "Run Task Test Suite",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        1168
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_deliveries"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_id",
+              "keyValue": "={{ $json.reset_filter }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a8481107-4079-4cf4-ba70-ac03148d6e6e",
+      "name": "Clear Test Event Scans",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1264,
+        1424
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Removes this test event from the replay ledger so the same scan_ids can be sent again. Real event data with a different event_id is untouched."
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_encounters"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_id",
+              "keyValue": "={{ $('Build Test Plan').first().json.reset_filter }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e8176ed9-599d-4d16-9c56-75ed5265bba2",
+      "name": "Clear Test Event Encounters",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        1424
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Removes returning-visitor state so each run starts as a first scan rather than a threaded repeat."
+    },
+    {
+      "parameters": {
+        "jsCode": "return $('Build Test Plan').all().map(function (i) { return { json: i.json }; });"
+      },
+      "id": "cef6eb13-43d9-4be0-bbcd-5390adffdc95",
+      "name": "Resume Test Plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1776,
+        1424
+      ],
+      "notes": "The delete nodes return deleted row ids, not test items, so the plan is read back here before sending."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.webhook_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-oak-webhook-secret",
+              "value": "={{ $vars.OAK_WEBHOOK_SECRET || '' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": "={{ $json.gap_ms }}"
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "57129b4c-69dc-4ae9-b6e8-583f8c8a6159",
+      "name": "POST Booth Scan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2032,
+        1424
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Hits the real production webhook of workflow 01, one scan at a time, exactly as a booth scanner would."
+    },
+    {
+      "parameters": {
+        "amount": "={{ $('Build Test Plan').first().json.settle_seconds }}"
+      },
+      "id": "9eba7c93-e158-4086-8fe6-1bd11442dd08",
+      "name": "Wait for Pipelines to Finish",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2192,
+        1296
+      ],
+      "executeOnce": true,
+      "webhookId": "19abf89f-5ee1-4a39-a950-4e9670e70213",
+      "notes": "Workflow 01 answers the scanner in about two seconds and finishes enrichment, AI, HubSpot and Slack afterwards. This waits for that tail before scoring."
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_deliveries"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_id",
+              "keyValue": "={{ $('Build Test Plan').first().json.test_event_id }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "id": "d414ae57-7371-470c-93dc-0a6bc1c0265b",
+      "name": "Read Final Decisions",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2448,
+        1296
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Reads the stored decision rather than the webhook reply, because the reply is sent before the final deterministic gate runs."
+    },
+    {
+      "parameters": {
+        "jsCode": "const plan = $('Build Test Plan').all().map(function (i) { return i.json; });\nconst posts = $('POST Booth Scan').all().map(function (i) { return i.json; });\nconst rows = $('Read Final Decisions').all().map(function (i) { return i.json; }).filter(function (r) { return r && r.scan_id; });\nconst byScan = {};\nfor (const r of rows) byScan[r.scan_id] = r;\n\nconst results = plan.map(function (p, idx) {\n  const post = posts[idx] || {};\n  const body = (post && post.body && typeof post.body === 'object') ? post.body : post;\n  const status = post && post.statusCode != null ? Number(post.statusCode) : null;\n  const row = byScan[p.scan_id] || null;\n\n  let raw = {};\n  if (row && row.raw_json) { try { raw = JSON.parse(row.raw_json); } catch (e) { raw = {}; } }\n  const d = raw.decision || raw;\n\n  let slack = {};\n  if (row && row.slack_json) { try { slack = JSON.parse(row.slack_json) || {}; } catch (e) { slack = {}; } }\n\n  const answered = String((body && (body.provisional_classification || body.classification)) || '') || null;\n  const stored = row ? (String(row.classification || '') || null) : null;\n  const persona = String(d.persona || (body && (body.provisional_persona || body.persona)) || '') || null;\n  const channel = String((raw.routing && raw.routing.channel) || '') || null;\n  const finalScore = row && row.score != null ? Number(row.score) : null;\n  const er = raw.employee_resolution || {};\n\n  const slackDeliveries = Array.isArray(slack.deliveries) ? slack.deliveries : [];\n  const slackDelivered = Number(slack.delivered_count || 0);\n  const slackFailed = Number(slack.failed_count || 0);\n  const slackErrors = slackDeliveries.filter(function (x) { return x && !x.ok; }).map(function (x) { return String(x.kind || 'post') + ': ' + String(x.error || 'unknown error'); });\n  const slackReceipt = row ? Boolean(row.slack_json) : false;\n  const slackExpected = Boolean(channel) && stored !== 'invalid';\n  const expectAccepted = !(p.expect && p.expect.accepted === false);\n  const deliveryStatus = row ? (String(row.status || '') || null) : null;\n\n  const checks = [];\n  if (expectAccepted) {\n    checks.push({ check: 'webhook accepted the scan', pass: Boolean(body && body.accepted === true), got: (body && body.status) || ('HTTP ' + status) });\n    checks.push({ check: 'a decision row was stored', pass: Boolean(row), got: row ? 'oak_deliveries row present' : 'no row for ' + p.scan_id });\n    if (row) {\n      checks.push({\n        check: 'the delivery ledger reached status complete',\n        pass: deliveryStatus === 'complete',\n        got: deliveryStatus === 'complete' ? 'status is complete' : ((deliveryStatus ? 'status is still ' + deliveryStatus : 'the row carries no status') + ' after the ' + (p.settle_seconds == null ? 'settle' : p.settle_seconds + 's settle') + ' wait - re-read the row to tell a pipeline still running from one that never reached Persist Complete Delivery')\n      });\n    }\n  } else {\n    checks.push({ check: 'webhook rejected the scan', pass: !(body && body.accepted === true), got: (body && body.status) || ('HTTP ' + status) });\n    checks.push({ check: 'no decision row was stored', pass: !row, got: row ? 'oak_deliveries row present for ' + p.scan_id + ' - the scan was not rejected' : 'no oak_deliveries row for ' + p.scan_id + ', which is correct for a rejected scan' });\n  }\n  if (expectAccepted && slackExpected) {\n    checks.push({\n      check: 'Slack actually delivered the alert',\n      pass: slackReceipt ? (slackDelivered > 0 && slackFailed === 0) : false,\n      got: !slackReceipt ? 'no Slack receipt was recorded' : (slackErrors.length ? slackErrors.join(' | ') : (slackDelivered + ' delivered, ' + slackFailed + ' failed'))\n    });\n  }\n  if (expectAccepted && p.expect) {\n    if (p.expect.classification) checks.push({ check: 'classification is ' + p.expect.classification, pass: stored === p.expect.classification, got: stored || 'none' });\n    if (p.expect.persona) checks.push({ check: 'persona is ' + p.expect.persona, pass: persona === p.expect.persona, got: persona || 'none' });\n    if (p.expect.channel !== undefined) checks.push({ check: 'routed to #' + p.expect.channel, pass: channel === p.expect.channel, got: channel ? ('#' + channel) : 'no channel' });\n  }\n  const failures = checks.filter(function (c) { return !c.pass; });\n\n  return {\n    lead: p.lead,\n    suite: p.suite,\n    label: p.label,\n    scan_id: p.scan_id,\n    expectations: p.expect ? 'checked' : 'none supplied',\n    verdict: failures.length ? 'FAIL' : 'PASS',\n    answered_to_scanner: answered,\n    stored_after_pipeline: stored,\n    delivery_status: deliveryStatus,\n    changed_after_the_202: Boolean(answered && stored && answered !== stored),\n    persona: persona,\n    score: finalScore,\n    rule_summary: d.rule_summary || null,\n    slack_channel: channel,\n    slack_delivered: slackReceipt ? slackDelivered : null,\n    slack_errors: slackErrors,\n    slack_threaded: Boolean(slack.threaded),\n    hubspot_contact_id: ((raw.crm_context || {}).hubspot_contact_id) || null,\n    company_created: Boolean((raw.crm_context || {}).company_created),\n    headcount: er.employees == null ? 'not established' : (er.employees + ' from ' + String(er.source || '').replace(/_/g, ' ') + ' at ' + Math.round(Number(er.confidence || 0) * 100) + '%'),\n    enrichment_cache_hit: Boolean(raw.enrichment_cache_hit),\n    repeat_scan: Boolean(d.repeat_scan),\n    scan_number: d.scan_count || 1,\n    why: p.notes || null,\n    checks: checks,\n    failures: failures.map(function (f) { return f.check + ' - got ' + f.got; })\n  };\n});\n\nconst failed = results.filter(function (r) { return r.verdict === 'FAIL'; });\nconst sourceLabels = { paste_json_here: 'JSON pasted into the Paste JSON Here node', data_table: 'enabled rows in oak_test_payloads', fallback: 'built-in safety net (the table was empty)' };\nconst src = (plan[0] && plan[0].source) || 'unknown';\nconst slackProblems = results.filter(function (r) { return r.slack_errors.length; });\nreturn [{ json: {\n  ran_at: new Date().toISOString(),\n  scans_came_from: sourceLabels[src] || src,\n  verdict: failed.length ? 'FAIL' : 'PASS',\n  total: results.length,\n  passed: results.length - failed.length,\n  failed: failed.length,\n  reset_first: Boolean(plan[0] && plan[0].reset_before_run),\n  enrichment_reused_from_cache: results.filter(function (r) { return r.enrichment_cache_hit; }).length,\n  slack_alerts_delivered: results.reduce(function (n, r) { return n + Number(r.slack_delivered || 0); }, 0),\n  slack_failures: slackProblems.map(function (r) { return r.label + ': ' + r.slack_errors.join(' | '); }),\n  headline: results.map(function (r) {\n    return r.lead + '. ' + r.label + ' -> ' + (r.stored_after_pipeline || 'no decision') + (r.slack_channel ? ' (#' + r.slack_channel + ')' : '') + ' [' + r.verdict + ']';\n  }),\n  results: results\n} }];"
+      },
+      "id": "581beed5-0701-4b16-826a-4c88ec0dd765",
+      "name": "Score Test Run",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        1296
+      ],
+      "notes": "One PASS/FAIL row per lead: what the webhook answered, what was finally stored, which channel it routed to, and every expectation that did not hold."
+    },
+    {
+      "parameters": {
+        "content": "# 07 - Task Test Harness\n\n**What this workflow does**\nA manually triggered harness that sits outside the lead path: nothing calls it and nothing in the pipeline depends on it. It POSTs booth scans to workflow 01's live production webhook exactly as a badge scanner would, waits for the async tail, then scores each scan against stored state and returns one PASS/FAIL row per scan - so a claim about the pipeline can be checked instead of trusted.\n\n## The assumptions it rests on\n\n1. **A demo that needs a second tool is a demo that breaks.** No Postman, no curl, no editing code to change a test.\n2. **The webhook reply is not the answer.** Workflow 01 answers the scanner in about two seconds and keeps working for another minute. Scoring therefore reads the stored decision from `oak_deliveries`, never the HTTP reply - and reports `changed_after_the_202` when the two disagree.\n3. **A soft failure nobody asserts on is indistinguishable from success.** Slack delivery is a scored check, not a hope. A channel the app has not joined fails the run instead of quietly posting nowhere.\n4. **Tests belong in data, not in code.** Cases live in the `oak_test_payloads` table, so adding one is a row, not an edit.\n\n## How to run it\n\nHit **Execute workflow**. With `Paste JSON Here` left at `\"scans\": []`, the **enabled** rows of `oak_test_payloads` run - the four task leads. To run more without toggling rows one by one, set the n8n variable `OAK_TEST_SUITE`: `all` runs every row, a suite name runs that suite whatever its `enabled` flag, and a name no row carries fails the run instead of falling back to the four. Put one or more scan objects in `scans` for a one-off; anything there takes precedence over the table and the variable.\n\nA scan object reaches the webhook as the task payload **verbatim**: the harness deletes the test-only `expect` key before the POST. Expectations otherwise come from the table, matched by `scan_id`, and an inline `expect` overrides that lookup. Only `reset`, `gap_seconds` and `settle_seconds` are harness controls, and they sit outside `scans`.\n\n## What the reset does\n\nDeletes only rows tagged `oak-live-event-2026`, so the same `scan_id` can be replayed past the duplicate guard and every visitor looks new again. Real event data with any other `event_id` is untouched. `reset: false` is what turns a second scan of the same badge into a returning visitor.\n\n## What comes back\n\nOne row per lead: what the webhook answered versus what was finally stored, tier, persona, score, the rule that fired, the Slack channel and whether Slack accepted the message, the HubSpot contact id, the resolved headcount with its source and confidence, and whether enrichment was reused from cache.\n\n**Expected for the task suite:** Rachel → `tier_1` / `#booth-hot` · Hiroshi → `matched` / `#booth-matched` · David → `out_of_scope` / `#booth-out-of-scope` · Sarah → `competitor_intel` / `#competitive-intel`\n\n## What a PASS asserts\n\nMatching the classification is the last check, not the only one. An accepted scan has to be accepted by the webhook, leave an `oak_deliveries` row, reach `status: complete` inside the settle wait, and - when the stored decision names a channel - have Slack confirm the message, before `classification`, `persona` and `channel` are compared at all. The ledger check is what separates a pipeline still running from one that died after the `202`.\n\nA case whose expectation is `{\"accepted\": false}` inverts the first two: the webhook must reject it and no `oak_deliveries` row may exist. That is the only way a case passes by nothing happening, and it is how the invalid-scan row in the table is scored.\n\n## Where it can fail\n\nTwo scans in one run sharing a `scan_id` is a deliberate hard error - the duplicate guard would drop the second one silently, and a test that silently halves itself is worse than no test. Beyond that, the harness is honest by construction: it scores from stored state, so anything it reports green actually happened.",
+        "height": 1600,
+        "width": 1120,
+        "color": 5
+      },
+      "id": "1c714658-66c9-4e3a-8dde-6b857c2dec1d",
+      "name": "Interview Guide - Test Harness",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -496
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"reset\": true,\n  \"scans\": []\n}",
+        "options": {}
+      },
+      "id": "6dbe5bf7-129a-4764-b39b-a90c3e1245ab",
+      "name": "Paste JSON Here",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        1296
+      ],
+      "notes": "One-off runs. Put one or more scan objects in scans and hit Execute workflow. Leave scans empty to use the enabled rows in oak_test_payloads instead. An optional expect on any scan gives PASS/FAIL."
+    },
+    {
+      "id": "c69e6350-1c65-4f9e-9eaa-2b210311112a",
+      "name": "Build Test Plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        1296
+      ],
+      "parameters": {
+        "jsCode": "/* ===== Defaults. Override reset, gap_seconds, settle_seconds in the pasted JSON. ===== */\n// n8n variables win when set. Unset, WEBHOOK_URL keeps this instance and RUN_SUITE keeps the enabled rows.\nconst WEBHOOK_URL    = String($vars.OAK_BOOTH_WEBHOOK_URL || '').trim() || 'https://oak-noam.app.n8n.cloud/webhook/oak-event/scan';\nconst RUN_SUITE      = String($vars.OAK_TEST_SUITE || '').trim() || 'enabled';   // 'enabled' | 'all' | a suite name\nconst GAP_MS         = 15000;\nconst SETTLE_SECONDS = 90;\nconst TEST_EVENT_ID  = 'oak-live-event-2026';\nconst RESET_ON_MANUAL_RUN = true;\n/* ==================================================================================== */\n\nconst FALLBACK = [\n  { label: 'Lead 1 - The Ideal Target',\n    payload: { scan_id: 'evt_9901', first_name: 'Rachel', last_name: 'Green', email: 'rachel.green@apex-finance.com', job_title: 'Chief Information Security Officer', company_name: 'Apex Financial Services', scanned_at: '2026-07-19T11:00:00Z', notes_from_booth: 'Currently using SailPoint, renewal coming up in 5 months. Complaining about manual access reviews.' } },\n  { label: 'Lead 2 - The Technical Practitioner',\n    payload: { scan_id: 'evt_9902', first_name: 'Hiroshi', last_name: 'Tanaka', email: 'hiroshi.t@cloudscale-tech.io', job_title: 'Lead Identity Infrastructure Architect', company_name: 'CloudScale Technologies', scanned_at: '2026-07-19T11:05:00Z', notes_from_booth: 'Struggling with non-human identities and AI agent sprawl. Built a homegrown tool to track API keys.' } },\n  { label: 'Lead 3 - The Bad Fit (Too Small)',\n    payload: { scan_id: 'evt_9903', first_name: 'David', last_name: 'Miller', email: 'david@boutiquesecurity.co.il', job_title: 'Head of IT', company_name: 'Boutique Security Ltd', scanned_at: '2026-07-19T11:10:00Z', notes_from_booth: 'SaaS-only shop, 80 employees. Looking for a basic access tool.' } },\n  { label: 'Lead 4 - The Competitor / Intel Scan',\n    payload: { scan_id: 'evt_9904', first_name: 'Sarah', last_name: 'Connor', email: 's.connor@veza.com', job_title: 'Director of Product Management', company_name: 'Veza Technologies', scanned_at: '2026-07-19T11:15:00Z', notes_from_booth: 'Asked a lot of detailed questions about our ConnectAny architecture.' } }\n];\n\n// Every table row, enabled or not. RUN_SUITE picks which rows supply the scans; all rows supply expectations.\nconst allRows = $input.all().map(function (i) { return i.json; })\n  .filter(function (r) { return r && r.payload_json; })\n  .sort(function (a, b) { return Number(a.sort_order || 0) - Number(b.sort_order || 0); });\n\nfunction parseRow(r, i) {\n  const at = 'Row \"' + (r.label || (i + 1)) + '\"';\n  let payload;\n  try { payload = JSON.parse(r.payload_json); }\n  catch (e) { throw new Error(at + ' has invalid payload_json: ' + e.message); }\n  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error(at + ' payload_json must be a single JSON object.');\n  if (!payload.scan_id) throw new Error(at + ' has no scan_id in payload_json.');\n  let expect = null;\n  if (r.expect_json) {\n    try { const e2 = JSON.parse(r.expect_json); if (e2 && typeof e2 === 'object' && Object.keys(e2).length) expect = e2; }\n    catch (e) { throw new Error(at + ' has invalid expect_json: ' + e.message); }\n  }\n  return { payload: payload, expect: expect, row: r };\n}\n\nconst parsedRows = allRows.map(parseRow);\nconst expectByScan = {};\nconst labelByScan = {};\nconst notesByScan = {};\nfor (const p of parsedRows) {\n  const id = String(p.payload.scan_id);\n  if (p.expect) expectByScan[id] = p.expect;\n  if (p.row.label) labelByScan[id] = p.row.label;\n  if (p.row.notes) notesByScan[id] = p.row.notes;\n}\n\n// Pasted scans are the task payload verbatim. Expectations are looked up by scan_id.\nfunction normalize(list, where) {\n  return list.map(function (p, i) {\n    const at = where + ' item ' + (i + 1);\n    if (!p || typeof p !== 'object' || Array.isArray(p)) throw new Error(at + ' is not a JSON object.');\n    if (!p.scan_id) throw new Error(at + ' has no scan_id. Intake uses it to block webhook replays.');\n    const id = String(p.scan_id);\n    const nm = [p.first_name, p.last_name].filter(Boolean).join(' ').trim();\n    const body = Object.assign({}, p);\n    const inline = (p.expect && typeof p.expect === 'object' && Object.keys(p.expect).length) ? p.expect : null;\n    delete body.expect;\n    return { suite: where, label: labelByScan[id] || nm || id, expect: inline || expectByScan[id] || null, payload: body, notes: notesByScan[id] || null };\n  });\n}\n\nlet quick = {};\ntry { quick = $('Paste JSON Here').first().json || {}; } catch (e) { quick = {}; }\nconst quickScans = Array.isArray(quick.scans) ? quick.scans : (Array.isArray(quick) ? quick : []);\nconst quickReset = (quick && typeof quick.reset === 'boolean') ? quick.reset : null;\nconst gapMs = (quick && Number(quick.gap_seconds) > 0) ? Math.round(Number(quick.gap_seconds) * 1000) : GAP_MS;\nconst settle = (quick && Number(quick.settle_seconds) > 0) ? Math.round(Number(quick.settle_seconds)) : SETTLE_SECONDS;\nconst reset = (quickReset !== null) ? quickReset : RESET_ON_MANUAL_RUN;\n\nlet rows;\nlet source;\n\nif (quickScans.length) {\n  source = 'paste_json_here';\n  rows = normalize(quickScans, 'paste_json_here');\n} else {\n  // There is no bulk toggle for enabled, so RUN_SUITE is the switch: 'enabled' is the default run,\n  // 'all' ignores enabled, and any other value runs the rows whose suite equals it.\n  const selected = parsedRows.filter(function (p) {\n    if (RUN_SUITE === 'enabled') return p.row.enabled === true;\n    if (RUN_SUITE === 'all') return true;\n    return String(p.row.suite || 'default') === RUN_SUITE;\n  });\n  // A mistyped suite must not quietly fall back to the four task leads and report green.\n  if (!selected.length && RUN_SUITE !== 'enabled' && RUN_SUITE !== 'all') {\n    const suites = parsedRows.map(function (p) { return String(p.row.suite || 'default'); }).filter(function (s, i, a) { return a.indexOf(s) === i; });\n    throw new Error('OAK_TEST_SUITE is \"' + RUN_SUITE + '\" but no oak_test_payloads row has that suite. Use enabled, all, or one of: ' + (suites.join(', ') || 'none') + '.');\n  }\n  if (selected.length) {\n    source = RUN_SUITE === 'enabled' ? 'data_table' : ('oak_test_payloads, OAK_TEST_SUITE=' + RUN_SUITE);\n    rows = selected.map(function (p) {\n      const nm = [p.payload.first_name, p.payload.last_name].filter(Boolean).join(' ').trim();\n      return { suite: p.row.suite || 'default', label: p.row.label || nm || String(p.payload.scan_id), expect: p.expect, payload: p.payload, notes: p.row.notes || null };\n    });\n  } else {\n    source = 'fallback';\n    rows = FALLBACK.map(function (r) {\n      const id = String(r.payload.scan_id);\n      return { suite: 'task', label: r.label, expect: expectByScan[id] || null, payload: r.payload, notes: null };\n    });\n  }\n}\n\nconst seen = {};\nfor (const r of rows) {\n  if (seen[r.payload.scan_id]) throw new Error('Two scans in this run share scan_id \"' + r.payload.scan_id + '\". The replay guard would drop the second one.');\n  seen[r.payload.scan_id] = true;\n}\n\nreturn rows.map(function (r, i) {\n  return { json: {\n    lead: i + 1,\n    suite: r.suite,\n    label: r.label,\n    notes: r.notes,\n    expect: r.expect,\n    payload: r.payload,\n    scan_id: String(r.payload.scan_id),\n    email: r.payload.email || null,\n    source: source,\n    webhook_url: WEBHOOK_URL,\n    reset_before_run: reset,\n    reset_filter: reset ? TEST_EVENT_ID : '__no_reset__',\n    test_event_id: TEST_EVENT_ID,\n    gap_ms: gapMs,\n    settle_seconds: settle\n  } };\n});"
+      },
+      "notes": "Turns table rows, or pasted scans, into one plan item per scan with its expectation looked up by scan_id. The OAK_TEST_SUITE variable picks the rows: unset runs the enabled ones, all runs every row, any other value runs that suite and fails if no row has it; the four payloads in code are only a fallback when no row is enabled. OAK_BOOTH_WEBHOOK_URL sets the webhook target and defaults to this instance when unset."
+    },
+    {
+      "id": "37c538d4-3377-4a43-83f5-b6e810145d52",
+      "name": "Load Test Payloads",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        1296
+      ],
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "oak_test_payloads"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "condition": "isNotEmpty",
+              "keyName": "payload_json"
+            }
+          ]
+        },
+        "matchType": "allConditions",
+        "operation": "get",
+        "returnAll": true
+      },
+      "notes": "Loads every row that has a payload_json, not only the enabled ones: the rows OAK_TEST_SUITE selects (the enabled ones by default) supply the scans, all rows supply expectations by scan_id. Add, edit or toggle tests in the n8n Data Tables UI; nothing here needs a code change.",
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    }
+  ],
+  "connections": {
+    "Clear Test Event Scans": {
+      "main": [
+        [
+          {
+            "node": "Clear Test Event Encounters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Test Event Encounters": {
+      "main": [
+        [
+          {
+            "node": "Resume Test Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume Test Plan": {
+      "main": [
+        [
+          {
+            "node": "POST Booth Scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST Booth Scan": {
+      "main": [
+        [
+          {
+            "node": "Wait for Pipelines to Finish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Pipelines to Finish": {
+      "main": [
+        [
+          {
+            "node": "Read Final Decisions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Final Decisions": {
+      "main": [
+        [
+          {
+            "node": "Score Test Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Task Test Suite": {
+      "main": [
+        [
+          {
+            "node": "Paste JSON Here",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Test Plan": {
+      "main": [
+        [
+          {
+            "node": "Clear Test Event Scans",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paste JSON Here": {
+      "main": [
+        [
+          {
+            "node": "Load Test Payloads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Test Payloads": {
+      "main": [
+        [
+          {
+            "node": "Build Test Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "binaryMode": "separate",
+    "errorWorkflow": "N4JW7CO6qjdLi6mq"
+  },
+  "pinData": {},
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  },
+  "tags": [],
+  "active": true,
+  "versionId": "6d8a6cc5-df17-46ba-95c9-9fee127583cf",
+  "id": "nyht2byorvoxFX2u"
+}
