@@ -439,6 +439,7 @@ label.check input { width: 16px; height: 16px; flex: none; accent-color: var(--g
 .trace-cell { text-align: right; width: 1%; white-space: nowrap; }
 .competitor-note { margin: .8rem 0 0; font-size: .72rem; line-height: 1.45; }
 .small-note { font-size: .72rem; margin-top: -.4rem; }
+.scenario-card .pill, .map-heading .pill { white-space: normal; }
 .pill.example-pill { color: var(--muted); border: 1px dashed var(--line-strong); background: transparent; }
 .name-cell .example-pill { display: inline-flex; margin-left: .35rem; padding: .1rem .35rem; font-style: normal; font-size: .56rem; vertical-align: 1px; }
 .example-box { margin: 1rem 0 0; }
@@ -1697,7 +1698,8 @@ window.OAK_GRAPH = {
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#039;');
   const pretty = (value) => JSON.stringify(value, null, 2);
-  const label = (value) => String(value || '').replaceAll('_', ' ').replace(/\b\w/g, (x) => x.toUpperCase());
+  const CLASS_LABEL = { tier_1: 'Tier 1', matched: 'Matched', needs_review: 'Needs review', competitor_intel: 'Competitor intel', out_of_scope: 'Out of scope' };
+  const label = (value) => CLASS_LABEL[value] || String(value || '').replaceAll('_', ' ').replace(/\b\w/g, (x) => x.toUpperCase());
   const date = (value) => {
     if (!value) return '-';
     const d = new Date(value);
@@ -3432,7 +3434,7 @@ window.OAK_GRAPH = {
 
   function renderScenarios() {
     main.innerHTML = `
-      <section class="page-header"><div><p class="eyebrow">End-to-end scenarios</p><h1>The same pipeline, ${journey.scenarios.length} different visitors.</h1>
+      <section class="page-header"><div><p class="eyebrow">End-to-end scenarios</p><h1>The same pipeline, ${['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'][journey.scenarios.length] || journey.scenarios.length} different visitors.</h1>
         <p>Each walkthrough follows one badge scan through every stage, shows the Slack card it produces, and states what a naive design would have done instead. Every one of them also plays on the system map.</p></div>
         <div class="header-actions"><a class="button secondary" href="#/flow">Review the stages</a><a class="button" href="#/explorer">Open the map</a></div></section>
       <section class="scenario-grid">${journey.scenarios
