@@ -125,7 +125,7 @@ Every row of the `oak_test_payloads` Data Table (`G6sBwk6wTFKmidiZ`), grouped by
 
 | # | scan_id | Case | What it proves | Expected outcome |
 |---|---|---|---|---|
-| 5 | `evt_9905` | Rachel, second scan - new notes | A second scan of Lead 1 exercises the returning-visitor thread reply and the last-time notes block. **Likely FAIL against deployed logic: urgency is read only from the current scan's notes, and these notes carry no trigger, so 01 computes matched, not tier_1.** | `tier_1` / #booth-hot |
+| 5 | `evt_9905` | Rachel, second scan - new notes | A second scan of Lead 1 exercises the returning-visitor thread reply and the last-time notes block. Urgency she mentioned on her first visit is carried forward, so she stays Tier 1 even though these notes carry no trigger. | `tier_1` / #booth-hot |
 | 60 | `evt_9960` | Pair A, first scan | Pair A first visit: a CISO with no trigger is matched and creates the encounter. | `matched` / persona `ciso` / #booth-matched |
 | 61 | `evt_9961` | Pair A, second scan with new notes escalates | Pair A second visit with a renewal in the new notes escalates the returning visitor to Tier 1. | `tier_1` / persona `ciso` / #booth-hot |
 | 62 | `evt_9962` | Pair B, first scan | Pair B first visit: an IAM manager with no trigger is matched. | `matched` / persona `iam` / #booth-matched |
@@ -168,5 +168,5 @@ Every row of the `oak_test_payloads` Data Table (`G6sBwk6wTFKmidiZ`), grouped by
 
 Found by running the deployed `Normalize Scan`, `Evaluate ICP Policy`, `Build Visitor Context`, 04 `Build Enrichment Result` and `Enforce Final Deterministic Gates` code locally against every row with enrichment and AI stubbed out. The 43 new rows all agree with the deployed code. Two older rows do not:
 
-- **Row 5 `evt_9905`** expects `tier_1` / #booth-hot, but its notes carry no Tier 1 trigger and 01 reads urgency only from the current scan. Expect `matched` / #booth-matched. If a rep has pressed Not a fit on Rachel and reset is off, the stored override adds a further twist: the gate then sends it to #booth-review as a conflict.
+- **Row 5 `evt_9905`** now passes: 01 carries a returning visitor's earlier urgency forward, so Rachel's second scan stays `tier_1` / #booth-hot. A rep's Not a fit on Rachel still wins if reset is off.
 - **Row 17 `evt_9917`** now passes: the final gate was fixed to exempt `competitor_status: possible` from the under-500 size rule, matching 04.
