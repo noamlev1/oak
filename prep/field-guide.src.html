@@ -1,0 +1,1526 @@
+<title>Oak Workflow Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400;1,6..72,500&display=swap">
+<style>
+:root {
+  --bg: #edf0f3;
+  --band: #e4e8ed;
+  --surface: #ffffff;
+  --surface-2: #f5f7f9;
+  --ink: #111a24;
+  --ink-2: #435060;
+  --ink-3: #6b7886;
+  --line: #d6dde5;
+  --line-strong: #aeb9c5;
+  --accent: #2a47ab;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2e8f8;
+  --cue: #fbe7a1;
+  --cue-ink: #2b2206;
+  --cue-label: #8a6a00;
+  --code-bg: #121b26;
+  --code-ink: #dbe4ee;
+  --bar-bg: rgba(237, 240, 243, 0.9);
+  --scrim: rgba(17, 26, 36, 0.42);
+  --fail: #b8372c;
+  --ok: #1f7a4a;
+  --l-intake: #2463c9;
+  --l-enrich: #7445c2;
+  --l-write: #0d8069;
+  --l-rep: #b75a14;
+  --l-ops: #5a6778;
+
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --f-disp: "IBM Plex Sans Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --f-voice: "Newsreader", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+
+  --bar-h: 58px;
+  --rail-w: 50px;
+  --gutter: 20px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1218;
+    --band: #111922;
+    --surface: #141d27;
+    --surface-2: #19232e;
+    --ink: #e3e9ef;
+    --ink-2: #a9b5c2;
+    --ink-3: #7c8998;
+    --line: #243140;
+    --line-strong: #3a4a5b;
+    --accent: #8ea8ff;
+    --accent-ink: #0c1218;
+    --accent-soft: #1b2645;
+    --cue: #4a3c0c;
+    --cue-ink: #fbeebb;
+    --cue-label: #e0bb4a;
+    --code-bg: #090e13;
+    --code-ink: #d6dfe8;
+    --bar-bg: rgba(12, 18, 24, 0.88);
+    --scrim: rgba(0, 0, 0, 0.6);
+    --fail: #f07b6f;
+    --ok: #5cc98d;
+    --l-intake: #6d9ef2;
+    --l-enrich: #ab8bea;
+    --l-write: #45c2a4;
+    --l-rep: #eb944f;
+    --l-ops: #97a5b5;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1218;
+  --band: #111922;
+  --surface: #141d27;
+  --surface-2: #19232e;
+  --ink: #e3e9ef;
+  --ink-2: #a9b5c2;
+  --ink-3: #7c8998;
+  --line: #243140;
+  --line-strong: #3a4a5b;
+  --accent: #8ea8ff;
+  --accent-ink: #0c1218;
+  --accent-soft: #1b2645;
+  --cue: #4a3c0c;
+  --cue-ink: #fbeebb;
+  --cue-label: #e0bb4a;
+  --code-bg: #090e13;
+  --code-ink: #d6dfe8;
+  --bar-bg: rgba(12, 18, 24, 0.88);
+  --scrim: rgba(0, 0, 0, 0.6);
+  --fail: #f07b6f;
+  --ok: #5cc98d;
+  --l-intake: #6d9ef2;
+  --l-enrich: #ab8bea;
+  --l-write: #45c2a4;
+  --l-rep: #eb944f;
+  --l-ops: #97a5b5;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+p { margin: 0; }
+a { color: var(--accent); }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.tnum { font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-3); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- top bar ---------- */
+.bar {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 20;
+  background: var(--bar-bg);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.bar-in {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+  min-height: var(--bar-h);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  color: var(--ink);
+  font-family: var(--f-disp);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  min-height: 44px;
+}
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+.brand-sub { font-weight: 500; color: var(--ink-2); }
+.pick {
+  flex: 0 1 280px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 32px 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 15px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%), linear-gradient(135deg, var(--ink-3) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 17px, calc(100% - 12px) 17px;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+.spacer { flex: 1; }
+.tbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  min-width: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 14.5px;
+}
+.tbtn svg { width: 17px; height: 17px; flex: none; }
+.tbtn:hover { border-color: var(--ink-3); }
+.kbd {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0 5px;
+}
+.switch {
+  width: 30px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--line-strong);
+  position: relative;
+  flex: none;
+  transition: background 0.15s;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: transform 0.15s;
+}
+.tbtn[aria-pressed="true"] { border-color: var(--accent); }
+.tbtn[aria-pressed="true"] .switch { background: var(--accent); }
+.tbtn[aria-pressed="true"] .switch::after { transform: translateX(12px); }
+
+/* ---------- page shell ---------- */
+.wrap {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+  padding-block: 28px 96px;
+}
+.shell { display: block; }
+.side { display: none; }
+@media (min-width: 1100px) {
+  .shell.has-side {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 800px);
+    gap: 48px;
+    justify-content: center;
+  }
+  .shell.has-side .side { display: block; }
+}
+.side-in {
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + var(--bar-h) + 20px);
+  max-height: calc(100vh - var(--bar-h) - 40px);
+  overflow-y: auto;
+  padding-right: 6px;
+  font-size: 13.5px;
+}
+.side-h {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 18px 0 6px;
+  font-weight: 600;
+}
+.side-h:first-child { margin-top: 0; }
+.side ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.side a {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--ink-2);
+  text-decoration: none;
+  line-height: 1.35;
+}
+.side a:hover { background: var(--surface); color: var(--ink); }
+.side a.cur { background: var(--accent-soft); color: var(--ink); }
+.side a .n { font-family: var(--f-mono); font-size: 11.5px; color: var(--ink-3); padding-top: 1px; }
+
+/* ---------- shared bits ---------- */
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.lane-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--lane, var(--ink-3));
+  flex: none;
+}
+[data-lane="intake"] { --lane: var(--l-intake); }
+[data-lane="enrich"] { --lane: var(--l-enrich); }
+[data-lane="write"] { --lane: var(--l-write); }
+[data-lane="rep"] { --lane: var(--l-rep); }
+[data-lane="ops"] { --lane: var(--l-ops); }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 2px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  text-decoration: none;
+}
+a.chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip .cid { font-family: var(--f-mono); font-weight: 600; font-size: 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.voice {
+  font-family: var(--f-voice);
+  font-style: italic;
+}
+.hl {
+  background: linear-gradient(to bottom, transparent 0.12em, var(--cue) 0.12em, var(--cue) calc(100% - 0.06em), transparent calc(100% - 0.06em));
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  color: var(--cue-ink);
+  padding: 0 0.18em;
+}
+
+/* ---------- map view ---------- */
+.hero { max-width: 64ch; display: grid; gap: 12px; margin-bottom: 26px; }
+.hero h1 {
+  font-family: var(--f-disp);
+  font-weight: 700;
+  font-size: clamp(30px, 5vw, 44px);
+  line-height: 1.04;
+  letter-spacing: -0.005em;
+}
+.hero p { color: var(--ink-2); font-size: 17px; }
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.status b { font-family: var(--f-mono); font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.mapbox {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.mapbox svg { display: block; width: 100%; height: auto; }
+@media (max-width: 759px) { .mapbox, .legend { display: none; } }
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-bottom: 36px;
+}
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend svg { width: 26px; height: 12px; }
+
+.band { fill: var(--band); }
+.lane-t { font: 600 11px var(--f-body); letter-spacing: 0.08em; fill: var(--ink-2); text-transform: uppercase; }
+.mnode { cursor: pointer; }
+.mnode .mbox { fill: var(--surface); stroke: var(--line-strong); stroke-width: 1.2; }
+.mnode:hover .mbox, .mnode:focus-visible .mbox { stroke: var(--accent); stroke-width: 2; }
+.mnode:focus-visible { outline: none; }
+.mnode.missing .mbox { stroke-dasharray: 4 3; fill: var(--surface-2); }
+.mnode.missing .mname { fill: var(--ink-3); }
+.mid { font: 600 13px var(--f-mono); }
+.mname { font: 500 12.5px var(--f-body); fill: var(--ink); }
+.mcount { font: 400 11px var(--f-mono); fill: var(--ink-3); text-anchor: end; }
+.ext .ebox { fill: var(--bg); stroke: var(--ink-3); stroke-dasharray: 3 3; }
+.ext text { font: 500 12px var(--f-body); fill: var(--ink-2); text-anchor: middle; }
+.edge { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
+.edge.ext { stroke-dasharray: 5 4; }
+.ahead { fill: var(--ink-3); }
+.elabel { font: 400 11.5px var(--f-body); fill: var(--ink-2); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.ebadge circle { fill: var(--accent); }
+.ebadge text { font: 600 11px var(--f-mono); fill: var(--accent-ink); text-anchor: middle; }
+.faildot { fill: var(--fail); stroke: var(--surface); stroke-width: 2; }
+svg.focus .edge, svg.focus .ebadge, svg.focus .elabel { opacity: 0.22; }
+svg.focus .edge.hot, svg.focus .ebadge.hot, svg.focus .elabel.hot { opacity: 1; }
+svg.focus .edge.hot { stroke: var(--accent); stroke-width: 2; }
+
+.lanes { display: grid; gap: 30px; }
+.lanes h2 {
+  font-family: var(--f-disp);
+  font-weight: 600;
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+.lane-h { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.lane-h .lane-dot { width: 11px; height: 11px; }
+.wf-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+@media (min-width: 900px) { .wf-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.wf-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  text-decoration: none;
+  height: 100%;
+}
+.wf-row:hover { border-color: var(--accent); }
+.wf-row.missing { background: var(--surface-2); border-style: dashed; }
+.wf-id {
+  font-family: var(--f-mono);
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.2;
+  color: var(--lane);
+}
+.wf-main { display: grid; gap: 4px; min-width: 0; }
+.wf-name { font-weight: 600; font-size: 16.5px; line-height: 1.3; }
+.wf-name small { font-weight: 400; font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); margin-left: 6px; }
+.wf-blurb { color: var(--ink-2); font-size: 14.5px; }
+.wf-edges { display: grid; gap: 2px; font-size: 13.5px; color: var(--ink-2); }
+.wf-edges b { font-weight: 600; color: var(--ink-3); font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; margin-right: 6px; }
+
+/* ---------- workflow view ---------- */
+.crumb { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-3); margin-bottom: 14px; }
+.crumb a { color: var(--ink-2); text-decoration: none; min-height: 32px; display: inline-flex; align-items: center; }
+.crumb a:hover { color: var(--accent); }
+.wf-title { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+.wf-title .big-id {
+  font-family: var(--f-mono);
+  font-weight: 600;
+  font-size: clamp(34px, 6vw, 48px);
+  line-height: 1;
+  color: var(--lane);
+}
+.wf-title h1 {
+  font-family: var(--f-disp);
+  font-weight: 700;
+  font-size: clamp(28px, 4.6vw, 40px);
+  line-height: 1.05;
+}
+.canvas-name { font-family: var(--f-mono); font-size: 13px; color: var(--ink-3); margin-bottom: 22px; overflow-wrap: anywhere; }
+.breath { margin-bottom: 26px; max-width: 66ch; }
+.breath .k { display: block; margin-bottom: 8px; color: var(--cue-label); }
+.breath p { font-size: clamp(20px, 2.6vw, 24px); line-height: 1.45; }
+.facts {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px 18px;
+  margin: 0 0 40px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+}
+.facts dt { font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding-top: 3px; }
+.facts dd { margin: 0; color: var(--ink); max-width: 66ch; }
+@media (max-width: 560px) {
+  .facts { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .facts dd { margin-bottom: 10px; }
+}
+.talk-note { display: none; }
+.sec-h {
+  font-family: var(--f-disp);
+  font-weight: 600;
+  font-size: 26px;
+  line-height: 1.15;
+  margin: 0 0 18px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sec-h small { font-family: var(--f-body); font-weight: 400; font-size: 14px; color: var(--ink-3); }
+
+/* rail */
+.rail { position: relative; }
+.rail::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--rail-w) / 2 - 1px);
+  top: 8px;
+  bottom: 24px;
+  width: 2px;
+  background: var(--line-strong);
+}
+.group { position: relative; margin-bottom: 10px; }
+.g-head {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  padding: 10px 0 14px;
+}
+.g-mark {
+  justify-self: center;
+  margin-top: 5px;
+  width: 14px;
+  height: 14px;
+  background: var(--bg);
+  border: 2px solid var(--ink-2);
+  transform: rotate(45deg);
+  position: relative;
+  z-index: 1;
+}
+.g-name { font-family: var(--f-disp); font-weight: 600; font-size: 20px; line-height: 1.25; }
+.g-name .g-range { font-family: var(--f-mono); font-weight: 400; font-size: 12.5px; color: var(--ink-3); margin-left: 8px; }
+.g-purpose { color: var(--ink-2); font-size: 15px; margin-top: 2px; max-width: 64ch; }
+.node {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  margin-bottom: 14px;
+  scroll-margin-top: calc(env(safe-area-inset-top, 0px) + var(--bar-h) + 14px);
+}
+.step {
+  justify-self: center;
+  position: relative;
+  z-index: 1;
+  min-width: 34px;
+  height: 28px;
+  margin-top: 14px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  font-family: var(--f-mono);
+  font-weight: 600;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 5px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.step.fork { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.card {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 16px 18px 16px;
+  display: grid;
+  gap: 12px;
+  transition: box-shadow 0.25s, border-color 0.25s;
+}
+.node.flash .card { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.n-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.n-name { font-family: var(--f-disp); font-weight: 600; font-size: 20px; line-height: 1.25; overflow-wrap: anywhere; }
+.n-type {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+.n-body { display: grid; gap: 12px; }
+.what { font-size: 15.5px; max-width: 66ch; }
+.rows {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 10px 14px;
+  font-size: 15px;
+}
+.rows > dt { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding-top: 3px; }
+.rows > dd { margin: 0; min-width: 0; color: var(--ink-2); }
+.rows > dd.dec { color: var(--ink); font-weight: 500; }
+@media (max-width: 560px) {
+  .rows { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+  .rows > dd { margin-bottom: 9px; }
+}
+.io { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: start; }
+.io > span:not(.io-a) { background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 5px 9px; color: var(--ink); font-size: 14px; }
+.io-a { color: var(--ink-3); padding-top: 5px; }
+@media (max-width: 560px) {
+  .io { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .io-a { padding: 0 0 0 10px; transform: rotate(90deg); justify-self: start; }
+}
+.code {
+  overflow-x: auto;
+  background: var(--code-bg);
+  border-radius: 5px;
+  -webkit-overflow-scrolling: touch;
+}
+.code pre {
+  margin: 0;
+  padding: 11px 13px;
+  font-family: var(--f-mono);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--code-ink);
+  white-space: pre;
+  width: max-content;
+  min-width: 100%;
+}
+.forks { list-style: none; margin: 0; padding: 0 0 0 4px; display: grid; }
+.forks li { position: relative; padding: 2px 0 10px 24px; }
+.forks li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-left: 2px solid var(--ink-3);
+}
+.forks li:last-child::before { bottom: auto; height: 17px; }
+.forks li::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15px;
+  width: 17px;
+  border-top: 2px solid var(--ink-3);
+}
+.fork-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.blabel {
+  font-family: var(--f-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+}
+.blabel.t { color: var(--ok); border-color: var(--ok); }
+.blabel.f { color: var(--fail); border-color: var(--fail); }
+.to {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 2px 10px 2px 4px;
+  border-radius: 5px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+.to .to-n {
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  min-width: 24px;
+  text-align: center;
+  padding: 1px 3px;
+  color: var(--ink-2);
+}
+a.to:hover { border-color: var(--accent); color: var(--accent); }
+span.to { border-style: dashed; padding-left: 10px; color: var(--ink-2); }
+.bmeaning { color: var(--ink-2); font-size: 14.5px; margin-top: 4px; }
+.nexts { display: flex; flex-wrap: wrap; gap: 6px; }
+.say {
+  border-top: 1px dashed var(--line-strong);
+  padding-top: 12px;
+  display: grid;
+  gap: 4px;
+}
+.say .k, .breath .k { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 600; color: var(--cue-label); }
+.say p { font-size: 19px; line-height: 1.45; max-width: 64ch; }
+
+/* talk-track mode */
+html.talk .n-body, html.talk .n-type, html.talk .g-purpose, html.talk .facts { display: none; }
+html.talk .card { gap: 6px; padding-block: 12px; }
+html.talk .say { border-top: 0; padding-top: 0; }
+html.talk .say .k { display: none; }
+html.talk .step { margin-top: 10px; }
+html.talk .talk-note {
+  display: block;
+  margin: -8px 0 28px;
+  padding: 10px 14px;
+  background: var(--accent-soft);
+  border-radius: 6px;
+  font-size: 15px;
+  max-width: 66ch;
+}
+
+/* decisions + questions */
+.after { margin-top: 48px; display: grid; gap: 48px; }
+.decs { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; counter-reset: d; }
+.decs li {
+  counter-increment: d;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 4px 10px;
+  max-width: 70ch;
+}
+.decs li::before {
+  content: counter(d);
+  font-family: var(--f-mono);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink-3);
+  padding-top: 2px;
+}
+.decs b { font-weight: 600; display: block; font-size: 16.5px; }
+.decs p { color: var(--ink-2); grid-column: 2; }
+.q-tools { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin: -6px 0 14px; color: var(--ink-3); font-size: 14px; }
+.qa-list { display: grid; gap: 8px; }
+.qa { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.qa summary {
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  min-height: 52px;
+  font-weight: 500;
+  font-size: 16px;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary .rev { font-size: 13px; color: var(--accent); white-space: nowrap; font-weight: 500; }
+.qa[open] summary .rev::after { content: "Hide"; }
+.qa:not([open]) summary .rev::after { content: "Show answer"; }
+.qa .ans { padding: 0 16px 16px; color: var(--ink-2); max-width: 70ch; border-top: 1px solid var(--line); padding-top: 12px; margin: 0 16px 0 16px; padding-inline: 0; }
+.linkbtn { background: none; border: 0; color: var(--accent); cursor: pointer; padding: 6px 0; min-height: 40px; font-size: 14px; }
+.pager { display: flex; justify-content: space-between; gap: 12px; margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); }
+.pager a { display: grid; gap: 2px; text-decoration: none; color: var(--ink); padding: 8px 0; min-height: 44px; }
+.pager a small { color: var(--ink-3); font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase; }
+.pager a:last-child { text-align: right; }
+.stub {
+  background: var(--surface-2);
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  padding: 18px;
+  color: var(--ink-2);
+  max-width: 66ch;
+}
+.stub code { font-family: var(--f-mono); font-size: 13.5px; }
+
+/* ---------- search ---------- */
+.scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 40; }
+.search {
+  position: fixed;
+  z-index: 41;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(680px, calc(100% - 20px));
+  max-height: calc(100% - 20px - env(safe-area-inset-top, 0px));
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.search-box { display: flex; gap: 8px; padding: 10px; border-bottom: 1px solid var(--line); }
+.search-box input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 16px;
+}
+.search-meta { padding: 8px 14px; font-size: 13px; color: var(--ink-3); }
+.results { list-style: none; margin: 0; padding: 0 6px 8px; overflow-y: auto; }
+.results a {
+  display: grid;
+  gap: 2px;
+  padding: 10px 10px;
+  border-radius: 5px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.results a[aria-selected="true"], .results a:hover { background: var(--accent-soft); }
+.r-top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.r-where { font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.r-name { font-weight: 600; }
+.r-snip { font-size: 14px; color: var(--ink-2); }
+.r-snip i { font-style: normal; font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3); margin-right: 6px; }
+mark { background: var(--cue); color: var(--cue-ink); border-radius: 2px; padding: 0 1px; }
+
+/* ---------- phone ---------- */
+@media (max-width: 640px) {
+  :root { --rail-w: 38px; --gutter: 16px; }
+  .brand-sub, .kbd, .tbtn .lbl-long { display: none; }
+  .bar-in { gap: 8px; }
+  .pick { flex: 1 1 auto; }
+  .tbtn { padding: 0 10px; }
+  .card { padding: 14px 14px; }
+  .n-name { font-size: 18.5px; }
+  .say p { font-size: 18px; }
+  .step { min-width: 30px; font-size: 12px; }
+  .wrap { padding-block: 20px 80px; }
+}
+@media (max-width: 380px) {
+  .tbtn .lbl-short { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+</style>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="#map" data-go="map" aria-label="System map"><span class="brand-mark">Oak</span><span class="brand-sub">Field Guide</span></a>
+    <label class="visually-hidden" for="wf-pick">Open a workflow</label>
+    <select id="wf-pick" class="pick"></select>
+    <span class="spacer"></span>
+    <button id="open-search" class="tbtn" type="button" aria-label="Search nodes">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M13 13l4.5 4.5" stroke-linecap="round"/></svg>
+      <span class="lbl-long">Search</span><span class="kbd">/</span>
+    </button>
+    <button id="talk" class="tbtn" type="button" aria-pressed="false" title="Collapse every node to its name and the line to say (T)">
+      <span class="switch" aria-hidden="true"></span><span class="lbl-short">Talk</span><span class="lbl-long">&nbsp;track</span>
+    </button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="shell" class="shell">
+    <aside class="side" id="side" aria-label="Steps in this workflow"></aside>
+    <main id="main"></main>
+  </div>
+</div>
+
+<div id="scrim" class="scrim" hidden></div>
+<div id="search" class="search" role="dialog" aria-modal="true" aria-label="Search every node" hidden>
+  <div class="search-box">
+    <label class="visually-hidden" for="q">Search</label>
+    <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search names, what, why, say it">
+    <button id="close-search" class="tbtn" type="button">Close</button>
+  </div>
+  <p id="q-meta" class="search-meta"></p>
+  <div id="q-results" class="results" role="listbox" aria-label="Results"></div>
+</div>
+
+<script>
+/*__GUIDE_DATA__*/
+</script>
+<script>
+(function () {
+  "use strict";
+
+  var GUIDE = Array.isArray(window.GUIDE) ? window.GUIDE : [];
+  var ORDER = ["00", "01", "02", "02A", "03", "04", "05", "06", "07", "08", "99"];
+  var LANES = [
+    { key: "intake", label: "Intake" },
+    { key: "enrich", label: "Enrich and reason" },
+    { key: "write", label: "Write and notify" },
+    { key: "rep", label: "Rep actions" },
+    { key: "ops", label: "Operations" }
+  ];
+  var LANE_LABEL = {};
+  LANES.forEach(function (l) { LANE_LABEL[l.key] = l.label; });
+
+  // Fixed facts about the system, used for the map and for workflows whose notes are not built yet.
+  var META = {
+    "01": { short: "Intake & Decision", lane: "intake", blurb: "The booth webhook. Validates, blocks replays, classifies by policy, answers in about 2 seconds, then runs the rest of the pipeline." },
+    "02A": { short: "CRM Context", lane: "enrich", blurb: "Reads HubSpot, read-only, so the decision knows the relationship, owner and open deals." },
+    "04": { short: "Company & Person Enrichment", lane: "enrich", blurb: "Free homepage read always; paid Brave search gated off for out of scope; person search skipped for competitors." },
+    "05": { short: "AI Lead Reasoning", lane: "enrich", blurb: "Bounded Gemini synthesis: resolves an ambiguous title above a 0.7 floor, an unknown industry, and writes the opening question and listen-fors." },
+    "02": { short: "HubSpot Sync", lane: "write", blurb: "Writes the contact, company, meeting and note to HubSpot. Human-typed values win via keep()." },
+    "03": { short: "Slack Alerts", lane: "write", blurb: "Builds the Slack card, picks the channel from the policy, threads repeat visitors, attaches the buttons each tier gets." },
+    "06": { short: "Slack Actions", lane: "rep", blurb: "Handles the twelve rep buttons. Reclassification reloads raw_json and calls 03 to repost the card." },
+    "00": { short: "Setup & Seed", lane: "ops", blurb: "Creates and seeds the Data Tables. Runs from its draft by hand and is never published." },
+    "07": { short: "Task Test Harness", lane: "ops", blurb: "Replays test payloads through the live booth webhook and scores each one PASS or FAIL." },
+    "08": { short: "Control Center API", lane: "ops", blurb: "Serves the control-center app from static webhook routes under oak-api." },
+    "99": { short: "Failure Handler", lane: "ops", blurb: "Error workflow for eight workflows. Turns a failure into a plain-language Slack report in #oak-revops." }
+  };
+  var EXT = {
+    scanner: { label: ["Booth scanner"] },
+    slack: { label: ["Slack buttons"] },
+    app: { label: ["Control Center", "app"] }
+  };
+  // Real call edges. n = order in which 01 calls its sub-flows.
+  var EDGES = [
+    { from: "scanner", to: "01", kind: "ext", label: "POST /oak-event/scan" },
+    { from: "07", to: "01", kind: "ext", label: "replays test scans" },
+    { from: "01", to: "02A", kind: "call", n: 1 },
+    { from: "01", to: "04", kind: "call", n: 2 },
+    { from: "01", to: "05", kind: "call", n: 3 },
+    { from: "01", to: "02", kind: "call", n: 4 },
+    { from: "01", to: "03", kind: "call", n: 5 },
+    { from: "slack", to: "06", kind: "ext", label: "button clicks" },
+    { from: "06", to: "03", kind: "call", label: "on reclassify" },
+    { from: "08", to: "app", kind: "serve", label: "serves" }
+  ];
+  var FAILS = ["01", "02", "02A", "03", "04", "05", "06", "07"];
+
+  var byId = {};
+  GUIDE.forEach(function (w) { byId[String(w.id).toUpperCase()] = w; });
+  // Add any extra sub-flow calls the data declares that the fixed list lacks.
+  GUIDE.forEach(function (w) {
+    var from = String(w.id).toUpperCase();
+    (w.calls || []).forEach(function (c) {
+      var id = idIn(c);
+      if (!id || id === from) return;
+      var dup = EDGES.some(function (e) { return e.from === from && e.to === id; });
+      if (!dup) EDGES.push({ from: from, to: id, kind: "call", extra: true });
+    });
+  });
+
+  function idIn(s) {
+    var m = /^\s*(02A|0\d|99)\b/i.exec(String(s || ""));
+    if (!m) return null;
+    var id = m[1].toUpperCase();
+    return ORDER.indexOf(id) >= 0 ? id : null;
+  }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function tok(id) { return "wf-" + id.toLowerCase(); }
+  function nodeTok(id, step) { return tok(id) + "-n" + step; }
+  function parseTok(h) {
+    var m = /^wf-(\d\d)(a)?(?:-n(\d+))?$/i.exec(h || "");
+    if (!m) return null;
+    var id = (m[1] + (m[2] ? "A" : "")).toUpperCase();
+    if (ORDER.indexOf(id) < 0) return null;
+    return { id: id, step: m[3] ? +m[3] : null };
+  }
+  function shortOf(id) { return (byId[id] && byId[id].short) || META[id].short; }
+  function laneOf(id) { return META[id].lane; }
+  function firstSentence(s) {
+    var m = /^[\s\S]*?[.!?](\s|$)/.exec(s || "");
+    return (m ? m[0] : s || "").trim();
+  }
+  function nodesOf(w) {
+    var out = [];
+    groupsOf(w).forEach(function (g) { g.nodes.forEach(function (n) { out.push(n); }); });
+    return out;
+  }
+  function groupsOf(w) {
+    var gs = (w.groups || []).map(function (g) {
+      var ns = (g.nodes || []).slice().sort(function (a, b) { return a.step - b.step; });
+      return { name: g.name, purpose: g.purpose, nodes: ns, min: ns.length ? ns[0].step : 1e9 };
+    });
+    return gs.sort(function (a, b) { return a.min - b.min; });
+  }
+  function edgeName(k) { return EXT[k] ? EXT[k].label.join(" ") : k; }
+
+  /* ---------- storage (per-viewer convenience only) ---------- */
+  var KEY = "oak-field-guide:v1";
+  var state = { last: null, scroll: {}, talk: false };
+  try {
+    var raw = window.localStorage.getItem(KEY);
+    if (raw) {
+      var got = JSON.parse(raw);
+      if (got && typeof got === "object") {
+        state.last = typeof got.last === "string" ? got.last : null;
+        state.scroll = got.scroll && typeof got.scroll === "object" ? got.scroll : {};
+        state.talk = !!got.talk;
+      }
+    }
+  } catch (e) { /* storage blocked: defaults */ }
+  var saveTimer = null;
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      try { window.localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+    }, 200);
+  }
+
+  var main = document.getElementById("main");
+  var side = document.getElementById("side");
+  var shell = document.getElementById("shell");
+  var pick = document.getElementById("wf-pick");
+  var talkBtn = document.getElementById("talk");
+  var root = document.documentElement;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- picker ---------- */
+  (function buildPick() {
+    var html = '<option value="map">System map</option>';
+    LANES.forEach(function (l) {
+      html += '<optgroup label="' + esc(l.label) + '">';
+      ORDER.filter(function (id) { return laneOf(id) === l.key; }).forEach(function (id) {
+        html += '<option value="' + tok(id) + '">' + esc(id + "  " + shortOf(id)) + (byId[id] ? "" : " (not written)") + "</option>";
+      });
+      html += "</optgroup>";
+    });
+    pick.innerHTML = html;
+    pick.addEventListener("change", function () { go(pick.value); });
+  })();
+
+  /* ---------- map ---------- */
+  var ROWY = { intake: 60, enrich: 164, write: 268, rep: 372, ops: 476 };
+  var POS = {
+    "01": [440, "intake"], "02A": [600, "enrich"], "04": [770, "enrich"], "05": [940, "enrich"],
+    "02": [360, "write"], "03": [520, "write"], "06": [520, "rep"],
+    "07": [260, "ops"], "99": [440, "ops"], "00": [610, "ops"], "08": [780, "ops"]
+  };
+  var EPOS = { scanner: [260, "intake", 120], slack: [330, "rep", 120], app: [950, "ops", 110] };
+  var NW = 156, NH = 60;
+  // Hand-routed so no edge crosses a box.
+  var ROUTES = {
+    "scanner>01": "M320,60 L358,60",
+    "07>01": "M260,446 L260,132 C260,108 400,118 400,94",
+    "01>02A": "M518,50 C600,50 600,92 600,130",
+    "01>04": "M518,60 C770,60 770,92 770,130",
+    "01>05": "M518,70 C940,70 940,92 940,130",
+    "01>02": "M410,90 C410,170 360,170 360,234",
+    "01>03": "M470,90 C470,170 520,170 520,234",
+    "slack>06": "M390,372 L438,372",
+    "06>03": "M520,342 L520,302",
+    "08>app": "M858,476 L891,476"
+  };
+  var BADGE = { "01>02A": [600, 108], "01>04": [770, 108], "01>05": [940, 108], "01>02": [364, 206], "01>03": [516, 206] };
+  var LABELS = {
+    "scanner>01": [339, 48, "middle", "POST /scan"],
+    "07>01": [270, 424, "start", "replays test scans"],
+    "slack>06": [414, 360, "middle", "clicks"],
+    "06>03": [532, 326, "start", "calls 03 on reclassify"],
+    "08>app": [874, 464, "middle", "serves"]
+  };
+  function wrapName(s, max) {
+    var words = String(s).split(/\s+/), lines = [""];
+    words.forEach(function (w) {
+      var cur = lines[lines.length - 1];
+      if (cur && (cur + " " + w).length > max && lines.length < 2) lines.push(w);
+      else lines[lines.length - 1] = cur ? cur + " " + w : w;
+    });
+    return lines;
+  }
+  function centerOf(k) {
+    if (POS[k]) return [POS[k][0], ROWY[POS[k][1]]];
+    if (EPOS[k]) return [EPOS[k][0], ROWY[EPOS[k][1]]];
+    return null;
+  }
+  function mapSVG() {
+    var s = '<svg id="map-svg" viewBox="0 0 1040 536" role="img" aria-label="System map: ten workflows in five lanes with their call edges">';
+    s += '<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahead" d="M0,0 L10,5 L0,10 z"/></marker></defs>';
+    LANES.forEach(function (l, i) {
+      var y = ROWY[l.key] - 52;
+      if (i % 2 === 0) s += '<rect class="band" x="0" y="' + y + '" width="1040" height="104" rx="4"/>';
+      s += '<g data-lane="' + l.key + '"><rect x="14" y="' + (y + 14) + '" width="9" height="9" rx="2" style="fill:var(--lane)"/>';
+      s += '<text class="lane-t" x="30" y="' + (y + 22.5) + '">' + esc(l.label) + "</text></g>";
+    });
+    // edges first so boxes sit on top
+    EDGES.forEach(function (e) {
+      var key = e.from + ">" + e.to;
+      var d = ROUTES[key];
+      if (!d) {
+        var a = centerOf(e.from), b = centerOf(e.to);
+        if (!a || !b) return;
+        d = "M" + a[0] + "," + (a[1] + NH / 2) + " L" + b[0] + "," + (b[1] - NH / 2 - 2);
+      }
+      var cls = "edge" + (e.kind === "ext" || e.kind === "serve" ? " ext" : "");
+      s += '<path class="' + cls + '" data-e="' + esc(key) + '" d="' + d + '" marker-end="url(#ah)"/>';
+    });
+    EDGES.forEach(function (e) {
+      var key = e.from + ">" + e.to;
+      if (e.n && BADGE[key]) {
+        var p = BADGE[key];
+        s += '<g class="ebadge" data-e="' + esc(key) + '"><circle cx="' + p[0] + '" cy="' + p[1] + '" r="9"/><text x="' + p[0] + '" y="' + (p[1] + 4) + '">' + e.n + "</text></g>";
+      }
+      if (LABELS[key]) {
+        var L = LABELS[key];
+        s += '<text class="elabel" data-e="' + esc(key) + '" x="' + L[0] + '" y="' + L[1] + '" text-anchor="' + L[2] + '">' + esc(L[3]) + "</text>";
+      }
+    });
+    Object.keys(EPOS).forEach(function (k) {
+      var p = EPOS[k], cx = p[0], cy = ROWY[p[1]], w = p[2], lines = EXT[k].label, h = lines.length > 1 ? 40 : 34;
+      s += '<g class="ext"><rect class="ebox" x="' + (cx - w / 2) + '" y="' + (cy - h / 2) + '" width="' + w + '" height="' + h + '" rx="' + h / 2 + '"/>';
+      lines.forEach(function (ln, i) {
+        s += '<text x="' + cx + '" y="' + (cy + 4 + (i - (lines.length - 1) / 2) * 14) + '">' + esc(ln) + "</text>";
+      });
+      s += "</g>";
+    });
+    ORDER.forEach(function (id) {
+      var p = POS[id], cx = p[0], cy = ROWY[p[1]], x = cx - NW / 2, y = cy - NH / 2;
+      var w = byId[id];
+      var lines = wrapName(shortOf(id), 21);
+      s += '<g class="mnode' + (w ? "" : " missing") + '" data-lane="' + laneOf(id) + '" data-id="' + id + '" data-go="' + tok(id) + '" tabindex="0" role="link" aria-label="Open ' + esc(id + " " + shortOf(id)) + '">';
+      s += '<rect class="mbox" x="' + x + '" y="' + y + '" width="' + NW + '" height="' + NH + '" rx="6"/>';
+      s += '<text class="mid" x="' + (x + 12) + '" y="' + (y + 20) + '" style="fill:var(--lane)">' + id + "</text>";
+      s += '<text class="mcount" x="' + (x + NW - 12) + '" y="' + (y + 20) + '">' + (w ? w.node_count + " nodes" : "not written") + "</text>";
+      lines.forEach(function (ln, i) {
+        s += '<text class="mname" x="' + (x + 12) + '" y="' + (y + (lines.length > 1 ? 38 : 42) + i * 15) + '">' + esc(ln) + "</text>";
+      });
+      if (FAILS.indexOf(id) >= 0) s += '<circle class="faildot" cx="' + (x + NW - 12) + '" cy="' + y + '" r="5"><title>Reports failures to 99</title></circle>';
+      if (id === "99") s += '<circle class="faildot" cx="' + (x + NW - 12) + '" cy="' + y + '" r="5" style="fill:var(--surface);stroke:var(--fail);stroke-width:2"><title>Receives failures</title></circle>';
+      s += "</g>";
+    });
+    return s + "</svg>";
+  }
+  function edgeText(id) {
+    var into = [], out = [];
+    EDGES.forEach(function (e) {
+      if (e.to === id) into.push(e.from === "07" ? "07 (replays test scans)" : edgeName(e.from) + (e.from === "slack" ? " (rep clicks)" : ""));
+      if (e.from === id) out.push(e.to === "app" ? "the Control Center app" : e.to + (e.label ? " " + e.label.replace(/^calls 03 /, "") : ""));
+    });
+    var r = [];
+    if (id === "99") into.push("failures from " + FAILS.join(", "));
+    if (into.length) r.push("<span><b>From</b>" + esc(into.join(", ")) + "</span>");
+    if (id === "01") r.push("<span><b>Calls</b>" + esc("02A, 04, 05, 02, 03 in that order") + "</span>");
+    else if (out.length) r.push("<span><b>" + (id === "08" ? "Serves" : "Calls") + "</b>" + esc(out.join(", ")) + "</span>");
+    if (FAILS.indexOf(id) >= 0) r.push("<span><b>On error</b>reports to 99</span>");
+    if (id === "00") r.push("<span><b>Runs</b>by hand, from its draft</span>");
+    return r.join("");
+  }
+  function renderMap() {
+    shell.classList.remove("has-side");
+    side.innerHTML = "";
+    var written = ORDER.filter(function (id) { return byId[id]; });
+    var nodes = written.reduce(function (a, id) { return a + (byId[id].node_count || 0); }, 0);
+    var h = '<section class="hero"><span class="eyebrow">Oak GTM Automation Challenge</span>';
+    h += "<h1>The Live Event Lead Engine, node by node</h1>";
+    h += "<p>A badge scan comes in at 01, gets CRM context, enrichment and bounded AI reasoning, then lands in HubSpot and as a Slack card a rep can act on. Open any workflow to walk its nodes in execution order.</p>";
+    h += '<div class="status"><span><b>' + written.length + "</b> of " + ORDER.length + " workflows written</span><span><b>" + nodes + "</b> nodes explained</span><span>Talk track collapses each node to the line you say</span></div></section>";
+    h += '<div class="mapbox">' + mapSVG() + "</div>";
+    h += '<div class="legend">';
+    h += '<span><svg viewBox="0 0 26 12" aria-hidden="true"><path class="edge" d="M1,6 L22,6" marker-end="url(#ah)"/></svg>calls a sub-flow (number = order inside 01)</span>';
+    h += '<span><svg viewBox="0 0 26 12" aria-hidden="true"><path class="edge ext" d="M1,6 L22,6" marker-end="url(#ah)"/></svg>driven from outside n8n</span>';
+    h += '<span><svg viewBox="0 0 26 12" aria-hidden="true"><circle class="faildot" cx="13" cy="6" r="5"/></svg>reports failures to 99 (errorWorkflow)</span>';
+    h += "</div>";
+    h += '<div class="lanes">';
+    LANES.forEach(function (l) {
+      var ids = ORDER.filter(function (id) { return laneOf(id) === l.key; });
+      h += '<section data-lane="' + l.key + '"><div class="lane-h"><span class="lane-dot"></span><h2>' + esc(l.label) + "</h2></div><ul class=\"wf-list\">";
+      ids.forEach(function (id) {
+        var w = byId[id];
+        h += '<li><a class="wf-row' + (w ? "" : " missing") + '" data-lane="' + l.key + '" href="#' + tok(id) + '" data-go="' + tok(id) + '">';
+        h += '<span class="wf-id">' + id + "</span><span class=\"wf-main\">";
+        h += '<span class="wf-name">' + esc(shortOf(id)) + "<small>" + (w ? w.node_count + " nodes" : "not written yet") + "</small></span>";
+        h += '<span class="wf-blurb">' + esc(w ? firstSentence(w.one_breath) : META[id].blurb) + "</span>";
+        h += '<span class="wf-edges">' + edgeText(id) + "</span></span></a></li>";
+      });
+      h += "</ul></section>";
+    });
+    h += "</div>";
+    main.innerHTML = h;
+    document.title = "Oak Workflow Field Guide";
+
+    var svg = document.getElementById("map-svg");
+    if (svg) {
+      svg.addEventListener("mouseover", function (ev) {
+        var g = ev.target.closest && ev.target.closest(".mnode");
+        if (!g) return;
+        var id = g.getAttribute("data-id");
+        svg.classList.add("focus");
+        svg.querySelectorAll("[data-e]").forEach(function (el) {
+          var k = el.getAttribute("data-e").split(">");
+          el.classList.toggle("hot", k[0] === id || k[1] === id);
+        });
+      });
+      svg.addEventListener("mouseleave", function () { svg.classList.remove("focus"); });
+    }
+  }
+
+  /* ---------- workflow ---------- */
+  function linkChips(list) {
+    if (!list || !list.length) return '<span class="muted">None</span>';
+    return '<span class="chips">' + list.map(function (s) {
+      var id = idIn(s);
+      if (id) {
+        var rest = String(s).replace(/^\s*(02A|0\d|99)\b\s*/i, "");
+        return '<a class="chip" href="#' + tok(id) + '" data-go="' + tok(id) + '"><span class="cid">' + id + "</span>" + esc(rest || shortOf(id)) + "</a>";
+      }
+      return '<span class="chip">' + esc(s) + "</span>";
+    }).join("") + "</span>";
+  }
+  function toLink(w, name, steps) {
+    var st = steps[name];
+    if (st == null) return '<span class="to">' + esc(name) + "</span>";
+    var t = nodeTok(w.id, st);
+    return '<a class="to" href="#' + t + '" data-go="' + t + '"><span class="to-n">' + st + "</span>" + esc(name) + "</a>";
+  }
+  function labelClass(l) {
+    var s = String(l).toLowerCase();
+    if (s === "true" || s === "yes" || s === "success") return " t";
+    if (s === "false" || s === "no" || s === "error") return " f";
+    return "";
+  }
+  function nodeHTML(w, n, steps) {
+    var id = String(w.id).toUpperCase();
+    var branches = n.branches || [];
+    var rows = "";
+    function row(k, v, cls) { rows += "<dt>" + k + "</dt><dd" + (cls ? ' class="' + cls + '"' : "") + ">" + v + "</dd>"; }
+    row("Why", esc(n.why));
+    row("In, out", '<div class="io"><span>' + esc(n.in) + '</span><span class="io-a" aria-label="to">&rarr;</span><span>' + esc(n.out) + "</span></div>");
+    if (n.decides) row("Decides", esc(n.decides), "dec");
+    if (n.code) row("Code", '<div class="code" tabindex="0" aria-label="Code, scrolls sideways"><pre><code>' + esc(n.code) + "</code></pre></div>");
+    if (branches.length) {
+      row("Branches", '<ul class="forks">' + branches.map(function (b) {
+        return '<li><div class="fork-line"><span class="blabel' + labelClass(b.label) + '">' + esc(b.label) + '</span><span class="muted" aria-hidden="true">&rarr;</span>' + toLink(w, b.goes_to, steps) + "</div>" + (b.meaning ? '<p class="bmeaning">' + esc(b.meaning) + "</p>" : "") + "</li>";
+      }).join("") + "</ul>");
+    }
+    row("On failure", esc(n.on_failure));
+    if (!branches.length) {
+      var nx = n.next || [];
+      row("Next", nx.length ? '<span class="nexts">' + nx.map(function (x) { return toLink(w, x, steps); }).join("") + "</span>" : '<span class="muted">Ends here</span>');
+    }
+    var t = nodeTok(id, n.step);
+    var h = '<article class="node" id="' + t + '" data-step="' + n.step + '">';
+    h += '<a class="step' + (branches.length ? " fork" : "") + '" href="#' + t + '" data-go="' + t + '" aria-label="Step ' + n.step + (branches.length ? ", branches" : "") + '" title="' + (branches.length ? "Branches here" : "Step " + n.step) + '">' + n.step + "</a>";
+    h += '<div class="card"><header class="n-head"><h3 class="n-name">' + esc(n.name) + '</h3><span class="n-type">' + esc(n.type) + "</span></header>";
+    h += '<div class="n-body"><p class="what">' + esc(n.what) + '</p><dl class="rows">' + rows + "</dl></div>";
+    h += '<div class="say"><span class="k">Say it</span><p class="voice"><span class="hl">' + esc(n.say_it) + "</span></p></div>";
+    h += "</div></article>";
+    return h;
+  }
+  function pager(id) {
+    var i = ORDER.indexOf(id), p = ORDER[i - 1], nx = ORDER[i + 1];
+    var h = '<nav class="pager" aria-label="Other workflows">';
+    h += p ? '<a href="#' + tok(p) + '" data-go="' + tok(p) + '"><small>Previous</small>' + esc(p + " " + shortOf(p)) + "</a>" : '<a href="#map" data-go="map"><small>Back</small>System map</a>';
+    h += nx ? '<a href="#' + tok(nx) + '" data-go="' + tok(nx) + '"><small>Next</small>' + esc(nx + " " + shortOf(nx)) + "</a>" : '<a href="#map" data-go="map"><small>Done</small>System map</a>';
+    return h + "</nav>";
+  }
+  function renderWf(id) {
+    var w = byId[id], lane = laneOf(id);
+    var h = '<div data-lane="' + lane + '">';
+    h += '<nav class="crumb"><a href="#map" data-go="map">System map</a><span aria-hidden="true">/</span><span class="lane-dot"></span><span>' + esc(LANE_LABEL[lane]) + "</span></nav>";
+    h += '<div class="wf-title"><span class="big-id">' + id + "</span><h1>" + esc(shortOf(id)) + "</h1></div>";
+    if (!w) {
+      shell.classList.remove("has-side");
+      side.innerHTML = "";
+      h += '<p class="canvas-name">Oak GTM - ' + esc(id + " " + META[id].short) + "</p>";
+      h += '<div class="stub"><p>' + esc(META[id].blurb) + '</p><p style="margin-top:10px">The node-by-node notes for this workflow are not in this build yet. They appear after <code>guide-data/' + esc(id.toLowerCase()) + ".json</code> lands and the page is rebuilt.</p></div>";
+      h += '<div class="wf-edges" style="margin-top:18px">' + edgeText(id) + "</div>";
+      main.innerHTML = h + pager(id) + "</div>";
+      document.title = id + " " + shortOf(id) + " | Oak Field Guide";
+      return;
+    }
+    var groups = groupsOf(w), all = nodesOf(w), steps = {};
+    all.forEach(function (n) { steps[n.name] = n.step; });
+    h += '<p class="canvas-name">' + esc(w.name) + " &middot; " + w.node_count + " nodes</p>";
+    h += '<div class="breath"><span class="k">Say this first</span><p class="voice"><span class="hl">' + esc(w.one_breath) + "</span></p></div>";
+    h += '<p class="talk-note">Talk track is on. Say the line above, then each node\'s line in order: ' + all.length + " lines. Turn it off to see the detail again.</p>";
+    h += '<dl class="facts">';
+    h += "<dt>Trigger</dt><dd>" + esc(w.trigger) + "</dd>";
+    h += "<dt>Input</dt><dd>" + esc(w.input) + "</dd>";
+    h += "<dt>Output</dt><dd>" + esc(w.output) + "</dd>";
+    h += "<dt>Called by</dt><dd>" + linkChips(w.called_by) + "</dd>";
+    h += "<dt>Calls</dt><dd>" + linkChips(w.calls) + "</dd>";
+    h += "</dl>";
+    h += '<h2 class="sec-h">Nodes in execution order <small>' + all.length + " nodes, " + groups.length + (groups.length === 1 ? " group" : " groups") + "</small></h2>";
+    h += '<div class="rail">';
+    groups.forEach(function (g) {
+      var first = g.nodes.length ? g.nodes[0].step : "", last = g.nodes.length ? g.nodes[g.nodes.length - 1].step : "";
+      h += '<section class="group"><div class="g-head"><span class="g-mark" aria-hidden="true"></span><div><h3 class="g-name">' + esc(g.name) + '<span class="g-range">' + (first === last ? "step " + first : "steps " + first + "-" + last) + "</span></h3>";
+      if (g.purpose) h += '<p class="g-purpose">' + esc(g.purpose) + "</p>";
+      h += "</div></div>";
+      g.nodes.forEach(function (n) { h += nodeHTML(w, n, steps); });
+      h += "</section>";
+    });
+    h += "</div>";
+    h += '<div class="after">';
+    if (w.decisions && w.decisions.length) {
+      h += '<section><h2 class="sec-h">Decisions worth defending</h2><ol class="decs">';
+      w.decisions.forEach(function (d) { h += "<li><div><b>" + esc(d.title) + "</b></div><p>" + esc(d.why) + "</p></li>"; });
+      h += "</ol></section>";
+    }
+    if (w.questions && w.questions.length) {
+      h += '<section><h2 class="sec-h">Likely questions</h2><div class="q-tools"><span>Answer out loud first, then check.</span><button type="button" class="linkbtn" id="qa-all">Show all answers</button></div><div class="qa-list">';
+      w.questions.forEach(function (q) {
+        h += '<details class="qa"><summary><span>' + esc(q.q) + '</span><span class="rev" aria-hidden="true"></span></summary><p class="ans">' + esc(q.a) + "</p></details>";
+      });
+      h += "</div></section>";
+    }
+    h += "</div>";
+    main.innerHTML = h + pager(id) + "</div>";
+    document.title = id + " " + shortOf(id) + " | Oak Field Guide";
+
+    // side index
+    var s = '<div class="side-in"><p class="side-h">' + esc(id + " " + shortOf(id)) + "</p>";
+    groups.forEach(function (g) {
+      s += '<p class="side-h">' + esc(g.name) + "</p><ol>";
+      g.nodes.forEach(function (n) {
+        var t = nodeTok(id, n.step);
+        s += '<li><a href="#' + t + '" data-go="' + t + '" data-step="' + n.step + '"><span class="n">' + n.step + "</span><span>" + esc(n.name) + "</span></a></li>";
+      });
+      s += "</ol>";
+    });
+    side.innerHTML = s + "</div>";
+    shell.classList.add("has-side");
+
+    var qaBtn = document.getElementById("qa-all");
+    if (qaBtn) qaBtn.addEventListener("click", function () {
+      var ds = main.querySelectorAll("details.qa");
+      var anyClosed = Array.prototype.some.call(ds, function (d) { return !d.open; });
+      ds.forEach(function (d) { d.open = anyClosed; });
+      qaBtn.textContent = anyClosed ? "Hide all answers" : "Show all answers";
+    });
+    spy();
+  }
+
+  /* ---------- scroll spy for the side index ---------- */
+  var observer = null;
+  function spy() {
+    if (observer) observer.disconnect();
+    if (!("IntersectionObserver" in window)) return;
+    var links = {};
+    side.querySelectorAll("a[data-step]").forEach(function (a) { links[a.getAttribute("data-step")] = a; });
+    var cur = null;
+    observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) {
+          var st = en.target.getAttribute("data-step");
+          if (cur) cur.classList.remove("cur");
+          cur = links[st] || null;
+          if (cur) cur.classList.add("cur");
+        }
+      });
+    }, { rootMargin: "-90px 0px -65% 0px" });
+    main.querySelectorAll(".node").forEach(function (n) { observer.observe(n); });
+  }
+
+  /* ---------- routing ---------- */
+  var current = null;
+  function render(view) {
+    if (view === "map") renderMap(); else renderWf(view);
+    current = view;
+    pick.value = view === "map" ? "map" : tok(view);
+  }
+  function flash(el) {
+    el.classList.add("flash");
+    setTimeout(function () { el.classList.remove("flash"); }, 1800);
+  }
+  function scrollToNode(id, step) {
+    var el = document.getElementById(nodeTok(id, step));
+    if (!el) return;
+    el.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "smooth" });
+    flash(el);
+  }
+  function route(token, opts) {
+    opts = opts || {};
+    var p = parseTok(token);
+    var view = p ? p.id : "map";
+    var changed = view !== current;
+    if (changed) render(view);
+    state.last = view;
+    save();
+    if (p && p.step) {
+      if (changed) requestAnimationFrame(function () { scrollToNode(view, p.step); });
+      else scrollToNode(view, p.step);
+    } else if (opts.restore) {
+      restoreScroll(view);
+    } else if (changed) {
+      window.scrollTo(0, 0);
+    }
+  }
+  function go(token) {
+    try { history.pushState(null, "", "#" + token); } catch (e) { /* sandboxed: route anyway */ }
+    route(token);
+  }
+  window.addEventListener("popstate", function () { route(location.hash.slice(1)); });
+  window.addEventListener("hashchange", function () { route(location.hash.slice(1)); });
+
+  var userMoved = false;
+  ["wheel", "touchstart", "keydown", "mousedown"].forEach(function (ev) {
+    window.addEventListener(ev, function () { userMoved = true; }, { passive: true, once: true });
+  });
+  function restoreScroll(view) {
+    var y = +(state.scroll && state.scroll[view]) || 0;
+    if (!y) return;
+    requestAnimationFrame(function () { window.scrollTo(0, y); });
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () { if (!userMoved) window.scrollTo(0, y); });
+    }
+  }
+  var scrollTick = null;
+  window.addEventListener("scroll", function () {
+    if (scrollTick) return;
+    scrollTick = setTimeout(function () {
+      scrollTick = null;
+      if (current) { state.scroll[current] = Math.round(window.scrollY); save(); }
+    }, 250);
+  }, { passive: true });
+
+  document.addEventListener("click", function (ev) {
+    var a = ev.target.closest && ev.target.closest("[data-go]");
+    if (!a || ev.metaKey || ev.ctrlKey || ev.shiftKey) return;
+    ev.preventDefault();
+    closeSearch();
+    go(a.getAttribute("data-go"));
+  });
+  document.addEventListener("keydown", function (ev) {
+    var t = ev.target;
+    if (ev.key === "Enter" && t && t.classList && t.classList.contains("mnode")) { go(t.getAttribute("data-go")); return; }
+    var typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT");
+    if (typing || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    if (ev.key === "/") { ev.preventDefault(); openSearch(); }
+    else if (ev.key === "t" || ev.key === "T") setTalk(!root.classList.contains("talk"));
+  });
+
+  /* ---------- talk track ---------- */
+  function setTalk(on) {
+    var anchor = null, off = 0;
+    var nodes = main.querySelectorAll(".node");
+    for (var i = 0; i < nodes.length; i++) {
+      var r = nodes[i].getBoundingClientRect();
+      if (r.bottom > 80) { anchor = nodes[i]; off = r.top; break; }
+    }
+    root.classList.toggle("talk", on);
+    talkBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    state.talk = on;
+    save();
+    if (anchor && window.scrollY > 0) window.scrollBy(0, anchor.getBoundingClientRect().top - off);
+  }
+  talkBtn.addEventListener("click", function () { setTalk(!root.classList.contains("talk")); });
+
+  /* ---------- search ---------- */
+  var INDEX = [];
+  ORDER.forEach(function (id) {
+    var w = byId[id];
+    if (!w) return;
+    INDEX.push({ kind: "wf", id: id, name: id + " " + shortOf(id), f: { name: id + " " + shortOf(id) + " " + w.name, say: w.one_breath } });
+    nodesOf(w).forEach(function (n) {
+      INDEX.push({ kind: "node", id: id, step: n.step, name: n.name, type: n.type, f: { name: n.name, what: n.what, why: n.why, say: n.say_it } });
+    });
+  });
+  INDEX.forEach(function (e) {
+    e.hay = [e.f.name, e.f.what, e.f.why, e.f.say].join(" \u0001 ").toLowerCase();
+  });
+  var sEl = document.getElementById("search"), scrim = document.getElementById("scrim");
+  var qIn = document.getElementById("q"), qMeta = document.getElementById("q-meta"), qRes = document.getElementById("q-results");
+  var active = -1, lastFocus = null;
+  function openSearch() {
+    lastFocus = document.activeElement;
+    sEl.hidden = false;
+    scrim.hidden = false;
+    qIn.focus();
+    qIn.select();
+    runSearch();
+  }
+  function closeSearch() {
+    if (sEl.hidden) return;
+    sEl.hidden = true;
+    scrim.hidden = true;
+    if (lastFocus && lastFocus.focus) try { lastFocus.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  }
+  document.getElementById("open-search").addEventListener("click", openSearch);
+  document.getElementById("close-search").addEventListener("click", closeSearch);
+  scrim.addEventListener("click", closeSearch);
+  function hlText(text, terms) {
+    var out = esc(text);
+    terms.forEach(function (t) {
+      var re = new RegExp("(" + esc(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "ig");
+      out = out.replace(re, "<mark>$1</mark>");
+    });
+    return out;
+  }
+  function snippet(text, term) {
+    var s = String(text || ""), i = s.toLowerCase().indexOf(term);
+    if (i < 0) return s.length > 150 ? s.slice(0, 150) + "..." : s;
+    var a = Math.max(0, i - 60), b = Math.min(s.length, i + term.length + 90);
+    return (a > 0 ? "..." : "") + s.slice(a, b) + (b < s.length ? "..." : "");
+  }
+  function runSearch() {
+    var q = qIn.value.trim().toLowerCase();
+    active = -1;
+    if (!q) {
+      qMeta.textContent = INDEX.length ? "Searches every node name, what, why and say-it line across " + Object.keys(byId).length + " workflows. Try: thread anchor, 0.7, keep, Promote." : "No workflow notes in this build yet.";
+      qRes.innerHTML = "";
+      return;
+    }
+    var terms = q.split(/\s+/).filter(Boolean);
+    var hits = [];
+    INDEX.forEach(function (e) {
+      if (!terms.every(function (t) { return e.hay.indexOf(t) >= 0; })) return;
+      var nm = e.f.name.toLowerCase(), sc = 0;
+      if (nm.indexOf(q) >= 0) sc += 20;
+      terms.forEach(function (t) { if (nm.indexOf(t) >= 0) sc += 5; if ((e.f.say || "").toLowerCase().indexOf(t) >= 0) sc += 1; });
+      if (e.kind === "wf") sc += 2;
+      hits.push({ e: e, sc: sc });
+    });
+    hits.sort(function (a, b) {
+      return b.sc - a.sc || ORDER.indexOf(a.e.id) - ORDER.indexOf(b.e.id) || (a.e.step || 0) - (b.e.step || 0);
+    });
+    var shown = hits.slice(0, 60);
+    qMeta.textContent = hits.length ? hits.length + (hits.length === 1 ? " match" : " matches") + (hits.length > shown.length ? ", showing " + shown.length : "") : "No node mentions that. Try fewer words.";
+    qRes.innerHTML = shown.map(function (h, i) {
+      var e = h.e, t = e.kind === "wf" ? tok(e.id) : nodeTok(e.id, e.step);
+      var field = "what", ft = terms[0];
+      ["say", "what", "why"].some(function (k) { if ((e.f[k] || "").toLowerCase().indexOf(ft) >= 0) { field = k; return true; } return false; });
+      var lbl = { say: "Say it", what: "What", why: "Why" }[field];
+      var where = e.kind === "wf" ? "Workflow" : e.id + " step " + e.step;
+      return '<a href="#' + t + '" data-go="' + t + '" role="option" id="r' + i + '" aria-selected="false"><span class="r-top"><span class="r-where">' + esc(where) + '</span><span class="r-name">' + hlText(e.name, terms) + "</span>" + (e.type ? '<span class="r-where">' + esc(e.type) + "</span>" : "") + '</span><span class="r-snip"><i>' + lbl + "</i>" + hlText(snippet(e.f[field], ft), terms) + "</span></a>";
+    }).join("");
+  }
+  function setActive(i) {
+    var items = qRes.querySelectorAll("a");
+    if (!items.length) return;
+    active = (i + items.length) % items.length;
+    items.forEach(function (a, k) { a.setAttribute("aria-selected", k === active ? "true" : "false"); });
+    items[active].scrollIntoView({ block: "nearest" });
+  }
+  qIn.addEventListener("input", runSearch);
+  qIn.addEventListener("keydown", function (ev) {
+    if (ev.key === "ArrowDown") { ev.preventDefault(); setActive(active + 1); }
+    else if (ev.key === "ArrowUp") { ev.preventDefault(); setActive(active - 1); }
+    else if (ev.key === "Enter") {
+      ev.preventDefault();
+      var items = qRes.querySelectorAll("a");
+      var a = items[active >= 0 ? active : 0];
+      if (a) { closeSearch(); go(a.getAttribute("data-go")); }
+    }
+  });
+  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") closeSearch(); });
+
+  /* ---------- boot ---------- */
+  if (state.talk) { root.classList.add("talk"); talkBtn.setAttribute("aria-pressed", "true"); }
+  var h0 = location.hash.slice(1);
+  var p0 = parseTok(h0);
+  if (p0) route(h0, { restore: !p0.step && state.last === p0.id });
+  else if (h0 === "map") route("map", { restore: state.last === "map" });
+  else if (state.last && state.last !== "map" && ORDER.indexOf(state.last) >= 0) route(tok(state.last), { restore: true });
+  else route("map", { restore: true });
+})();
+</script>

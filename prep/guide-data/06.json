@@ -1,0 +1,991 @@
+{
+  "id": "06",
+  "name": "Oak GTM - 06 Slack Actions",
+  "short": "Slack Actions",
+  "lane": "rep",
+  "one_breath": "06 closes the loop inside Slack: it is the Interactivity endpoint behind the twelve buttons and four modals on every booth card. Slack calls it when a rep taps a button; it verifies Slack's HMAC signature and fails closed, acknowledges inside the 3-second window, then writes the result to the encounter row and HubSpot, replies in the card's thread and adds a check mark, and when a rep reclassifies a lead it reloads the stored decision and calls 03 so the reposted card lands in the right channel with the right buttons.",
+  "trigger": "Webhook POST https://oak-noam.app.n8n.cloud/webhook/oak-slack/actions (rawBody on, response by a Respond node); active version 87d50258",
+  "input": "Slack's form-encoded payload: a block_actions click (action_id and a JSON value with event_person_key, scan_id, hubspot_contact_id, classification) or a view_submission from a modal (callback_id, form values, private_metadata), with the x-slack-signature and x-slack-request-timestamp headers.",
+  "output": "HTTP 200 (empty) when verified, 401 on a bad or stale signature, 503 when OAK_SLACK_SIGNING_SECRET is not set. Then side effects: oak_encounters update (and claim fields), HubSpot contact PATCH, note, task or owner, Slack thread reply, card update or reaction, owner DM, modal, and for reclassification a new card through 03.",
+  "called_by": [
+    "Slack Interactivity (a rep tapping a button or submitting a modal on a card 03 posted)"
+  ],
+  "calls": [
+    "03"
+  ],
+  "node_count": 44,
+  "groups": [
+    {
+      "name": "Ungrouped",
+      "purpose": "The public webhook Slack calls.",
+      "nodes": [
+        {
+          "step": 1,
+          "name": "Receive Slack Action",
+          "type": "Webhook (POST /webhook/oak-slack/actions)",
+          "what": "The Slack app's Interactivity Request URL. Every button click (block_actions) and every modal submission (view_submission) arrives here as a form-encoded body with a single payload field, plus the x-slack-signature and x-slack-request-timestamp headers. rawBody is on and responseMode is responseNode, so the workflow decides the status code.",
+          "why": "rawBody is required because the HMAC has to be computed over the exact bytes Slack sent; a re-serialised body would never verify. responseNode lets the workflow answer 401 or 503 on a bad request and 200 fast on a good one.",
+          "in": "Slack's POST: headers and the raw form body (payload=<url-encoded JSON>).",
+          "out": "One item with headers and the raw body as binary 'data'.",
+          "decides": null,
+          "code": "httpMethod: POST, path: 'oak-slack/actions', responseMode: 'responseNode', options: { rawBody: true }",
+          "branches": [],
+          "on_failure": "Nothing to fail; settings.errorWorkflow is 99.",
+          "say_it": "06 is a public webhook that Slack calls when a rep taps a button, and it keeps the raw body so the signature can be verified byte for byte.",
+          "next": [
+            "Verify Signature and Parse"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Verify and Route Every Action",
+      "purpose": "Verifies Slack's HMAC, acknowledges inside Slack's timeout, loads the stored encounter, then routes by action_id or modal callback_id.",
+      "nodes": [
+        {
+          "step": 2,
+          "name": "Verify Signature and Parse",
+          "type": "Code",
+          "what": "Security first, before anything is looked up. Reads the raw body from binary, then fails closed with a named error if OAK_SLACK_SIGNING_SECRET is missing, the raw body is missing, or the timestamp is more than 300 seconds from now in either direction (replay protection). Otherwise computes Slack's v0 signature, HMAC-SHA256 over 'v0:<timestamp>:<raw body>', and compares with crypto.timingSafeEqual after a length check. Only if verified, it decodes the form body by hand (URLSearchParams is not available in the Code sandbox) and JSON-parses payload; a parse failure un-verifies the request. It then normalises both shapes: a click gives action_id, the button value JSON, selected option, channel id, message ts and the original message blocks; a modal submission gives callback_id, every form value flattened into view_values, and channel_id, message_ts, scan_id and the rest from private_metadata (a view_submission has no message). Sets response_code 200 verified, 401 when a secret exists but verification failed, 503 when no secret is configured.",
+          "why": "A public webhook that writes to HubSpot is an open door. Verifying before parsing means an unsigned request cannot even choose which code path runs.",
+          "in": "Headers x-slack-signature and x-slack-request-timestamp, the raw body, $vars.OAK_SLACK_SIGNING_SECRET.",
+          "out": "{verified, error, response_code, response_body ('' or {ok:false,error}), payload_type, action_id, callback_id, selected_value, view_values, action_value {event_person_key, scan_id, hubspot_contact_id, classification, status?}, trigger_id, slack_user_id, slack_user_name, channel_id, message_ts, original_blocks, response_url}.",
+          "decides": "Whether the request is really from Slack, and the status code.",
+          "code": "else if(!timestamp||Math.abs(Date.now()/1000-Number(timestamp))>300)error='Slack request timestamp is stale';\nconst expected='v0='+crypto.createHmac('sha256',secret).update('v0:'+timestamp+':'+raw,'utf8').digest('hex');\nverified=received.length===expected.length&&crypto.timingSafeEqual(Buffer.from(received),Buffer.from(expected));\nconst responseCode=verified?200:(secret?401:503);",
+          "branches": [],
+          "on_failure": "No onError setting, but every risky step is in try/catch and becomes verified:false with a named error, so a bad request is answered 401 or 503 rather than crashing.",
+          "say_it": "The first node recomputes Slack's HMAC over the raw body with the signing secret, compares in constant time, rejects anything older than five minutes, and fails closed if the secret is not set.",
+          "next": [
+            "Acknowledge Slack"
+          ]
+        },
+        {
+          "step": 3,
+          "name": "Acknowledge Slack",
+          "type": "Respond to Webhook",
+          "what": "Answers Slack immediately with response_code (200, 401 or 503) and response_body as text: empty on success, {ok:false,error} otherwise. An empty 200 on a view_submission also closes the modal.",
+          "why": "Slack gives an interactive endpoint 3 seconds, and a modal's trigger_id also expires in 3 seconds. Only the signature check runs before this; everything slow (table reads, HubSpot, reposting through 03) happens after the ack.",
+          "in": "response_code and response_body from Verify Signature and Parse.",
+          "out": "The HTTP response to Slack; the item passes on unchanged.",
+          "decides": "The status code Slack sees.",
+          "code": "respondWith: 'text', responseBody: '={{ $json.response_body }}', options: { responseCode: '={{ $json.response_code }}' }",
+          "branches": [],
+          "on_failure": "No onError setting.",
+          "say_it": "We acknowledge Slack inside its 3-second window before doing any real work.",
+          "next": [
+            "Continue Only If Verified"
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Continue Only If Verified",
+          "type": "Code",
+          "what": "Returns the verified item, or zero items. With zero items nothing downstream runs at all.",
+          "why": "The fail-closed gate. The ack already told Slack 401 or 503; this guarantees an unverified request cannot reach a table, HubSpot or Slack write.",
+          "in": "Verify Signature and Parse (by name).",
+          "out": "The verified item, or nothing.",
+          "decides": "Whether anything else runs.",
+          "code": "const v=$('Verify Signature and Parse').first().json;return v.verified?[{json:v}]:[];",
+          "branches": [],
+          "on_failure": "No onError setting; trivial code.",
+          "say_it": "An unverified request produces zero items, so the workflow simply stops: fail closed.",
+          "next": [
+            "Load Encounter"
+          ]
+        },
+        {
+          "step": 5,
+          "name": "Load Encounter",
+          "type": "Data Table get (oak_encounters)",
+          "what": "Reads the oak_encounters row for action_value.event_person_key (limit 1, table by name). It carries the stored decision at scan time (last_rule_summary, last_score, last_score_breakdown, last_decision_reasons), the claim state, the current overrides (override_classification, competitor_override, exclude_from_outreach, booth_status, follow_up_at ...), hubspot_contact_id, email and last_payload_json.",
+          "why": "Every route needs the stored state: Why this score explains it, Claim checks it, and the planner merges into it so one action never blanks another's field. It is the only table read before a modal opens, to stay inside the 3-second trigger_id window.",
+          "in": "event_person_key from the button value or private_metadata.",
+          "out": "The encounter row, or an empty item if none.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "alwaysOutputData (an unknown badge gives an empty item, not a stop) but no onError: a Data Table error fails the run and 99 reports a 06 failure.",
+          "say_it": "Load Encounter reads what was decided at scan time, so the button works from stored facts rather than the card text.",
+          "next": [
+            "Build Action Context"
+          ]
+        },
+        {
+          "step": 6,
+          "name": "Build Action Context",
+          "type": "Code",
+          "what": "Builds the 'Why this score?' text from the stored row and maps the action to a route. The map has twelve keys: oak_why_score why; oak_claim claim; oak_add_note, oak_downgrade, oak_promote_tier1, oak_booth_status_meeting_booked modal; oak_snooze, oak_send_owner, oak_booth_status, oak_flag_intel, oak_false_alarm, oak_mark_matched effects. Matching is longest prefix, which does two jobs: oak_booth_status_met resolves to oak_booth_status (effects) while oak_booth_status_meeting_booked resolves to itself (modal), and a __2 suffix 03 adds to de-duplicate an id still reaches its handler. Every view_submission routes to effects with its callback_id as the action_key. Unknown ids route to 'unsupported'. contact_id falls back to the row's hubspot_contact_id.",
+          "why": "One router for twelve buttons and four modal submissions; a modal answer rejoins the same write path as a direct click. (The node's canvas note still says 'eleven button action_ids'; the map has twelve keys.)",
+          "in": "Verify Signature and Parse (by name) and the encounter row ($input).",
+          "out": "The parsed request plus route (why | claim | modal | effects | unsupported), action_key, encounter (the row), why_text, scan_id, contact_id, event_person_key, actor.",
+          "decides": "The route and the action key.",
+          "code": "const baseActionId=Object.keys(map).filter(function(k){return rawActionId===k||rawActionId.indexOf(k)===0;}).sort(function(x,y){return y.length-x.length;})[0]||rawActionId;\nconst route=a.payload_type==='view_submission'?'effects':(map[baseActionId]||'unsupported');\nconst actionKey=a.payload_type==='view_submission'?String(a.callback_id||''):baseActionId;",
+          "branches": [],
+          "on_failure": "No onError setting; the stored JSON parses are in try/catch.",
+          "say_it": "Buttons are routed by longest matching action_id prefix, and every modal submission is routed straight to the shared write path.",
+          "next": [
+            "Route Slack Action"
+          ]
+        },
+        {
+          "step": 7,
+          "name": "Route Slack Action",
+          "type": "Switch",
+          "what": "Switches on $json.route (case-sensitive, strict) into five outputs.",
+          "why": "Only two actions need their own path (Why this score, which must stay read-only, and Claim, which needs a race guard); four need a modal first; everything else shares one planner and one write path.",
+          "in": "route from Build Action Context.",
+          "out": "The context item on one output.",
+          "decides": "Which path handles the click.",
+          "code": null,
+          "branches": [
+            {
+              "label": "Why score (why)",
+              "goes_to": "Reply With Stored Score",
+              "meaning": "Why this score?: explain the stored decision in the thread."
+            },
+            {
+              "label": "Claim (claim)",
+              "goes_to": "Get Claimant",
+              "meaning": "Claim: the ownership and race-guard path."
+            },
+            {
+              "label": "Open modal (modal)",
+              "goes_to": "Build Modal View",
+              "meaning": "Promote to Tier 1, Not a fit, Add note and Meeting booked: open a modal first; the submission comes back through the webhook."
+            },
+            {
+              "label": "CRM and Slack effects (effects)",
+              "goes_to": "Plan Action Effects",
+              "meaning": "Mark met, Matched, Snooze, Send to owner, Flag for intel, False alarm, and all four modal submissions."
+            },
+            {
+              "label": "Fallback: Unsupported",
+              "goes_to": "Ignore Unsupported Action",
+              "meaning": "An action_id with no handler: stop cleanly without writing."
+            }
+          ],
+          "on_failure": "No onError; cannot fail.",
+          "say_it": "Route Slack Action splits clicks into four real routes, explain, claim, open a modal, or the shared write path, plus a safe dead end for anything unknown.",
+          "next": [
+            "Reply With Stored Score",
+            "Get Claimant",
+            "Build Modal View",
+            "Plan Action Effects",
+            "Ignore Unsupported Action"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Why this score? - Stored Explanation",
+      "purpose": "Replies in the thread with the stored rule, score breakdown and deterministic reasons; no LLM at click time.",
+      "nodes": [
+        {
+          "step": 8,
+          "name": "Reply With Stored Score",
+          "type": "Slack (post message in thread)",
+          "what": "Posts why_text into the card's thread: '*Why this score?*', 'Rule fired: <last_rule_summary>', 'Score: <x>/100 (persona: 30 pts, urgency: 40 pts, ...)' and the numbered deterministic reasons, all from oak_encounters.",
+          "why": "Read-only by design: an explanation must never be able to change what it explains, and it must match what was decided at scan time. No model is called at click time, so it is instant and free. It reads the scan-time row, so after a rep reclassification it still explains the original rule decision.",
+          "in": "channel_id, message_ts and why_text from Build Action Context.",
+          "out": "Slack's response.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 3, 1000 ms apart, and no onError: if Slack still refuses, the execution fails and 99 posts '06: a rep pressed a button and it did not take effect ... ask them to try again' to #oak-revops.",
+          "say_it": "Why this score? replays the stored rule, score split and reasons from the encounter row, with no AI at click time.",
+          "next": []
+        }
+      ]
+    },
+    {
+      "name": "Claim - Ownership and CRM Sync",
+      "purpose": "Claims once with a conditional update, reads it back, syncs HubSpot (filling an empty owner only on an email match), updates the card, and tells the second rep who got there first.",
+      "nodes": [
+        {
+          "step": 9,
+          "name": "Get Claimant",
+          "type": "Slack (user info)",
+          "what": "Looks up the clicking user (slack_user_id): real name and profile email.",
+          "why": "The email is the bridge to a HubSpot owner, and the name goes on the row and the card.",
+          "in": "slack_user_id from Build Action Context.",
+          "out": "Slack user object (profile.real_name, profile.email, name).",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 3, 1000 ms apart, and no onError: if Slack still refuses, the execution fails and 99 posts '06: a rep pressed a button and it did not take effect ... ask them to try again' to #oak-revops.",
+          "say_it": "Claim starts by asking Slack who clicked, because their email is how we match them to a HubSpot owner.",
+          "next": [
+            "Claim Encounter If Unowned"
+          ]
+        },
+        {
+          "step": 10,
+          "name": "Claim Encounter If Unowned",
+          "type": "Data Table update (oak_encounters)",
+          "what": "Conditional update: matches event_person_key AND claimed_by_slack_id isEmpty, and sets claimed_by_slack_id, claimed_by_name, claimed_at, booth_status 'claimed' and updated_at.",
+          "why": "The race guard. When two reps tap Claim at the same moment, the first update fills claimed_by_slack_id and the second one's WHERE clause no longer matches any row, so it writes nothing. There is no read-then-write gap to race through.",
+          "in": "event_person_key and slack_user_id from Build Action Context; name from Get Claimant.",
+          "out": "Updated rows, or an empty item when nothing matched.",
+          "decides": "Whether this click becomes the owner.",
+          "code": "filters: event_person_key = <key>  AND  claimed_by_slack_id isEmpty\nvalue: { claimed_by_slack_id, claimed_by_name, claimed_at: $now, booth_status: 'claimed' }",
+          "branches": [],
+          "on_failure": "alwaysOutputData so a no-match still continues to the read-back; no onError, so a table error fails the run and 99 reports it.",
+          "say_it": "Claim is a conditional update, only where nobody has claimed yet, so two simultaneous clicks cannot both win.",
+          "next": [
+            "Reload Claim State"
+          ]
+        },
+        {
+          "step": 11,
+          "name": "Reload Claim State",
+          "type": "Data Table get (oak_encounters)",
+          "what": "Reads the row back by event_person_key.",
+          "why": "The update alone does not say who won; the read-back does.",
+          "in": "event_person_key.",
+          "out": "The current row with claimed_by_slack_id and claimed_by_name.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "alwaysOutputData; no onError.",
+          "say_it": "After the conditional update we read the row back to see who actually holds the claim.",
+          "next": [
+            "Build Claim Result"
+          ]
+        },
+        {
+          "step": 12,
+          "name": "Build Claim Result",
+          "type": "Code",
+          "what": "Success only if the stored claimant is the person who clicked. Otherwise the reply is 'Already claimed by <name>.' (or the <@id> mention, or 'someone else'), or, when no row exists, 'That badge is not in the booth record, so there is nothing to claim yet. Scan it at the booth first.' Also captures claimant_name and claimant_email from Get Claimant.",
+          "why": "Makes the race outcome honest for the second rep. A side effect worth knowing: the same rep clicking a stale Claim again also compares equal, so it re-runs the HubSpot write harmlessly.",
+          "in": "Build Action Context, the reloaded row ($input), Get Claimant.",
+          "out": "Context plus claim_success, claimant_name, claimant_email, claimed_by_slack_id, claimed_by_name, claim_reply.",
+          "decides": "Who won the claim.",
+          "code": "const success=found&&String(row.claimed_by_slack_id||'')===String(a.slack_user_id||'');\nclaim_reply:success?('Claimed by <@'+a.slack_user_id+'>. CRM synchronization is running.'):(found?('Already claimed by '+(row.claimed_by_name||(row.claimed_by_slack_id?('<@'+row.claimed_by_slack_id+'>'):'someone else'))+'.'):'That badge is not in the booth record, ...')",
+          "branches": [],
+          "on_failure": "No onError setting; pure code.",
+          "say_it": "The winner is whoever the row says, compared to who clicked; the loser is told exactly who got there first.",
+          "next": [
+            "Claim Succeeded?"
+          ]
+        },
+        {
+          "step": 13,
+          "name": "Claim Succeeded?",
+          "type": "IF",
+          "what": "Branches on claim_success === true.",
+          "why": "The loser must write nothing.",
+          "in": "claim_success.",
+          "out": "The claim result on one output.",
+          "decides": "Winner path or loser path.",
+          "code": "{{ $json.claim_success }} is true",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Find HubSpot Owner by Email",
+              "meaning": "This rep holds the claim: sync HubSpot and update the card."
+            },
+            {
+              "label": "false",
+              "goes_to": "Reply Already Claimed",
+              "meaning": "Someone else holds it, or the badge is unknown: say so in the thread and stop."
+            }
+          ],
+          "on_failure": "No onError; cannot fail.",
+          "say_it": "Only the winner of the claim touches HubSpot and the card.",
+          "next": [
+            "Find HubSpot Owner by Email",
+            "Reply Already Claimed"
+          ]
+        },
+        {
+          "step": 14,
+          "name": "Find HubSpot Owner by Email",
+          "type": "HTTP Request (HubSpot GET owners)",
+          "what": "GET https://api.hubapi.com/crm/v3/owners/?email=<claimant email>&limit=10 (uses '__no_email__' when Slack gave no email), with the HubSpot OAuth2 credential.",
+          "why": "Lets a claim fill an empty HubSpot owner with the right person, matched by email.",
+          "in": "claimant_email from Build Claim Result.",
+          "out": "HubSpot owners list (results[] with id, email).",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, onError continueRegularOutput: a failure just means no owner match.",
+          "say_it": "We look up a HubSpot owner by the claimer's Slack email.",
+          "next": [
+            "Read HubSpot Owner State"
+          ]
+        },
+        {
+          "step": 15,
+          "name": "Read HubSpot Owner State",
+          "type": "HTTP Request (HubSpot GET contact)",
+          "what": "GET /crm/v3/objects/contacts/<hubspot_contact_id>?properties=hubspot_owner_id,oak_claimed_by,oak_claimed_at,oak_booth_status.",
+          "why": "We must know whether the contact already has an owner before deciding to set one.",
+          "in": "action_value.hubspot_contact_id (Claim only appears on cards with a contact id).",
+          "out": "The contact's properties.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, onError continueRegularOutput.",
+          "say_it": "We read the contact's current owner so an existing owner is never overwritten.",
+          "next": [
+            "Build HubSpot Claim Patch"
+          ]
+        },
+        {
+          "step": 16,
+          "name": "Build HubSpot Claim Patch",
+          "type": "Code",
+          "what": "Always sets oak_claimed_by ('<@U...> Name'), oak_claimed_at and oak_booth_status 'claimed'. Adds hubspot_owner_id only when the contact has no owner AND an owner's email equals the claimant's (case-insensitive). Records hubspot_owner_status: 'preserved existing HubSpot owner', 'set HubSpot owner from matching Slack email', or 'left HubSpot owner empty; no Slack-email owner match'.",
+          "why": "A booth claim is evidence of who is working the lead, not permission to reassign an account. Human-owned CRM fields win.",
+          "in": "Build Claim Result, Find HubSpot Owner by Email, Read HubSpot Owner State (all by name).",
+          "out": "Claim result plus hubspot_contact_id, hubspot_properties, hubspot_owner_status.",
+          "decides": "Whether the claim may set the HubSpot owner.",
+          "code": "const ownerId=!current&&matches.length?String(matches[0].id):'';\nconst properties={oak_claimed_by:'<@'+c.slack_user_id+'> '+c.claimant_name,oak_claimed_at:new Date().toISOString(),oak_booth_status:'claimed'};if(ownerId)properties.hubspot_owner_id=ownerId;",
+          "branches": [],
+          "on_failure": "No onError setting; the upstream HTTP errors arrive as items and simply produce no owner match.",
+          "say_it": "A claim fills an empty HubSpot owner from a matching Slack email and never overwrites an existing owner.",
+          "next": [
+            "Write HubSpot Claim"
+          ]
+        },
+        {
+          "step": 17,
+          "name": "Write HubSpot Claim",
+          "type": "HTTP Request (HubSpot PATCH contact)",
+          "what": "PATCH /crm/v3/objects/contacts/<id> with {properties: hubspot_properties}.",
+          "why": "Puts the claim into the CRM where managers report on it.",
+          "in": "hubspot_contact_id and hubspot_properties.",
+          "out": "HubSpot's response or an error item.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 3, 1000 ms apart, onError continueRegularOutput: a HubSpot failure does not undo the claim; the card shows 'HubSpot claim fields failed: <error>'.",
+          "say_it": "The claim is written to HubSpot, and if that fails the card says so instead of pretending.",
+          "next": [
+            "Build Claimed Card"
+          ]
+        },
+        {
+          "step": 18,
+          "name": "Build Claimed Card",
+          "type": "Code",
+          "what": "Copies the clicked message's original blocks, removes any previous oak_claim_status block, inserts a context line right under the header ('✅ Claimed by <@rep> · <owner status or HubSpot error>'), and removes the Claim button (action_id exactly 'oak_claim') from every actions block so nobody else tries.",
+          "why": "Anyone looking at the channel sees who owns the lead without opening the thread.",
+          "in": "Build HubSpot Claim Patch and Write HubSpot Claim (by name); original_blocks from the click.",
+          "out": "{..., updated_blocks (JSON string), claim_reply}.",
+          "decides": null,
+          "code": "const context={type:'context',block_id:'oak_claim_status',elements:[{type:'mrkdwn',text:'✅ *Claimed by <@'+c.slack_user_id+'>* · '+status}]};\nfor(const b of filtered){if(b.type==='actions'&&Array.isArray(b.elements))b.elements=b.elements.filter(e=>e.action_id!=='oak_claim');}",
+          "branches": [],
+          "on_failure": "No onError setting.",
+          "say_it": "The card is rewritten in place to say who claimed it, and the Claim button disappears.",
+          "next": [
+            "Mark Card Claimed"
+          ]
+        },
+        {
+          "step": 19,
+          "name": "Mark Card Claimed",
+          "type": "Slack (update message)",
+          "what": "chat.update on channel_id and ts (passed through Number()) with updated_blocks and claim_reply as fallback text.",
+          "why": "Edits the original card in place.",
+          "in": "Build Claimed Card (by name).",
+          "out": "Slack's response.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 3, 1000 ms apart, and no onError: if Slack still refuses, the execution fails and 99 posts '06: a rep pressed a button and it did not take effect ... ask them to try again' to #oak-revops.",
+          "say_it": "The original card is updated in place with the claim banner.",
+          "next": [
+            "Confirm Claim in Thread"
+          ]
+        },
+        {
+          "step": 20,
+          "name": "Confirm Claim in Thread",
+          "type": "Slack (post message in thread)",
+          "what": "Posts claim_reply ('Claimed by <@rep>. <owner status>.') in the card's thread.",
+          "why": "A timestamped record in the conversation.",
+          "in": "Build Claimed Card (by name).",
+          "out": "Slack's response.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 3, 1000 ms apart, and no onError: if Slack still refuses, the execution fails and 99 posts '06: a rep pressed a button and it did not take effect ... ask them to try again' to #oak-revops.",
+          "say_it": "The claim is confirmed in the thread, then the card gets a check mark.",
+          "next": [
+            "Mark Card Handled"
+          ]
+        },
+        {
+          "step": 21,
+          "name": "Reply Already Claimed",
+          "type": "Slack (post message in thread)",
+          "what": "Posts claim_reply in the thread: 'Already claimed by <name>.' or the badge-not-in-record message. The path ends here.",
+          "why": "The second rep gets an honest answer instead of silence or a double assignment, and writes nothing.",
+          "in": "Build Claim Result (by name).",
+          "out": "Slack's response.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 3, 1000 ms apart, and no onError: if Slack still refuses, the execution fails and 99 posts '06: a rep pressed a button and it did not take effect ... ask them to try again' to #oak-revops.",
+          "say_it": "The second rep to tap Claim is told 'Already claimed by X' in the thread and nothing is written.",
+          "next": []
+        }
+      ]
+    },
+    {
+      "name": "Add note, Not a fit, Promote, Meeting booked - Open Modal",
+      "purpose": "Opens the four modals, carrying scan, encounter, contact, channel and thread in private_metadata so the submission can write back and repost.",
+      "nodes": [
+        {
+          "step": 22,
+          "name": "Build Modal View",
+          "type": "Code",
+          "what": "Builds one of four modals. private_metadata carries event_person_key, hubspot_contact_id, scan_id, channel_id, message_ts and classification so the submission can write back, reply in the original thread and repost. Promote to Tier 1 (callback oak_promote_modal): required static select promote_reason from confirmed_renewal, live_identity_incident, active_audit_deadline, budget_and_timeline, senior_decision_maker, other, plus optional promote_detail (500 chars). Meeting booked (oak_meeting_modal): required datepicker meeting_date defaulting to today, optional meeting_note (500). Add booth note (oak_note_modal): required note_text up to 2,000 chars, submit 'Save to HubSpot'. Not a fit (oak_downgrade_modal, the default branch): required reason_choice from outside_icp, wrong_persona, too_small, no_timing_or_budget, partner_or_vendor, job_seeker, other, plus optional reason_detail (500).",
+          "why": "Promote and Not a fit are the extremes, so they ask for a reason and are auditable; a meeting needs a date; a note needs text. A view_submission has no message, so private_metadata is the only way to carry the context through.",
+          "in": "Build Action Context (by name): action_key, trigger_id, ids, channel and ts.",
+          "out": "{trigger_id, request_json (views.open body)}.",
+          "decides": "Which modal opens.",
+          "code": "const meta=JSON.stringify({event_person_key:c.event_person_key,hubspot_contact_id:c.contact_id,scan_id:String(c.scan_id||''),channel_id:c.channel_id,message_ts:c.message_ts,classification:String(c.action_value.classification||'')});\nconst view=k==='oak_promote_tier1'?{...callback_id:'oak_promote_modal'...}:k==='oak_booth_status_meeting_booked'?{...'oak_meeting_modal'...}:k==='oak_add_note'?{...'oak_note_modal'...}:{...callback_id:'oak_downgrade_modal'...};",
+          "branches": [],
+          "on_failure": "No onError setting; pure code.",
+          "say_it": "Four modals, each carrying the lead's ids and the original thread in private_metadata so the answer can write back and repost.",
+          "next": [
+            "Open Slack Modal"
+          ]
+        },
+        {
+          "step": 23,
+          "name": "Open Slack Modal",
+          "type": "HTTP Request (Slack views.open)",
+          "what": "POST https://slack.com/api/views.open with the trigger_id and view, using the Slack app credential. When the rep submits, Slack sends a new view_submission to the same webhook, which is verified again and routed to effects.",
+          "why": "trigger_id expires 3 seconds after the click, which is another reason the ack comes first and only one table read precedes this.",
+          "in": "request_json.",
+          "out": "Slack's response ({ok, view} or {ok:false, error}).",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, onError continueRegularOutput with alwaysOutputData. Nothing reads its response, so an expired_trigger_id is silent: the rep just sees no modal and taps again.",
+          "say_it": "The modal must open within Slack's 3-second trigger window, which is why the webhook acknowledges first.",
+          "next": []
+        }
+      ]
+    },
+    {
+      "name": "Decide Effects for Every Other Action",
+      "purpose": "One planner turns every non-claim action and every modal submission into a row update, HubSpot patch, note and reply, then picks the side effect.",
+      "nodes": [
+        {
+          "step": 24,
+          "name": "Plan Action Effects",
+          "type": "Code",
+          "what": "One planner for every action on the shared write path. It starts eu from the current encounter row (so an action never blanks a field another action owns) and per action_key sets eu, properties (the HubSpot patch), note_body (starting 'OAK BOOTH ACTION - <what>', Actor, At, 'Source: Slack action button, not AI inference.'), reply_text, side and reclass_reason. oak_booth_status (Mark met): booth_status met, oak_booth_status met, hs_lead_status CONNECTED. oak_snooze: follow_up_at 09:00 UTC tomorrow, booth_status follow_up_later if still 'scanned', side snooze, a HIGH priority TODO task 'Oak booth follow-up: <email>'. oak_send_owner: side send_owner, no properties. oak_flag_intel: competitive_intel and exclude_from_outreach true; oak_competitor_status confirmed, oak_exclude_from_outreach 'true'. oak_false_alarm: competitor_override false_alarm, exclude false, override_classification needs_review, side repost; oak_competitor_status none, oak_lead_tier needs_review, oak_exclude_from_outreach 'false'. oak_mark_matched: override_classification matched, side repost, oak_lead_tier matched. oak_promote_modal: override_classification tier_1, side repost, reason from the select plus detail, oak_lead_tier tier_1. oak_meeting_modal: booth_status meeting_booked, follow_up_at = picked date 09:00 UTC, oak_booth_status meeting_booked, hs_lead_status OPEN_DEAL, lifecyclestage salesqualifiedlead. oak_note_modal: note only, properties {}. oak_downgrade_modal: exclude_from_outreach true, override_classification out_of_scope, downgrade_reason, booth_status not_a_fit, side repost; oak_lead_tier out_of_scope, oak_exclude_from_outreach 'true', oak_booth_status not_a_fit, hs_lead_status UNQUALIFIED. Anything else: an 'unsupported action' note and 'That action is not implemented yet.'",
+          "why": "Ten buttons differ in what they write, not how, so deciding it in one place means the row, the CRM patch, the note and the reply cannot drift apart per button. (Its canvas note says 'nine buttons'; counting Mark met, Matched, Snooze, Send to owner, Flag, False alarm plus the four modal submissions it is ten.)",
+          "in": "Build Action Context (by name): action_key, encounter row, view_values, action_value, actor ids, channel and ts.",
+          "out": "{route_key, side (direct | snooze | send_owner | repost), actor, who (<@U...>), slack_user_id, channel_id, message_ts, contact_id, event_person_key, eu, properties, task, note_body, reply_text, reclass_reason, original_blocks}.",
+          "decides": "What every action writes, and whether it needs a side effect first.",
+          "code": "const eu={booth_status:String(row.booth_status||'scanned'),exclude_from_outreach:row.exclude_from_outreach===true,override_classification:String(row.override_classification||''),...,last_action:key,last_action_by:actor,last_action_at:now};\nelse if(key==='oak_promote_modal'){...eu.override_classification='tier_1';eu.last_action='oak_promote_tier1';side='repost';reclassReason=reason;properties={oak_lead_tier:'tier_1'};...}\nelse if(key==='oak_downgrade_modal'){...eu.override_classification='out_of_scope';...side='repost';...properties={oak_lead_tier:'out_of_scope',oak_exclude_from_outreach:'true',oak_booth_status:'not_a_fit',hs_lead_status:'UNQUALIFIED'};...}",
+          "branches": [],
+          "on_failure": "No onError setting; pure code.",
+          "say_it": "One planner computes the row update, HubSpot patch, audit note and reply for ten buttons, so they cannot drift apart, and every note says it came from a button, not AI.",
+          "next": [
+            "Needs Side Effect?"
+          ]
+        },
+        {
+          "step": 25,
+          "name": "Needs Side Effect?",
+          "type": "Switch",
+          "what": "Switches on side (case-sensitive, strict).",
+          "why": "Snooze, Send to owner and reclassification each need one extra call before the shared write path; everything else writes directly.",
+          "in": "side from Plan Action Effects.",
+          "out": "The plan item on one output.",
+          "decides": "Which extra call, if any, runs before the shared write.",
+          "code": null,
+          "branches": [
+            {
+              "label": "Snooze task (snooze)",
+              "goes_to": "Create Snooze Task",
+              "meaning": "Snooze: create the HubSpot task first."
+            },
+            {
+              "label": "Send to owner (send_owner)",
+              "goes_to": "Get Contact Owner",
+              "meaning": "Send to owner: resolve the owner and DM the card first."
+            },
+            {
+              "label": "Repost card (repost)",
+              "goes_to": "Load Decision Payload",
+              "meaning": "Promote to Tier 1, Matched, Not a fit, False alarm: repost the card through 03 first."
+            },
+            {
+              "label": "Fallback: Write only",
+              "goes_to": "Apply Encounter Update",
+              "meaning": "Mark met, Meeting booked, Add note, Flag for intel (and unsupported keys): straight to the shared write path."
+            }
+          ],
+          "on_failure": "No onError; cannot fail. Detail: the saved connections also list an empty fifth output, a harmless leftover.",
+          "say_it": "Only three actions need an extra call first; all of them then rejoin the same write path.",
+          "next": [
+            "Create Snooze Task",
+            "Get Contact Owner",
+            "Load Decision Payload",
+            "Apply Encounter Update"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Snooze - HubSpot Follow-up Task",
+      "purpose": "Creates the HubSpot follow-up task due 09:00 UTC the next day before the shared write path records the snooze.",
+      "nodes": [
+        {
+          "step": 26,
+          "name": "Create Snooze Task",
+          "type": "HTTP Request (HubSpot POST task)",
+          "what": "POST /crm/v3/objects/tasks with the planned task (hs_timestamp 09:00 UTC tomorrow, subject 'Oak booth follow-up: <email>', body naming who snoozed it, NOT_STARTED, HIGH, TODO), associated to the contact with HUBSPOT_DEFINED association type 204 (task to contact).",
+          "why": "Snooze must leave something in the CRM that will actually resurface; it is the only task creator in the system.",
+          "in": "task and contact_id from Plan Action Effects.",
+          "out": "HubSpot's task (id) or an error item.",
+          "decides": null,
+          "code": "associations: [{ to: { id: String($json.contact_id) }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 204 }] }]",
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, then onError continueRegularOutput with alwaysOutputData: a miss becomes an error item that Summarize Action Result reports in the thread and the CRM note.",
+          "say_it": "Snooze creates a real HubSpot task due 9am UTC tomorrow, so the follow-up cannot be forgotten.",
+          "next": [
+            "Apply Encounter Update"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Send to owner - DM Hand-off",
+      "purpose": "Resolves the HubSpot owner, maps the owner email to a Slack user, and DMs the card without its buttons.",
+      "nodes": [
+        {
+          "step": 27,
+          "name": "Get Contact Owner",
+          "type": "HTTP Request (HubSpot GET contact)",
+          "what": "GET /crm/v3/objects/contacts/<contact_id>?properties=hubspot_owner_id,email,firstname,lastname (contact 0 if none, which fails and is reported).",
+          "why": "Send to owner means the HubSpot owner, so we need the contact's owner id.",
+          "in": "contact_id from Plan Action Effects.",
+          "out": "Contact properties including hubspot_owner_id.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, then onError continueRegularOutput with alwaysOutputData: a miss becomes an error item that Summarize Action Result reports in the thread and the CRM note.",
+          "say_it": "Send to owner first reads who owns the contact in HubSpot.",
+          "next": [
+            "Get Owner Record"
+          ]
+        },
+        {
+          "step": 28,
+          "name": "Get Owner Record",
+          "type": "HTTP Request (HubSpot GET owner)",
+          "what": "GET /crm/v3/owners/<hubspot_owner_id> (0 if empty).",
+          "why": "The owner's email is the only reliable bridge from a HubSpot owner to a Slack user; this does not depend on the owner_directory map 03 uses.",
+          "in": "properties.hubspot_owner_id from Get Contact Owner.",
+          "out": "Owner record with email.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, then onError continueRegularOutput with alwaysOutputData: a miss becomes an error item that Summarize Action Result reports in the thread and the CRM note.",
+          "say_it": "We resolve the HubSpot owner's email, which is how we find them in Slack.",
+          "next": [
+            "Lookup Slack User"
+          ]
+        },
+        {
+          "step": 29,
+          "name": "Lookup Slack User",
+          "type": "HTTP Request (Slack users.lookupByEmail)",
+          "what": "GET https://slack.com/api/users.lookupByEmail?email=<owner email> with the Slack app credential. Needs the users:read.email scope.",
+          "why": "Turns the owner's email into a Slack user id to DM.",
+          "in": "email from Get Owner Record.",
+          "out": "{ok, user:{id,...}} or {ok:false, error}.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, then onError continueRegularOutput with alwaysOutputData: a miss becomes an error item that Summarize Action Result reports in the thread and the CRM note.",
+          "say_it": "The owner's email is looked up in Slack to get the user to DM.",
+          "next": [
+            "DM Owner Card"
+          ]
+        },
+        {
+          "step": 30,
+          "name": "DM Owner Card",
+          "type": "HTTP Request (Slack chat.postMessage)",
+          "what": "Posts to the owner's user id: a context line 'Forwarded from the Oak booth by <@rep> because you own this record in HubSpot.' followed by the original card blocks with every actions block removed (so no buttons and no link row).",
+          "why": "The owner gets the full context, but cannot double-write from a stale copy of the card.",
+          "in": "user.id from Lookup Slack User; who, actor and original_blocks from Plan Action Effects.",
+          "out": "{ok, ...} or {ok:false, error}.",
+          "decides": null,
+          "code": ".concat(($('Plan Action Effects').first().json.original_blocks || []).filter(b => b.type !== 'actions'))",
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, continueRegularOutput with alwaysOutputData. Slack returns ok:false rather than an HTTP error for most failures; Summarize Action Result reads ok and reports 'Slack refused the owner DM ... The bot needs users:read.email and im:write.'",
+          "say_it": "The owner gets the card in a DM without buttons, and if any hop fails the thread says which one.",
+          "next": [
+            "Apply Encounter Update"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reclassify - Repost the Card Through 03",
+      "purpose": "Reloads the decision 01 stored, overrides the tier, drops routing and calls 03 so the channel and buttons come from the policy for the new tier.",
+      "nodes": [
+        {
+          "step": 31,
+          "name": "Load Decision Payload",
+          "type": "Data Table get (oak_deliveries)",
+          "what": "Reads the oak_deliveries row for the scan_id the card (or modal private_metadata) carried, limit 1. Its raw_json is the complete final decision payload 01 handed to 03 for that scan.",
+          "why": "Reposting from the stored decision, not from the clicked message: a view_submission carries no message blocks, and the old implementation that rebuilt the card from blocks posted a heading and no lead after a Promote.",
+          "in": "scan_id from Build Action Context.",
+          "out": "The delivery row (raw_json, slack_json, event_id ...) or an empty item.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "alwaysOutputData plus continueRegularOutput: a missing row falls back to the encounter's last_payload_json in the next node.",
+          "say_it": "Reclassification reloads the exact decision object 01 stored for that scan.",
+          "next": [
+            "Build Reclassified Payload"
+          ]
+        },
+        {
+          "step": 32,
+          "name": "Build Reclassified Payload",
+          "type": "Code",
+          "what": "Takes oak_deliveries.raw_json, falling back to oak_encounters.last_payload_json (same object, latest scan for this person). If neither parses into an object with a scan_id, or no new classification was planned, it returns repost_ok false with a reason. Otherwise it copies the payload, sets classification to the planned override, deletes routing so 03 resolves the channel from the policy for the new tier, forces notification_mode 'first_scan' and nulls previous_slack_ts and previous_slack_channel (a new card in a new channel, not a thread reply), and writes the override_banner: '*Moved from <old> to <new>*' when the tier changed, else '*Reclassified as <new>*', plus ' by <@rep>' and ' - <reason>'. The rep's reason has < > & stripped. For out_of_scope it replaces decision_reasons with 'Marked not a fit at the booth by <rep>.' plus the reason, because that card prints reasons verbatim and the rules' reasons would contradict the human. Adds repost_ok, repost_from_classification, repost_source.",
+          "why": "One card builder for every path: 03 gets a normal decision payload and renders the right channel, layout and buttons for the new tier. It never calls 03 with a half-built payload, which would post a card full of blanks. Note what it does not change: score and (except for out of scope) reasons stay as decided at scan time, so a promoted card shows the original score under a Tier 1 header and banner.",
+          "in": "Plan Action Effects (by name), the delivery row ($input), the encounter row from Build Action Context.",
+          "out": "The full reposting payload with repost_ok true, or {repost_ok:false, repost_skip_reason}.",
+          "decides": "Whether to repost, and the new classification and banner.",
+          "code": "let raw=String(row.raw_json||'');\nif(!raw)raw=String(enc.last_payload_json||'');\nout.classification=to;\ndelete out.routing;\nout.notification_mode='first_scan';\nout.override_banner=(from&&from!==to?('*Moved from '+label(from)+' to '+label(to)+'*'):('*Reclassified as '+label(to)+'*'))+' by '+String(p.who||actor)+(reason?(' - '+reason):'')+'.';",
+          "branches": [],
+          "on_failure": "No onError setting; the JSON parse is in try/catch and an unreadable payload becomes repost_ok false.",
+          "say_it": "The reclassified card is rebuilt from the stored decision with routing dropped, so 03 looks up the new channel and buttons, and a banner says who moved it and why.",
+          "next": [
+            "Repost Payload Ready?"
+          ]
+        },
+        {
+          "step": 33,
+          "name": "Repost Payload Ready?",
+          "type": "IF",
+          "what": "Branches on repost_ok === true.",
+          "why": "Never call 03 with an unreadable payload.",
+          "in": "repost_ok.",
+          "out": "The payload on one output.",
+          "decides": "Repost or skip.",
+          "code": "$json.repost_ok === true",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Repost Card via Slack Alerts",
+              "meaning": "Payload is complete: call 03."
+            },
+            {
+              "label": "false",
+              "goes_to": "Record Repost Outcome",
+              "meaning": "Nothing readable to repost: skip; the CRM and row are still updated and the reply says the repost was skipped."
+            }
+          ],
+          "on_failure": "No onError; cannot fail.",
+          "say_it": "If the stored payload cannot be read, we skip the repost but still record the rep's decision.",
+          "next": [
+            "Repost Card via Slack Alerts",
+            "Record Repost Outcome"
+          ]
+        },
+        {
+          "step": 34,
+          "name": "Repost Card via Slack Alerts",
+          "type": "Execute Sub-workflow (03 gyCxnkoGkh3OJpz5)",
+          "what": "Calls 03 Slack Alerts by id with waitForSubWorkflow true, exactly as 01 does. 03 looks up the channel for the new tier in the policy (tier_1 booth-hot with its @here, matched booth-matched, needs_review booth-review; out_of_scope goes to booth-out-of-scope via 03's quiet route), renders the full card, attaches that tier's buttons (a needs_review repost from False alarm gets the triage row), puts the banner under the header, and records the new card as the thread anchor in oak_encounters. It returns 03's delivery receipt.",
+          "why": "Waiting means the receipt can be reported in the reply. The old card is not edited or deleted; it only gets a check mark at the end.",
+          "in": "The reclassified payload.",
+          "out": "03's receipt: delivered_count, failed_count, channel, warnings ...",
+          "decides": null,
+          "code": "workflowId: { mode: 'id', value: 'gyCxnkoGkh3OJpz5' }, options: { waitForSubWorkflow: true }",
+          "branches": [],
+          "on_failure": "onError continueRegularOutput with alwaysOutputData: if 03 fails, the rep's decision is still written; Summarize Action Result says 'The reposted card was not delivered to Slack.'",
+          "say_it": "Reclassification calls 03 again as a sub-workflow, so the reposted card lands in the right channel with the right buttons.",
+          "next": [
+            "Record Repost Outcome"
+          ]
+        },
+        {
+          "step": 35,
+          "name": "Record Repost Outcome",
+          "type": "Code",
+          "what": "Both branches land here and produce one shape: repost_attempted, repost_skip_reason, repost_classification, repost_source (oak_deliveries.raw_json or oak_encounters.last_payload_json), repost_delivered (03's delivered_count), repost_channel, repost_warnings.",
+          "why": "The shared write path and the thread reply can report what happened without knowing which branch ran.",
+          "in": "Build Reclassified Payload and Repost Card via Slack Alerts (by name).",
+          "out": "The repost outcome item.",
+          "decides": null,
+          "code": "const ok=b.repost_ok===true;\nrepost_delivered:(ok&&r)?Number(r.delivered_count||0):0",
+          "branches": [],
+          "on_failure": "No onError setting; the 03 read is in try/catch.",
+          "say_it": "The repost result is normalised into one shape so the reply can say exactly what happened.",
+          "next": [
+            "Apply Encounter Update"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Shared Write Path - Table, CRM, Reply",
+      "purpose": "One write path: update the encounter row, report side effects honestly, patch HubSpot only when a property changed, add a note, reply in the thread.",
+      "nodes": [
+        {
+          "step": 36,
+          "name": "Apply Encounter Update",
+          "type": "Data Table update (oak_encounters)",
+          "what": "Updates the row matched on event_person_key with the pre-merged eu values: booth_status, exclude_from_outreach, override_classification, competitor_override, follow_up_at, downgrade_reason, competitive_intel, last_action, last_action_by, last_action_at, updated_at.",
+          "why": "The row is what a later re-scan reads back: 01 turns override_classification into rep_override, and 01's final gate (or 04 when 05 is skipped) honours it unless HubSpot or the visitor at 0.9+ confidence now puts the company at 1,000+.",
+          "in": "Plan Action Effects (by name).",
+          "out": "The updated row (or an empty item).",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "alwaysOutputData plus continueRegularOutput; a failure is reported as 'Encounter state may not have been stored in oak_encounters.'",
+          "say_it": "Every action updates the encounter row, which is how a rep's correction survives the next scan of the same badge.",
+          "next": [
+            "Summarize Action Result"
+          ]
+        },
+        {
+          "step": 37,
+          "name": "Summarize Action Result",
+          "type": "Code",
+          "what": "Checks every side effect and appends honest notes to both the reply and the CRM note: 'The HubSpot follow-up task was not created', 'No HubSpot owner email was found, so no DM was sent.', 'No Slack user matches the HubSpot owner email X', 'Slack refused the owner DM ... The bot needs users:read.email and im:write.', 'The card was delivered to X.', 'The card was not reposted because <reason>, so only the CRM and the row were updated.', 'The reposted card was not delivered to Slack.', 'Encounter state may not have been stored', 'No HubSpot contact id was on the card, so no CRM write was attempted.'",
+          "why": "A button must never claim an effect that did not happen.",
+          "in": "Plan Action Effects, Create Snooze Task, Get Owner Record, Lookup Slack User, DM Owner Card, Record Repost Outcome, Apply Encounter Update (all by name, missing ones tolerated).",
+          "out": "The plan plus side_notes, reply_text and note_body with the notes appended.",
+          "decides": null,
+          "code": "if(p.side==='repost'){const o=grab('Record Repost Outcome')||{};if(o.repost_attempted!==true)notes.push('The card was not reposted because '+String(o.repost_skip_reason||'...')+', so only the CRM and the row were updated.');else if(Number(o.repost_delivered||0)<1)notes.push('The reposted card was not delivered to Slack.');}",
+          "branches": [],
+          "on_failure": "No onError setting; every read is in try/catch.",
+          "say_it": "Before replying we check each side effect, so the thread and the CRM note say plainly what failed.",
+          "next": [
+            "CRM Writable?"
+          ]
+        },
+        {
+          "step": 38,
+          "name": "CRM Writable?",
+          "type": "IF",
+          "what": "True when contact_id is not empty.",
+          "why": "No contact id means nothing to patch or note in HubSpot; the row update and reply still happen.",
+          "in": "contact_id.",
+          "out": "The summary item on one output.",
+          "decides": "Whether to touch HubSpot.",
+          "code": "{{ $json.contact_id }} notEmpty",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Has Properties?",
+              "meaning": "There is a HubSpot contact: patch and note."
+            },
+            {
+              "label": "false",
+              "goes_to": "Reply Action Result",
+              "meaning": "No contact id: skip HubSpot and reply (the reply already says no CRM write was attempted)."
+            }
+          ],
+          "on_failure": "No onError; cannot fail.",
+          "say_it": "Without a contact id we skip HubSpot but still record and reply.",
+          "next": [
+            "Has Properties?",
+            "Reply Action Result"
+          ]
+        },
+        {
+          "step": 39,
+          "name": "Has Properties?",
+          "type": "IF",
+          "what": "True when the planned properties object has at least one key.",
+          "why": "Snooze, Send to owner and Add note change no contact property, and HubSpot rejects a PATCH with an empty properties object.",
+          "in": "properties from Summarize Action Result.",
+          "out": "The item on one output.",
+          "decides": "Whether to PATCH the contact.",
+          "code": "Object.keys($('Summarize Action Result').first().json.properties || {}).length > 0",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Patch Action Properties",
+              "meaning": "This action owns contact fields: patch them, then add the note."
+            },
+            {
+              "label": "false",
+              "goes_to": "Create Action Note",
+              "meaning": "Nothing to patch: go straight to the note."
+            }
+          ],
+          "on_failure": "No onError; cannot fail.",
+          "say_it": "We only PATCH HubSpot when the action actually changes a property.",
+          "next": [
+            "Patch Action Properties",
+            "Create Action Note"
+          ]
+        },
+        {
+          "step": 40,
+          "name": "Patch Action Properties",
+          "type": "HTTP Request (HubSpot PATCH contact)",
+          "what": "PATCH /crm/v3/objects/contacts/<contact_id> with only this action's properties: its oak_* fields, plus hs_lead_status (CONNECTED, OPEN_DEAL, UNQUALIFIED) or lifecyclestage salesqualifiedlead where the action is a real pipeline event.",
+          "why": "A rep correction never overwrites a human CRM field it does not own.",
+          "in": "contact_id and properties from Summarize Action Result.",
+          "out": "HubSpot's response or an error item.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, then onError continueRegularOutput with alwaysOutputData: a miss becomes an error item that Summarize Action Result reports in the thread and the CRM note.",
+          "say_it": "The HubSpot patch touches only the fields this action owns.",
+          "next": [
+            "Create Action Note"
+          ]
+        },
+        {
+          "step": 41,
+          "name": "Create Action Note",
+          "type": "HTTP Request (HubSpot POST note)",
+          "what": "POST /crm/v3/objects/notes with hs_timestamp now and hs_note_body (newlines as <br>), associated to the contact with association type 202 (note to contact).",
+          "why": "Every shared-path action leaves an attributed note, so the booth history survives outside Slack. Claim is the exception: it records oak_claimed_by instead.",
+          "in": "note_body and contact_id from Summarize Action Result.",
+          "out": "HubSpot's note or an error item.",
+          "decides": null,
+          "code": "hs_note_body: $('Summarize Action Result').first().json.note_body.replace(/\\n/g, '<br>'), associationTypeId: 202",
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, then onError continueRegularOutput with alwaysOutputData: a miss becomes an error item that Summarize Action Result reports in the thread and the CRM note.",
+          "say_it": "Every action leaves an attributed HubSpot note that says it came from a button, not AI.",
+          "next": [
+            "Reply Action Result"
+          ]
+        },
+        {
+          "step": 42,
+          "name": "Reply Action Result",
+          "type": "Slack (post message in thread)",
+          "what": "Posts reply_text in the card's thread, for example 'Promoted to *Tier 1* by <@rep> and reposted to the hot channel. Reason: confirmed renewal.' with any side-effect notes in italics.",
+          "why": "The rep sees the result where they clicked.",
+          "in": "channel_id, message_ts, reply_text from Summarize Action Result.",
+          "out": "Slack's response.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 3, 1000 ms apart, onError continueRegularOutput with alwaysOutputData, so the check mark still follows.",
+          "say_it": "The rep gets a thread reply saying exactly what was written.",
+          "next": [
+            "Mark Card Handled"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mark the Card Handled",
+      "purpose": "One check mark on the original card after a write, so a handled lead is visible in the channel.",
+      "nodes": [
+        {
+          "step": 43,
+          "name": "Mark Card Handled",
+          "type": "Slack (add reaction)",
+          "what": "Adds the white_check_mark reaction to the original card (channel_id and message_ts from Build Action Context, which for a modal submission came from private_metadata). Reached from both the claim path and the shared write path.",
+          "why": "Anyone scrolling the channel sees the lead has been handled without opening the thread. Why this score?, opening a modal and a lost claim race do not reach it.",
+          "in": "Build Action Context (by name).",
+          "out": "Slack's response.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 2, 1000 ms apart, onError continueRegularOutput with alwaysOutputData: a second press returns already_reacted, which is swallowed rather than shown to the rep.",
+          "say_it": "A check mark on the card means a human has acted on this lead.",
+          "next": []
+        }
+      ]
+    },
+    {
+      "name": "Unsupported Action",
+      "purpose": "Stops safely for action ids that are not implemented.",
+      "nodes": [
+        {
+          "step": 44,
+          "name": "Ignore Unsupported Action",
+          "type": "Code",
+          "what": "Returns {ignored:true, action_id} and has no outgoing connection, so the run ends.",
+          "why": "Stops safely for an action_id with no handler rather than half-writing an effect. Slack already got its 200.",
+          "in": "The context item from Route Slack Action's fallback.",
+          "out": "{ignored:true, action_id}.",
+          "decides": null,
+          "code": "return[{json:{ignored:true,action_id:$json.action_id}}];",
+          "branches": [],
+          "on_failure": "No onError setting; trivial code.",
+          "say_it": "An unknown button is ignored cleanly rather than half-applied.",
+          "next": []
+        }
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Verify before reading anything, fail closed",
+      "why": "It is a public webhook that writes to the CRM. The HMAC is checked over the raw bytes before the payload is even parsed; no secret means 503 and nothing runs, a bad or stale signature means 401, and Continue Only If Verified emits zero items."
+    },
+    {
+      "title": "Acknowledge first, work second",
+      "why": "Slack's 3-second window for the endpoint, and the 3-second trigger_id for opening a modal, both demand it. Only the signature check and one table read happen before a modal opens."
+    },
+    {
+      "title": "Claim is a conditional update plus a read-back",
+      "why": "Update only where claimed_by_slack_id is empty, then read the row and compare with the clicker. One owner, and an honest 'Already claimed by X' for the second rep, who writes nothing."
+    },
+    {
+      "title": "Ten buttons, one write path",
+      "why": "Plan Action Effects computes the row, the CRM patch, the note and the reply once. Only Why this score? (read-only) and Claim (race guard) are separate; modals rejoin the planner."
+    },
+    {
+      "title": "Reclassification replays the stored decision through 03",
+      "why": "oak_deliveries.raw_json (falling back to oak_encounters.last_payload_json) is re-sent to 03 with the new classification and no routing, so there is one card builder and the new card gets the right channel and buttons. The old version rebuilt from the clicked message, which is empty on a modal submission."
+    },
+    {
+      "title": "Reasons where they matter, one tap where they do not",
+      "why": "Promote to Tier 1 and Not a fit open a modal and require a reason; Matched and False alarm are one tap, because charging a form for the middle outcome is how reps stop correcting the system."
+    }
+  ],
+  "questions": [
+    {
+      "q": "How do you know a request really came from Slack?",
+      "a": "Slack signs 'v0:<timestamp>:<raw body>' with the app's signing secret. Verify Signature and Parse recomputes HMAC-SHA256 over the raw bytes (the webhook keeps rawBody for exactly this), compares with crypto.timingSafeEqual after a length check, and rejects timestamps more than 300 seconds off to stop replays. Missing secret: 503. Bad signature: 401. Either way Continue Only If Verified returns no items, so nothing downstream runs."
+    },
+    {
+      "q": "Why acknowledge before doing the work?",
+      "a": "Slack retries or shows an error if an interactive endpoint does not answer within 3 seconds, and a modal's trigger_id expires 3 seconds after the click. So only the signature check runs before Acknowledge Slack; HubSpot calls and the repost through 03 happen after. An empty 200 on a modal submission also closes the modal."
+    },
+    {
+      "q": "Two reps hit Claim at the same second. What happens?",
+      "a": "Claim Encounter If Unowned updates the row only where event_person_key matches AND claimed_by_slack_id is empty, so only one update can land. Reload Claim State reads the row back and Build Claim Result compares the stored claimant with the clicker. The winner gets the HubSpot write, the card rewrite ('Claimed by @rep', Claim button removed), a thread confirmation and a check mark. The other rep gets 'Already claimed by <name>' in the thread and writes nothing."
+    },
+    {
+      "q": "Walk me through Promote to Tier 1 on a review card.",
+      "a": "The tap opens a modal asking why (six reasons plus detail). The submission comes back into the same webhook, is verified, and routes to effects with callback oak_promote_modal. The planner sets override_classification tier_1 and oak_lead_tier tier_1 and side repost. Load Decision Payload reads raw_json for that scan, Build Reclassified Payload sets tier_1, drops routing and adds the banner, and 03 posts a fresh card in #booth-hot with the @here and Tier 1 buttons. Then the row update, HubSpot patch, note, thread reply and a check mark on the old card."
+    },
+    {
+      "q": "Which buttons does each card get, and why the triage row?",
+      "a": "Built in 03: a needs_review card gets Claim, Why this score?, the triage row Promote to Tier 1 | Matched | Not a fit, then Mark met, Meeting booked, and Add note, Send to owner, Snooze. Matched gets Not a fit in the status row and Promote in the last row; Tier 1 the same without Promote. Competitor cards get only Why this score?, Flag for competitive intel and False alarm. Out of scope gets none. A review card asks one question, where does this lead belong, so its three answers sit side by side."
+    },
+    {
+      "q": "What does the rep's correction change on the next scan?",
+      "a": "Apply Encounter Update stores override_classification on the encounter (tier_1, matched, needs_review or out_of_scope). On a re-scan 01 reads it back as rep_override and its final gate, or 04 when 05 is skipped, honours it, unless HubSpot or the visitor at 0.9+ confidence now puts the company at 1,000+, in which case it goes to review and 'Neither side wins silently - a human decides.'"
+    },
+    {
+      "q": "What if the stored payload is missing or HubSpot has no contact?",
+      "a": "Build Reclassified Payload returns repost_ok false and Repost Payload Ready? skips 03, but the row and CRM are still written and the reply says 'The card was not reposted because ...'. With no contact id, CRM Writable? skips HubSpot and the reply says no CRM write was attempted. Every soft failure is reported in the thread and in the note by Summarize Action Result."
+    },
+    {
+      "q": "Why does Why this score? not call the AI?",
+      "a": "An explanation must never be able to change what it explains, and it must match what was decided at scan time. It reads last_rule_summary, last_score, last_score_breakdown and last_decision_reasons from oak_encounters, so it is instant, free and reproducible."
+    }
+  ]
+}
