@@ -693,6 +693,15 @@
   "cite": "07 > Clear Test Event Scans, Clear Test Event Encounters; 01 > Normalize Scan (eventId default)"
  },
  {
+  "id": "test-10",
+  "category": "Reliability and testing",
+  "difficulty": "deep",
+  "q": "What can your harness not assert?",
+  "a": "Three things, and I checked them by eye. It has no assertion on the webhook status, so a replay answering duplicate_ignored is read from the POST output. It does not count Slack cards, so 'no second card' is checked in the channel. And it reports repeat_scan, scan_count and slack_threaded without asserting them, so returning-visitor threading is read, not scored. It also throws if two scans in one run share a scan_id, which is deliberate, so a true replay test spans two runs.",
+  "if_pushed": "Which would you add first? An assertion on the HTTP status per row, expect.status duplicate_ignored, because replay protection is a brief requirement and should be scored, not eyeballed.",
+  "cite": "07 > Score Test Run; docs/test-cases.md (Harness limits)"
+ },
+ {
   "id": "scale-01",
   "category": "Scale and operations",
   "difficulty": "deep",
@@ -788,8 +797,8 @@
   "difficulty": "deep",
   "q": "Your cascade puts a possible competitor above the size rule. Does that hold all the way through?",
   "a": "Not fully, and I found why. In 01 and in 04 a possible competitor is protected from the size rule, but the final gate after the AI only protects confirmed competitors, so a name-token possible competitor whose size comes back under 500 can be demoted to out of scope there. That is the exact mistake the ordering exists to prevent. The fix is one condition: the final gate skips the size branch when competitor_status is possible, mirroring 04.",
-  "if_pushed": "Does it affect the four task leads? No. Sarah is a confirmed competitor by domain, and confirmed is protected everywhere.",
-  "cite": "01 > Enforce Final Deterministic Gates (size branch); 04 > Build Enrichment Result (competitor rescue)"
+  "if_pushed": "Does it affect the four task leads? No, Sarah is a confirmed competitor and confirmed is protected everywhere. My own test 'Unlisted competitor caught by company name', a 60-person 'Northgate Identity Governance', is the case that exposes it.",
+  "cite": "01 > Enforce Final Deterministic Gates (size branch); 04 > Build Enrichment Result (competitor rescue); oak_test_payloads row 17; docs/test-cases.md"
  },
  {
   "id": "weak-03",
@@ -907,6 +916,15 @@
   "a": "The final gate and the places that mirror it. Today competitor, size and override rules are applied in 01's first pass, again in 04, again in 05's guard for the AI path, and again in the final gate, and the weaknesses I found are all places where those copies drifted apart. I would put the classification rules in one function, called at the start and at the end with whatever evidence exists, so there is one cascade instead of four partial ones.",
   "if_pushed": "Why four copies in the first place? Each stage needed to act on what it had just learned. Correct locally, but it needs one source of truth.",
   "cite": "01 > Evaluate ICP Policy, Enforce Final Deterministic Gates; 04 > Build Enrichment Result; 05 > Guard AI Output"
+ },
+ {
+  "id": "weak-16",
+  "category": "Weaknesses and what I would change",
+  "difficulty": "deep",
+  "q": "Rachel comes back in the afternoon and her new notes don't mention the renewal. Is she still Tier 1?",
+  "a": "No, and that is a gap. 01 reads urgency only from the current scan's notes, so her second scan, 'came back with her IAM lead, confirmed 4,000 employees', has no trigger and computes matched. The encounter row keeps her scan history and the earlier notes, but the rules do not look back at them. The fix is to carry urgency evidence forward on the encounter, like a rep override, so a trigger heard once holds for the rest of the event unless someone clears it.",
+  "if_pushed": "How would the card look today? A thread reply under her first #booth-hot card saying the tier changed from Tier 1 to matched, which is the wrong message about the best lead of the day. My saved test for that second scan expects Tier 1, so it fails until the fix lands.",
+  "cite": "01 > Evaluate ICP Policy (urgency from current notes), Build Visitor Context; oak_test_payloads row 5; docs/test-cases.md"
  },
  {
   "id": "gtm-01",
