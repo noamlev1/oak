@@ -545,7 +545,7 @@
   "difficulty": "deep",
   "q": "Two reps hit Claim at the same second. What happens?",
   "a": "Claim Encounter If Unowned is a conditional update: it matches the person's row only where claimed_by_slack_id is empty, so only the first update can land. Reload Claim State reads the row back and Build Claim Result succeeds only if the stored claimant is the person who clicked. The winner gets the HubSpot write and the card rewritten with 'Claimed by' and the Claim button removed; the other rep gets 'Already claimed by name' in the thread and writes nothing.",
-  "if_pushed": "Does claiming change the HubSpot owner? Only if the contact has no owner and the rep's Slack email matches a HubSpot owner. An existing owner is never overwritten.",
+  "if_pushed": "Does claiming change the HubSpot owner? Only if the contact has no owner and the rep's Slack email matches a HubSpot owner; an existing owner is never overwritten. One bug I found here: the card update passed Slack's ts through Number(), which drops a trailing zero, so about one card in ten did not show the claim even though the claim itself was stored.",
   "cite": "06 > Claim Encounter If Unowned, Reload Claim State, Build Claim Result, Build HubSpot Claim Patch"
  },
  {
@@ -589,7 +589,7 @@
   "category": "Slack and reps",
   "difficulty": "deep",
   "q": "A returning visitor moves from Matched to Tier 1. Which channel does the second card land in?",
-  "a": "Today it lands in the first card's thread in #booth-matched, broadcast to that channel, with an @here and 'tier changed from matched to tier 1', because when a thread anchor exists the channel is replaced by the previous channel. That keeps one conversation per person. The trade-off is that #booth-hot does not see it as a new root card. I would change it so a repeat_escalation that changes channel posts a new root card in #booth-hot and links the old thread.",
+  "a": "When I built threading, a returning visitor always replied in the first card's thread, broadcast to that channel. That is right when the tier stays the same, but I found in review that a lead escalating from matched to Tier 1 stayed in the #booth-matched thread and never reached #booth-hot, because the channel was replaced by the previous one whenever a thread anchor existed. The fix posts a new root card in the new tier's channel when the channel changes, and links back to the first thread.",
   "if_pushed": "Why record the anchor only after Slack confirms? So a failed first post can never orphan later thread replies; Record Thread Anchor only runs on ok true with a message ts.",
   "cite": "03 > Resolve Slack Targets (useThread), Slack Post Succeeded?, Record Thread Anchor"
  },
@@ -608,7 +608,7 @@
   "difficulty": "deep",
   "q": "A rep marks someone Not a fit. The person gets scanned again an hour later. What happens?",
   "a": "Not a fit stored override_classification out_of_scope on the encounter. On the re-scan Build Visitor Context reads it back as rep_override, and the final gate, or 04 when the lead skips AI, applies it last: the rep wins. The one exception is a contradiction: if HubSpot or the visitor, at 0.9 confidence or more, now puts the company at 1,000 plus, the lead goes to needs_review with 'Conflict: rep marked this out of scope, but N employees qualifies the company'. Neither side wins silently.",
-  "if_pushed": "Does that conflict rule have a flaw? Yes: as written it also fires when the rep promoted or matched a lead at a big company. I cover that under weaknesses.",
+  "if_pushed": "Did that conflict rule have a flaw? Yes, I found in review that it also fired when a rep promoted or matched a lead at a big company, which is backwards. The fix limits it to downgrades.",
   "cite": "01 > Build Visitor Context, Enforce Final Deterministic Gates; 04 > Build Enrichment Result"
  },
  {
@@ -724,7 +724,7 @@
   "category": "Scale and operations",
   "difficulty": "deep",
   "q": "And Brave and Gemini limits?",
-  "a": "Worst case is three Brave calls and one Gemini call for an in-scope scan from a company not seen in 30 days. Out of scope skips both paid searches and the AI, competitors skip the person search and the AI, and the cache covers repeat companies. So at 5,000 scans the real volume is far below 15,000 searches. Both run on the instance's gateway credits today; for a big show I would put my own keys on them with a known quota and add a policy switch to turn person search off, which today the gate does not read.",
+  "a": "Worst case is three Brave calls and one Gemini call for an in-scope scan from a company not seen in 30 days. Out of scope skips both paid searches, competitors skip the person search and the AI, and the cache covers repeat companies, so at 5,000 scans the real volume is far below 15,000 searches. Both run on the instance's gateway credits today; for a big show I would put my own keys on them with a known quota, and use the policy switches for search so marketing can turn person search off mid-event.",
   "if_pushed": "If Brave is exhausted mid-event? Search soft-fails, the lead gets site-only enrichment and 'headcount to confirm', and routing is unaffected.",
   "cite": "04 > Search Enabled?, Need Headcount Search?, Person Search Worth It?"
  },
@@ -796,7 +796,7 @@
   "category": "Weaknesses and what I would change",
   "difficulty": "deep",
   "q": "Your cascade puts a possible competitor above the size rule. Does that hold all the way through?",
-  "a": "Not fully, and I found why. In 01 and in 04 a possible competitor is protected from the size rule, but the final gate after the AI only protects confirmed competitors, so a name-token possible competitor whose size comes back under 500 can be demoted to out of scope there. That is the exact mistake the ordering exists to prevent. The fix is one condition: the final gate skips the size branch when competitor_status is possible, mirroring 04.",
+  "a": "I found this reading every node against its intent. In 01 and in 04 a possible competitor is protected from the size rule, but the final gate after the AI only protected confirmed competitors, so a name-token possible competitor whose size came back under 500 could be demoted to out of scope. That is the exact mistake the cascade order exists to prevent; the gate was written before the possible-competitor feature and never learned about it. The fix is one condition: the final gate skips the size branch when competitor_status is possible, mirroring 04.",
   "if_pushed": "Does it affect the four task leads? No, Sarah is a confirmed competitor and confirmed is protected everywhere. My own test 'Unlisted competitor caught by company name', a 60-person 'Northgate Identity Governance', is the case that exposes it.",
   "cite": "01 > Enforce Final Deterministic Gates (size branch); 04 > Build Enrichment Result (competitor rescue); oak_test_payloads row 17; docs/test-cases.md"
  },
@@ -805,7 +805,7 @@
   "category": "Weaknesses and what I would change",
   "difficulty": "deep",
   "q": "Is there a flaw in how rep overrides are carried forward?",
-  "a": "Yes. The contradiction rule sends a lead to review when a rep's override differs from the rules and HubSpot or the visitor puts the company at 1,000 plus. That makes sense for Not a fit. But as written it also fires when the rep promoted or matched a lead at a big company, which is backwards: a 1,000 plus company supports a promotion. The fix is to apply the contradiction only when the override is out_of_scope or needs_review.",
+  "a": "Yes, one I found in review. The contradiction rule sends a lead to review when a rep's override differs from the rules and HubSpot or the visitor puts the company at 1,000 plus. That makes sense for Not a fit, which is what it was written for, but as written it also fired when a rep promoted or matched a lead at a big company, which is backwards: a 1,000 plus company supports a promotion. Promote and Matched came later and inherited the rule. The fix applies the contradiction only to downgrades, Not a fit and False alarm.",
   "if_pushed": "How would a rep notice? The re-scan would land in #booth-review with 'Conflict: rep marked this tier 1, but 4,000 employees qualifies the company', which reads as nonsense.",
   "cite": "01 > Enforce Final Deterministic Gates (contradicted)"
  },
@@ -814,7 +814,7 @@
   "category": "Weaknesses and what I would change",
   "difficulty": "deep",
   "q": "Can the AI ever lift a lead the rules parked for a reason it shouldn't override?",
-  "a": "Yes, in one path. If an ambiguous-title lead was sent to review because 04 found competitor language on the homepage, or out of scope for a SaaS-only disqualifier, a confident persona read in the guard sets matched or tier_1 without checking why it was parked, and the final gate does not recheck those two. Size bands and confirmed competitors are safe because the gate re-applies them. The fix is one condition in the guard: only lift when competitor_status is not possible and there are no disqualifier signals.",
+  "a": "In one path it could. If an ambiguous-title lead was parked in review because 04 found competitor language on the homepage, or out of scope for a SaaS-only or single-cloud disqualifier found on the homepage, a confident persona read in 05's guard set matched or tier_1 without checking why it was parked, and the final gate did not recheck those two. Size bands and confirmed competitors were always safe because the gate re-applies them. The fix is one condition in the guard: only lift when competitor_status is not possible and there are no disqualifier signals.",
   "if_pushed": "How likely is it? It needs an ambiguous title, identity context and competitor language on the site at once, so rare, but it is the flag the whole design says the AI can never clear.",
   "cite": "05 > Guard AI Output (persona branch); 01 > Enforce Final Deterministic Gates"
  },
@@ -823,7 +823,7 @@
   "category": "Weaknesses and what I would change",
   "difficulty": "deep",
   "q": "What happens if the policy table is empty or has no active row?",
-  "a": "The run stalls silently. Load Active Policy in 01 does not always output data, so zero rows means zero items, the flow stops before the 202, nothing is stored and nothing errors, so 99 never fires. 00 guarantees one active row, but a hand edit that sets it to superseded would take the booth down quietly. The fix is to always output, fall back to an embedded default policy, and post a warning to #oak-revops.",
+  "a": "I found that the run stalled silently. Load Active Policy in 01 did not always output data, so zero rows meant zero items: the flow stopped before the 202, nothing was stored, and nothing errored, so it never even reached the failure handler. 00 guarantees one active row, but a hand edit that marked it superseded would have taken the booth down quietly. The fix makes the missing policy loud: the node always outputs, the scan falls back to a safe default instead of vanishing, and the failure reaches #oak-revops.",
   "if_pushed": "Do the sub-workflows have the same issue? No, 03, 04 and 05 load the policy with always-output and fall back to routing 01 already resolved or to defaults.",
   "cite": "01 > Load Active Policy (no alwaysOutputData); 03 > Load Routing Policy"
  },
@@ -850,7 +850,7 @@
   "category": "Weaknesses and what I would change",
   "difficulty": "core",
   "q": "What if the notes say 'we have never had a security breach'?",
-  "a": "That fires the breach trigger. The rule is a plain match on 'identity breach', 'security breach' or 'breached' with no negation handling, so a CISO saying they have never been breached would be Tier 1. The fix is a negation window, no, never or not within a few words before the phrase, plus a test case. It is also a case where I would rather send a breach-only Tier 1 to the rep with the quote on the card, which the card already shows.",
+  "a": "In the original rule, that fired the breach trigger: it was a plain match on 'identity breach', 'security breach' or 'breached' with no negation handling, so a CISO saying they had never been breached would be Tier 1. I found it testing the trigger phrases against realistic notes. The fix adds a negation check, no, never or not shortly before the phrase, plus a test case. The card also quotes the notes, so a rep would see the sentence, but Tier 1 should not depend on the rep catching it.",
   "if_pushed": "Why not let the AI judge the trigger? Then Tier 1 would depend on the model. A negation rule is cheap, testable and deterministic.",
   "cite": "01 > Evaluate ICP Policy (identity_breach regex)"
  },
@@ -877,7 +877,7 @@
   "category": "Weaknesses and what I would change",
   "difficulty": "deep",
   "q": "How does 02A tell a HubSpot outage from a genuinely new lead?",
-  "a": "It cannot today. Every lookup is read through a helper that treats a failed call like an empty one, so an outage reads as net_new with no owner and no deals. The card would say net new for an existing customer. The fix is to carry the error into lookup_status failed and have the card say 'CRM unavailable' instead of 'net new'.",
+  "a": "It cannot. Every lookup in 02A goes through a helper that treats a failed call like an empty one, and Build CRM Context still reports lookup_status complete, so a HubSpot outage reads as net_new with no owner and no deals. The card would call an existing customer net new. The fix is to carry the error into lookup_status failed and have the card say 'CRM unavailable, check HubSpot before you pitch' instead of 'net new'.",
   "if_pushed": "Does 02 have the same problem? Less so: 02 writes lookup_status failed when no contact id comes back, and warnings are collected per step.",
   "cite": "02A > Build CRM Context"
  },
@@ -886,7 +886,7 @@
   "category": "Weaknesses and what I would change",
   "difficulty": "core",
   "q": "You mention an owner DM on Tier 1. Does it fire?",
-  "a": "Not yet. The policy asks for an owner DM on Tier 1, but the map from HubSpot owner id to Slack user, owner_overrides and owner_directory, is empty in the active policy, so every Tier 1 DM is skipped with the warning 'HubSpot owner is not mapped to Slack'. The Send to owner button does work, because it bridges by the owner's email through users.lookupByEmail. The fix is to use that same email bridge for the automatic DM.",
+  "a": "Not today. The policy asks for an owner DM on Tier 1, but the map from HubSpot owner id to Slack user, owner_overrides and owner_directory, is empty in the active policy, so every Tier 1 DM is skipped with the warning 'HubSpot owner is not mapped to Slack'. The Send to owner button does work, because it bridges by the owner's email through users.lookupByEmail. The fix is to use that same email bridge for the automatic DM, so nobody has to maintain a map.",
   "if_pushed": "Why a separate map at all? I built the map first for control; the email bridge came later in 06 and is the better design.",
   "cite": "03 > Resolve Slack Targets (owner DM); 06 > Lookup Slack User"
  },
@@ -922,9 +922,72 @@
   "category": "Weaknesses and what I would change",
   "difficulty": "deep",
   "q": "Rachel comes back in the afternoon and her new notes don't mention the renewal. Is she still Tier 1?",
-  "a": "No, and that is a gap. 01 reads urgency only from the current scan's notes, so her second scan, 'came back with her IAM lead, confirmed 4,000 employees', has no trigger and computes matched. The encounter row keeps her scan history and the earlier notes, but the rules do not look back at them. The fix is to carry urgency evidence forward on the encounter, like a rep override, so a trigger heard once holds for the rest of the event unless someone clears it.",
-  "if_pushed": "How would the card look today? A thread reply under her first #booth-hot card saying the tier changed from Tier 1 to matched, which is the wrong message about the best lead of the day. My saved test for that second scan expects Tier 1, so it fails until the fix lands.",
+  "a": "On the original logic, no. 01 read urgency only from the current scan's notes, so her second scan, 'came back with her IAM lead, confirmed 4,000 employees', had no trigger and computed matched, and she was downgraded on the second visit. The encounter row kept her history and earlier notes, but the rules did not look back at them. I found it because my own returning-visitor test expects Tier 1 on that scan. The fix carries urgency evidence forward on the encounter, like a rep override, so a trigger heard once holds for the event.",
+  "if_pushed": "Why did that slip through? Returning visitors were built for threading and 'what changed', and the Tier 1 rule was written for single scans. Each was right alone; together they downgraded the best lead of the day.",
   "cite": "01 > Evaluate ICP Policy (urgency from current notes), Build Visitor Context; oak_test_payloads row 5; docs/test-cases.md"
+ },
+ {
+  "id": "weak-17",
+  "category": "Weaknesses and what I would change",
+  "difficulty": "deep",
+  "q": "Tell me about a bug that only showed up some of the time.",
+  "a": "Claim sometimes failed to update the card. The claim itself worked, but the card update passed Slack's message ts through Number(), and a ts like 1727000000.123450 loses its trailing zero as a number, so Slack could not find the message. That is roughly one claim in ten. I found it reading the node against Slack's rule that ts is a string identifier, not a number. The fix is to keep ts as a string end to end.",
+  "if_pushed": "Why did testing miss it? Most ts values do not end in zero, and the harness does not press buttons. A button-level test with a fixed ts ending in zero would have caught it.",
+  "cite": "06 > Build Claimed Card, Mark Card Claimed"
+ },
+ {
+  "id": "weak-18",
+  "category": "Weaknesses and what I would change",
+  "difficulty": "core",
+  "q": "Are there settings in your system that do nothing?",
+  "a": "There were two, found in review. 04's Brave query had a competitor-specific variant, but it read the classification from a node that does not carry it, so the variant never ran and competitors got the identity query. And the policy's person_search_enabled switch existed, but the person-search gate never read it, so turning it off would not have stopped the searches. A setting that looks live and is not is worse than no setting. The fix reads classification from the trigger node and wires the switch into the gate.",
+  "if_pushed": "How do you stop that happening again? A test per policy switch: flip it and assert the behaviour changed.",
+  "cite": "04 > Search Company Web, Person Search Worth It?; policy enrichment.person_search_enabled"
+ },
+ {
+  "id": "weak-19",
+  "category": "Weaknesses and what I would change",
+  "difficulty": "deep",
+  "q": "What happens if the competitor table fails to load?",
+  "a": "The scan is classified with no competitor check at all, silently. Load Competitors is set to continue on error and always output, which was right for keeping the booth running, but it means a Veza employee would be classified on title and size alone and could land in #booth-hot. The fix is to fall back to the policy's confirmed_names list, which already exists, and flag the scan so the card and #oak-revops say the competitor check was degraded.",
+  "if_pushed": "Why soft-fail it at all? A scan must never be lost. The mistake was soft-failing without saying so on the card.",
+  "cite": "01 > Load Competitors (alwaysOutputData, continueRegularOutput); policy competitors.confirmed_names"
+ },
+ {
+  "id": "weak-20",
+  "category": "Weaknesses and what I would change",
+  "difficulty": "deep",
+  "q": "Does keep() always protect what a rep typed into HubSpot?",
+  "a": "Only when the contact search found the contact. keep() compares the incoming value with the existing HubSpot value; if the search failed after its retries, or HubSpot's search index had not caught up with a contact created seconds earlier, there is no existing value to compare, so the scanner's values go out in the upsert and can overwrite a rep's edit. The fix is to fetch the contact by email directly, which does not depend on the search index, and to skip the standard-field write when the lookup errored rather than treating it as not found.",
+  "if_pushed": "How likely is it? Rare, it needs a failed search or a re-scan within seconds. But protecting human edits is the promise, so it has to hold on the bad path too.",
+  "cite": "02 > Find HubSpot Contact, Resolve CRM Write (keep())"
+ },
+ {
+  "id": "weak-21",
+  "category": "Weaknesses and what I would change",
+  "difficulty": "core",
+  "q": "Is your AI spend gate tight?",
+  "a": "Not fully. The gate reads persona_reasoning_required, which 01 sets from its first verdict. If 04 later demotes the lead, for example to out of scope because the homepage says SaaS-only, the lead still goes to Gemini and pays for a call on someone nobody will pursue. The fix is to recompute the gate from the classification after enrichment. It costs cents, not correctness, because the final gate still applies the size rules afterward.",
+  "if_pushed": "Why was it set so early? The gate was built before 04 could change a classification; again, a later feature interacting with an older rule.",
+  "cite": "01 > Needs AI Synthesis?; 04 > Build Enrichment Result"
+ },
+ {
+  "id": "weak-22",
+  "category": "Weaknesses and what I would change",
+  "difficulty": "deep",
+  "q": "Where are your rules imprecise?",
+  "a": "Two places I know of. The incumbent alias 'identity manager' for One Identity matches 'our identity manager said' in the notes, so a renewal sentence could be credited to the wrong tool. And the urgency quote on the card is the first 400 characters of the notes, not the exact trigger phrase, so on long notes the rep sees context rather than the sentence that fired. The fixes are removing the generic alias, and storing the matched span for each trigger and quoting that.",
+  "if_pushed": "Does the alias problem change tiers? Only when a renewal phrase is also present; then the trigger is real but the tool name may be wrong on the card and in HubSpot.",
+  "cite": "policy incumbent_tools (One Identity aliases); 01 > Evaluate ICP Policy (urgency quote)"
+ },
+ {
+  "id": "weak-23",
+  "category": "Weaknesses and what I would change",
+  "difficulty": "deep",
+  "q": "You say the policy is data. Is everything really in the policy?",
+  "a": "Most of it, not all. The @here rule is hardcoded in 03 for tier_1 rather than read from the policy's mention_tiers, so marketing cannot change who gets a mention with a row edit. 99's ops channel is typed into its Slack node rather than read from notifications.ops_alerts. And 00's Retire Superseded Policies filters on the literal 'oak-event-v5', so bumping the policy version needs a second code edit. The fix is to read all three from the policy, and to retire by 'not the version just seeded'.",
+  "if_pushed": "Why does it matter? The whole argument for policy-as-data is that the owner of the ICP never has to open n8n. Every hardcoded value is an exception to that promise.",
+  "cite": "03 > Resolve Slack Targets (mentions); 99 > Report to RevOps; 00 > Retire Superseded Policies"
  },
  {
   "id": "gtm-01",
@@ -1021,8 +1084,8 @@
   "category": "Curveballs",
   "difficulty": "curveball",
   "q": "You get one more week. What do you build?",
-  "a": "In order: one shared cascade function so the rules cannot drift between stages, which closes the possible-competitor, override and AI-lift gaps together. Per-stage ledger status and a resend tool, so a failed Slack post or HubSpot write is one click to recover. Negation handling on triggers. The owner DM through the email bridge. Name-mode Data Table nodes for a clean import. And a small dashboard of scans, tiers, failures and rep actions per hour for RevOps.",
-  "if_pushed": "Nothing new for reps? Yes, a quiet Rescue button on out-of-scope cards and a new root card in #booth-hot when a returning visitor escalates.",
+  "a": "First, one shared cascade function so rules cannot drift between 01, 04, 05 and the final gate; most of what I found in review was drift. Second, per-stage ledger status and a resend tool, so a failed Slack post or HubSpot write is one click to recover. Third, make failures loud where they are silent today: a failed competitor load, a HubSpot outage in 02A. Fourth, name-mode Data Table nodes for a clean import. And a small dashboard of scans, tiers, failures and rep actions per hour for RevOps.",
+  "if_pushed": "Nothing new for reps? A quiet Rescue button on out-of-scope cards, and the owner DM through the email bridge that Send to owner already uses.",
   "cite": "Weaknesses above; 03 threading; 06 buttons"
  },
  {
@@ -1069,5 +1132,14 @@
   "a": "Because my earlier test runs created her contact in HubSpot, and 02A derives the relationship from the contact's lifecycle stage: no contact is net_new, and a contact at lead stage is known_prospect. The harness reset clears the n8n tables, not HubSpot. So the label is correct for the portal as it is. Before a clean demo I delete the four test contacts, and she shows as net_new.",
   "if_pushed": "Should a lead created by this system count as known? Arguably not; I could treat a contact created by the booth engine at this event as net_new using oak_last_event.",
   "cite": "02A > Build CRM Context (customerStatus); 07 > Clear Test Event Scans"
+ },
+ {
+  "id": "curve-10",
+  "category": "Curveballs",
+  "difficulty": "curveball",
+  "q": "How did you review your own system, and what did you find?",
+  "a": "I read every node of the deployed workflows against what it was supposed to do, and ran the rule code locally against every test row with enrichment and AI stubbed. Most of what I found had the same shape: a feature added later interacting with an older rule, like the final gate not knowing about possible competitors, or returning visitors being downgraded because urgency was read per scan. Some I fixed; the rest I wrote down with a fix, including a scan marked complete before Slack posts and a HubSpot outage that reads as net new. I would rather tell you those than have you find them.",
+  "if_pushed": "What would stop that pattern? One shared classification function called at every stage, and a test for every policy switch and every override path.",
+  "cite": "docs/test-cases.md (Existing expectations that disagree with the deployed logic); Weaknesses category"
  }
 ]

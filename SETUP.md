@@ -125,7 +125,7 @@ Expected for the four task leads:
 
 | Lead | Classification | Channel |
 |---|---|---|
-| Rachel Chen | `tier_1` | `#booth-hot` |
+| Rachel Green | `tier_1` | `#booth-hot` |
 | Hiroshi Tanaka | `matched` | `#booth-matched` |
 | David Miller | `out_of_scope` | `#booth-out-of-scope` |
 | Sarah Connor | `competitor_intel` | `#competitive-intel` |

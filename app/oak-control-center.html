@@ -3,8 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
     <title>Oak GTM Control Center</title>
+    <script>try{var t=localStorage.getItem('oak-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}</script>
     <style>
 :root {
   --bg: #0c0d0d;
@@ -12,6 +13,7 @@
   --panel-2: #1a1e1c;
   --line: #2b312e;
   --line-soft: #202522;
+  --line-strong: #465048;
   --text: #f4f3ec;
   --muted: #9fa9a3;
   --green: #b9ef4a;
@@ -21,17 +23,151 @@
   --red: #ff716d;
   --blue: #75bfff;
   --purple: #c3a2ff;
+  --accent-text: #b9ef4a;
+  --orange-text: #ff9c55;
+  --red-text: #ff716d;
+  --quote: #e9e6d8;
+  --seg-bg: #e9e6d8;
+  --seg-text: #111;
+  --topbar: rgba(12, 13, 13, .92);
+  --panel-glass: rgba(20, 23, 22, .8);
+  --panel-soft: rgba(20, 23, 22, .55);
+  --field: #101211;
+  --code: #090a09;
+  --code-text: #b7c2bb;
+  --hover: rgba(255, 255, 255, .02);
+  --glow: rgba(185, 239, 74, .08);
+  --tint-green: rgba(185, 239, 74, .07);
+  --backdrop: rgba(0, 0, 0, .72);
   --shadow: 0 24px 60px rgba(0, 0, 0, .35);
+  --shadow-soft: 0 12px 32px rgba(0, 0, 0, .35);
+  --map-bg: #0f1110;
+  --lane-fill: rgba(255, 255, 255, .018);
+  --node-fill: #161a18;
+  --node-cur: #1c2517;
+  --wire: #3d4541;
+  --token-ring: #0c0d0d;
+  --k-orch: #b9ef4a;
+  --k-sub: #75bfff;
+  --k-hook: #ff9c55;
+  --k-manual: #d9d4bd;
+  --k-api: #7ca52b;
+  --k-error: #ff716d;
+  --k-store: #c3a2ff;
+  --k-ext: #9fa9a3;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
 }
+:root[data-theme="light"] {
+  --bg: #f4f3ed;
+  --panel: #ffffff;
+  --panel-2: #efeee7;
+  --line: #d9d7cc;
+  --line-soft: #e6e4db;
+  --line-strong: #a9ad9f;
+  --text: #161a17;
+  --muted: #5b645e;
+  --green: #b9ef4a;
+  --green-2: #5f8f12;
+  --cream: #3b3a2f;
+  --orange: #f28a3c;
+  --red: #e25049;
+  --blue: #4c9be0;
+  --purple: #9d7fe3;
+  --accent-text: #3e6a05;
+  --orange-text: #a24f0c;
+  --red-text: #b52f28;
+  --quote: #2f3129;
+  --seg-bg: #1c211e;
+  --seg-text: #fff;
+  --topbar: rgba(244, 243, 237, .92);
+  --panel-glass: rgba(255, 255, 255, .88);
+  --panel-soft: rgba(255, 255, 255, .7);
+  --field: #ffffff;
+  --code: #f2f1ea;
+  --code-text: #2b3530;
+  --hover: rgba(0, 0, 0, .03);
+  --glow: rgba(150, 200, 40, .12);
+  --tint-green: rgba(120, 180, 20, .1);
+  --backdrop: rgba(22, 26, 23, .45);
+  --shadow: 0 24px 60px rgba(40, 40, 30, .16);
+  --shadow-soft: 0 10px 26px rgba(40, 40, 30, .12);
+  --map-bg: #fbfaf6;
+  --lane-fill: rgba(0, 0, 0, .022);
+  --node-fill: #ffffff;
+  --node-cur: #f3fbe2;
+  --wire: #b3b8ad;
+  --token-ring: #ffffff;
+  --k-orch: #5f8f12;
+  --k-sub: #2f7fc8;
+  --k-hook: #d9731f;
+  --k-manual: #8a8570;
+  --k-api: #3e6a05;
+  --k-error: #d23f38;
+  --k-store: #7d5bd0;
+  --k-ext: #7b847e;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f3ed;
+    --panel: #ffffff;
+    --panel-2: #efeee7;
+    --line: #d9d7cc;
+    --line-soft: #e6e4db;
+    --line-strong: #a9ad9f;
+    --text: #161a17;
+    --muted: #5b645e;
+    --green: #b9ef4a;
+    --green-2: #5f8f12;
+    --cream: #3b3a2f;
+    --orange: #f28a3c;
+    --red: #e25049;
+    --blue: #4c9be0;
+    --purple: #9d7fe3;
+    --accent-text: #3e6a05;
+    --orange-text: #a24f0c;
+    --red-text: #b52f28;
+    --quote: #2f3129;
+    --seg-bg: #1c211e;
+    --seg-text: #fff;
+    --topbar: rgba(244, 243, 237, .92);
+    --panel-glass: rgba(255, 255, 255, .88);
+    --panel-soft: rgba(255, 255, 255, .7);
+    --field: #ffffff;
+    --code: #f2f1ea;
+    --code-text: #2b3530;
+    --hover: rgba(0, 0, 0, .03);
+    --glow: rgba(150, 200, 40, .12);
+    --tint-green: rgba(120, 180, 20, .1);
+    --backdrop: rgba(22, 26, 23, .45);
+    --shadow: 0 24px 60px rgba(40, 40, 30, .16);
+    --shadow-soft: 0 10px 26px rgba(40, 40, 30, .12);
+    --map-bg: #fbfaf6;
+    --lane-fill: rgba(0, 0, 0, .022);
+    --node-fill: #ffffff;
+    --node-cur: #f3fbe2;
+    --wire: #b3b8ad;
+    --token-ring: #ffffff;
+    --k-orch: #5f8f12;
+    --k-sub: #2f7fc8;
+    --k-hook: #d9731f;
+    --k-manual: #8a8570;
+    --k-api: #3e6a05;
+    --k-error: #d23f38;
+    --k-store: #7d5bd0;
+    --k-ext: #7b847e;
+    color-scheme: light;
+  }
+}
+:root[data-theme="dark"] { color-scheme: dark; }
 
 * { box-sizing: border-box; }
 html { min-height: 100%; background: var(--bg); }
 body { margin: 0; min-height: 100vh; background:
-  radial-gradient(circle at 72% -10%, rgba(185, 239, 74, .08), transparent 32rem),
+  radial-gradient(circle at 72% -10%, var(--glow), transparent 32rem),
   var(--bg); }
 button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
@@ -39,9 +175,9 @@ a { color: inherit; }
 
 .skip-link { position: fixed; top: -4rem; left: 1rem; z-index: 100; background: var(--green); color: #111; padding: .7rem 1rem; }
 .skip-link:focus { top: 1rem; }
-.topbar { position: sticky; top: 0; z-index: 20; height: 72px; display: flex; align-items: center; gap: 2rem; padding: 0 clamp(1rem, 3vw, 3rem); border-bottom: 1px solid var(--line); background: rgba(12, 13, 13, .92); backdrop-filter: blur(18px); }
+.topbar { position: sticky; top: 0; z-index: 20; height: 72px; display: flex; align-items: center; gap: 2rem; padding: 0 clamp(1rem, 3vw, 3rem); border-bottom: 1px solid var(--line); background: var(--topbar); backdrop-filter: blur(18px); }
 .brand { display: flex; align-items: center; gap: .8rem; min-width: max-content; text-decoration: none; }
-.brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--green); color: var(--green); font: 700 1rem/1 Georgia, serif; }
+.brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--accent-text); color: var(--accent-text); font: 700 1rem/1 Georgia, serif; }
 .brand b, .brand small { display: block; }
 .brand b { font: 600 1.05rem/1.15 Georgia, serif; letter-spacing: .02em; }
 .brand small { margin-top: .15rem; color: var(--muted); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; }
@@ -60,7 +196,7 @@ nav a:hover, nav a.active { color: var(--text); background: var(--panel-2); }
 .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; margin-bottom: 2rem; }
 .page-header h1 { margin: .2rem 0 .55rem; font: 400 clamp(2.1rem, 4vw, 4.8rem)/.95 Georgia, serif; letter-spacing: -.045em; }
 .page-header p { max-width: 740px; margin: 0; color: var(--muted); line-height: 1.55; }
-.eyebrow { margin: 0 0 .35rem !important; color: var(--green) !important; font-size: .68rem !important; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+.eyebrow { margin: 0 0 .35rem !important; color: var(--accent-text) !important; font-size: .68rem !important; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
 .header-actions { display: flex; gap: .65rem; align-items: center; flex-wrap: wrap; }
 .meta-line { display: flex; gap: 1rem; color: var(--muted); font-size: .78rem; }
 
@@ -81,7 +217,7 @@ nav a:hover, nav a.active { color: var(--text); background: var(--panel-2); }
 
 .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, .7fr); gap: 1rem; }
 .stack { display: grid; gap: 1rem; align-content: start; }
-.panel { border: 1px solid var(--line); border-radius: 12px; background: rgba(20, 23, 22, .8); overflow: hidden; }
+.panel { border: 1px solid var(--line); border-radius: 12px; background: var(--panel-glass); overflow: hidden; }
 .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.15rem; border-bottom: 1px solid var(--line-soft); }
 .panel-header h2, .panel-header h3 { margin: 0; font: 400 1.15rem/1.2 Georgia, serif; }
 .panel-body { padding: 1.15rem; }
@@ -97,9 +233,9 @@ nav a:hover, nav a.active { color: var(--text); background: var(--panel-2); }
 .competitor_intel .bar-fill, .pill.competitor_intel { background: var(--purple); color: #111; }
 .out_of_scope .bar-fill, .pill.out_of_scope { background: #68706c; color: white; }
 .pill { display: inline-flex; align-items: center; gap: .35rem; width: fit-content; border-radius: 999px; padding: .25rem .48rem; background: var(--line); color: var(--muted); font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .045em; white-space: nowrap; }
-.pill.live, .pill.healthy, .pill.active { color: var(--green); border: 1px solid rgba(185,239,74,.28); background: rgba(185,239,74,.08); }
-.pill.warning, .pill.partial, .pill.designed { color: var(--orange); border: 1px solid rgba(255,156,85,.25); background: rgba(255,156,85,.07); }
-.pill.critical, .pill.unsafe { color: var(--red); border: 1px solid rgba(255,113,109,.25); background: rgba(255,113,109,.07); }
+.pill.live, .pill.healthy, .pill.active { color: var(--accent-text); border: 1px solid rgba(185,239,74,.28); background: rgba(185,239,74,.08); }
+.pill.warning, .pill.partial, .pill.designed { color: var(--orange-text); border: 1px solid rgba(255,156,85,.25); background: rgba(255,156,85,.07); }
+.pill.critical, .pill.unsafe { color: var(--red-text); border: 1px solid rgba(255,113,109,.25); background: rgba(255,113,109,.07); }
 
 .alert-list, .workflow-list, .evidence-list, .reason-list { display: grid; gap: .55rem; margin: 0; padding: 0; list-style: none; }
 .alert { display: grid; grid-template-columns: 7px 1fr; gap: .7rem; padding: .75rem; background: var(--panel-2); border-radius: 7px; color: var(--muted); font-size: .78rem; line-height: 1.45; }
@@ -107,7 +243,7 @@ nav a:hover, nav a.active { color: var(--text); background: var(--panel-2); }
 .alert[data-severity="critical"]::before { background: var(--red); }
 .workflow { display: grid; grid-template-columns: 36px 1fr auto; gap: .65rem; align-items: center; padding: .55rem 0; border-bottom: 1px solid var(--line-soft); }
 .workflow:last-child { border: none; }
-.workflow-step { color: var(--green); font: 600 .75rem ui-monospace, monospace; }
+.workflow-step { color: var(--accent-text); font: 600 .75rem ui-monospace, monospace; }
 .workflow b { font-size: .78rem; }
 .workflow small { display: block; margin-top: .2rem; color: var(--muted); }
 
@@ -117,14 +253,14 @@ nav a:hover, nav a.active { color: var(--text); background: var(--panel-2); }
 .data-table td { padding: .85rem .8rem; border-bottom: 1px solid var(--line-soft); font-size: .78rem; vertical-align: top; }
 .data-table tr:last-child td { border-bottom: 0; }
 .data-table tbody tr { cursor: pointer; }
-.data-table tbody tr:hover { background: rgba(255,255,255,.02); }
+.data-table tbody tr:hover { background: var(--hover); }
 .name-cell b, .name-cell span { display: block; }
 .name-cell span { color: var(--muted); margin-top: .2rem; font-size: .7rem; }
 .muted { color: var(--muted); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .75em; }
 
 .filters { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem; }
-input, select, textarea { width: 100%; color: var(--text); background: #101211; border: 1px solid var(--line); border-radius: 6px; padding: .65rem .7rem; outline: none; }
+input, select, textarea { width: 100%; color: var(--text); background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: .65rem .7rem; outline: none; }
 input:focus, select:focus, textarea:focus { border-color: var(--green-2); box-shadow: 0 0 0 3px rgba(185,239,74,.06); }
 textarea { min-height: 130px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.5; }
 label { display: grid; gap: .4rem; color: var(--muted); font-size: .72rem; font-weight: 600; }
@@ -148,9 +284,9 @@ label { display: grid; gap: .4rem; color: var(--muted); font-size: .72rem; font-
 .editor-section h3 { margin: 0 0 1rem; font: 400 1rem Georgia, serif; }
 .field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .85rem; }
 .validation { display: grid; gap: .45rem; }
-.validation-item { padding: .65rem .75rem; border-radius: 6px; background: rgba(185,239,74,.06); color: var(--green); font-size: .74rem; }
-.validation-item.error { color: var(--red); background: rgba(255,113,109,.06); }
-.validation-item.warning { color: var(--orange); background: rgba(255,156,85,.06); }
+.validation-item { padding: .65rem .75rem; border-radius: 6px; background: rgba(185,239,74,.06); color: var(--accent-text); font-size: .74rem; }
+.validation-item.error { color: var(--red-text); background: rgba(255,113,109,.06); }
+.validation-item.warning { color: var(--orange-text); background: rgba(255,156,85,.06); }
 .sticky { position: sticky; top: 88px; }
 
 .competitor-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
@@ -164,17 +300,17 @@ label { display: grid; gap: .4rem; color: var(--muted); font-size: .72rem; font-
 .explorer-toolbar { display: flex; gap: .65rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .segmented { display: inline-flex; padding: 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; }
 .segmented button { border: 0; border-radius: 5px; background: transparent; color: var(--muted); padding: .45rem .7rem; cursor: pointer; font-size: .75rem; }
-.segmented button.active { background: var(--cream); color: #111; }
+.segmented button.active { background: var(--seg-bg); color: var(--seg-text); }
 .use-case-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
 .use-case-card { position: relative; min-height: 265px; display: flex; flex-direction: column; padding: 1.15rem; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); text-decoration: none; transition: transform .15s, border-color .15s; }
-.use-case-card:hover { transform: translateY(-2px); border-color: #465048; }
-.uc-number { color: var(--green); font: .7rem ui-monospace, monospace; }
+.use-case-card:hover { transform: translateY(-2px); border-color: var(--line-strong); }
+.uc-number { color: var(--accent-text); font: .7rem ui-monospace, monospace; }
 .use-case-card h2 { margin: .75rem 0 .55rem; font: 400 1.35rem/1.1 Georgia, serif; }
 .use-case-card > p { color: var(--muted); line-height: 1.5; font-size: .8rem; }
 .use-case-card footer { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-top: auto; padding-top: 1rem; }
 .uc-detail { max-width: 980px; margin: 0 auto; }
 .uc-detail h1 { font: 400 clamp(2.2rem, 5vw, 4.5rem)/.95 Georgia, serif; margin: .5rem 0 1.3rem; }
-.uc-block { margin: 1rem 0; padding: 1.2rem; border-left: 2px solid var(--line); background: rgba(20,23,22,.55); }
+.uc-block { margin: 1rem 0; padding: 1.2rem; border-left: 2px solid var(--line); background: var(--panel-soft); }
 .uc-block h2 { margin: 0 0 .8rem; font: 400 1.15rem Georgia, serif; }
 .uc-block p, .uc-block li { color: var(--muted); line-height: 1.65; font-size: .86rem; }
 .uc-block ol { margin: 0; padding-left: 1.2rem; }
@@ -182,7 +318,7 @@ label { display: grid; gap: .4rem; color: var(--muted); font-size: .72rem; font-
 .entry-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
 .entry-card { display: flex; flex-direction: column; min-height: 260px; padding: 1.4rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); text-decoration: none; transition: transform .15s, border-color .15s; }
 .entry-card:hover { transform: translateY(-2px); border-color: var(--green-2); }
-.entry-index { color: var(--green); font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.entry-index { color: var(--accent-text); font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .entry-card h2 { margin: .7rem 0 .6rem; font: 400 1.6rem/1.1 Georgia, serif; }
 .entry-card p { margin: 0; color: var(--muted); line-height: 1.55; font-size: .84rem; }
 .entry-card footer { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-top: auto; padding-top: 1.2rem; font-size: .72rem; }
@@ -197,32 +333,32 @@ label { display: grid; gap: .4rem; color: var(--muted); font-size: .72rem; font-
 .stage-link span { width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; font-size: .68rem; }
 .stage-link b { display: block; font-size: .78rem; font-weight: 500; }
 .stage-link small { display: block; margin-top: .15rem; font-size: .66rem; opacity: .75; }
-.stage-link.done span { border-color: var(--green-2); color: var(--green); }
+.stage-link.done span { border-color: var(--green-2); color: var(--accent-text); }
 .stage-link.current { background: var(--panel-2); color: var(--text); }
 .stage-link.current span { border-color: var(--green); background: var(--green); color: #111; font-weight: 700; }
 .stage-main { max-width: 820px; }
 .stage-main h1 { margin: .4rem 0 .8rem; font: 400 clamp(2rem, 4vw, 3.4rem)/1 Georgia, serif; letter-spacing: -.035em; }
-.stage-question { margin: 0 0 1.5rem; padding-left: 1rem; border-left: 2px solid var(--green); color: var(--cream); font-size: 1.05rem; line-height: 1.5; }
+.stage-question { margin: 0 0 1.5rem; padding-left: 1rem; border-left: 2px solid var(--green); color: var(--quote); font-size: 1.05rem; line-height: 1.5; }
 .uc-block.accent { border-left-color: var(--green); background: rgba(185, 239, 74, .05); }
-.uc-block.accent p { color: var(--cream); }
+.uc-block.accent p { color: var(--quote); }
 .pager { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem; }
 
 .scenario-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .scenario-card { display: flex; flex-direction: column; min-height: 230px; padding: 1.3rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); text-decoration: none; transition: transform .15s, border-color .15s; }
 .scenario-card:hover { transform: translateY(-2px); border-color: var(--green-2); }
 .scenario-card h2 { margin: .8rem 0 .4rem; font: 400 1.45rem/1.15 Georgia, serif; }
-.scenario-persona { margin: 0 0 .7rem; color: var(--cream); font-size: .8rem; }
+.scenario-persona { margin: 0 0 .7rem; color: var(--quote); font-size: .8rem; }
 .scenario-card p { margin: 0; color: var(--muted); line-height: 1.55; font-size: .82rem; }
 .scenario-card footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 1.1rem; font-size: .74rem; }
-.link-arrow { color: var(--green); font-weight: 600; }
-.booth-quote { margin-top: .9rem !important; color: var(--cream) !important; font-style: italic; }
+.link-arrow { color: var(--accent-text); font-weight: 600; }
+.booth-quote { margin-top: .9rem !important; color: var(--quote) !important; font-style: italic; }
 
 .trace { display: grid; gap: 0; }
 .trace-step { display: grid; grid-template-columns: 30px 1fr; gap: .9rem; padding: .85rem 0; border-bottom: 1px solid var(--line-soft); }
 .trace-step:last-child { border-bottom: 0; }
-.trace-marker { width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--green); font-size: .7rem; }
+.trace-marker { width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--accent-text); font-size: .7rem; }
 .trace-stage { display: block; margin-bottom: .3rem; color: var(--muted); font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; text-decoration: none; }
-.trace-stage:hover { color: var(--green); }
+.trace-stage:hover { color: var(--accent-text); }
 .trace-body b { font-size: .84rem; }
 .trace-body p { margin: .3rem 0 0; color: var(--muted); line-height: 1.55; font-size: .8rem; }
 
@@ -231,7 +367,7 @@ label { display: grid; gap: .4rem; color: var(--muted); font-size: .72rem; font-
 .slack-card header { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-bottom: .7rem; }
 .slack-channel { color: var(--muted); font: .75rem ui-monospace, monospace; }
 .slack-header { display: block; font: 600 .82rem/1.3 ui-sans-serif, sans-serif; letter-spacing: .03em; }
-.slack-lead { margin: .35rem 0 .9rem; color: var(--cream); font-size: .82rem; line-height: 1.5; }
+.slack-lead { margin: .35rem 0 .9rem; color: var(--quote); font-size: .82rem; line-height: 1.5; }
 .slack-card dl { display: grid; gap: .4rem; margin: 0 0 .9rem; }
 .slack-card dl div { display: grid; grid-template-columns: 78px 1fr; gap: .6rem; }
 .slack-card dt { color: var(--muted); font-size: .7rem; }
@@ -242,18 +378,6 @@ label { display: grid; gap: .4rem; color: var(--muted); font-size: .72rem; font-
 .slack-buttons span { padding: .38rem .6rem; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2); font-size: .72rem; }
 .slack-quiet { margin: .9rem 0 0; font-size: .74rem; }
 
-.map { display: grid; grid-template-columns: 160px 1fr; gap: 1rem; overflow-x: auto; }
-.map-lanes { display: grid; gap: .45rem; }
-.lane-label { min-height: 112px; display: flex; align-items: center; color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; }
-.map-content { min-width: 750px; display: grid; gap: .45rem; }
-.map-lane { min-height: 112px; display: flex; gap: .7rem; align-items: center; padding: .75rem; border: 1px solid var(--line-soft); border-radius: 8px; }
-.map-node { min-width: 135px; max-width: 165px; padding: .75rem; border: 1px solid var(--line); border-radius: 7px; background: var(--panel-2); font-size: .76rem; }
-.map-node small { display: block; color: var(--muted); margin-top: .35rem; line-height: 1.35; }
-.flow-steps { counter-reset: flow; display: grid; gap: .5rem; }
-.flow-step { counter-increment: flow; display: grid; grid-template-columns: 24px 1fr; gap: .6rem; align-items: start; padding: .65rem; border: 1px solid var(--line-soft); border-radius: 6px; color: var(--muted); font-size: .76rem; }
-.flow-step::before { content: counter(flow); width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--green); color: #111; font-weight: 700; }
-.flow-step b { color: var(--text); }
-
 .json-editor { min-height: 470px; }
 .preview-card { padding: 1rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
 .preview-card h3 { margin: 0 0 .8rem; font: 400 1.2rem Georgia, serif; }
@@ -261,11 +385,11 @@ label { display: grid; gap: .4rem; color: var(--muted); font-size: .72rem; font-
 .mutation-list { display: grid; gap: .45rem; margin-top: .8rem; }
 .mutation { display: flex; justify-content: space-between; gap: 1rem; padding: .6rem; border-radius: 5px; background: var(--panel-2); font-size: .75rem; }
 .console-actions { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: .8rem; }
-.result-box { margin-top: 1rem; padding: 1rem; max-height: 330px; overflow: auto; border: 1px solid var(--line); border-radius: 7px; background: #090a09; color: #b7c2bb; white-space: pre-wrap; font: .72rem/1.55 ui-monospace, monospace; }
-.warning-box { padding: .8rem; border: 1px solid rgba(255,156,85,.25); border-radius: 7px; color: var(--orange); background: rgba(255,156,85,.05); font-size: .75rem; line-height: 1.5; }
+.result-box { margin-top: 1rem; padding: 1rem; max-height: 330px; overflow: auto; border: 1px solid var(--line); border-radius: 7px; background: var(--code); color: var(--code-text); white-space: pre-wrap; font: .72rem/1.55 ui-monospace, monospace; }
+.warning-box { padding: .8rem; border: 1px solid rgba(255,156,85,.25); border-radius: 7px; color: var(--orange-text); background: rgba(255,156,85,.05); font-size: .75rem; line-height: 1.5; }
 
 dialog { max-width: 560px; width: calc(100% - 2rem); padding: 0; color: var(--text); background: transparent; border: 0; }
-dialog::backdrop { background: rgba(0,0,0,.72); backdrop-filter: blur(4px); }
+dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(4px); }
 .dialog-card { padding: 1.25rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow); }
 .dialog-card header { display: flex; align-items: start; justify-content: space-between; }
 .dialog-card h2 { margin: .2rem 0; font: 400 1.5rem Georgia, serif; }
@@ -274,7 +398,7 @@ dialog::backdrop { background: rgba(0,0,0,.72); backdrop-filter: blur(4px); }
 .dialog-actions { display: flex; justify-content: flex-end; gap: .6rem; margin-top: 1rem; }
 .toasts { position: fixed; right: 1rem; bottom: 1rem; z-index: 50; display: grid; gap: .55rem; }
 .toast { min-width: 280px; max-width: 420px; padding: .8rem 1rem; border: 1px solid var(--line); border-radius: 7px; background: var(--panel-2); box-shadow: var(--shadow); font-size: .78rem; }
-.toast.error { border-color: rgba(255,113,109,.5); color: var(--red); }
+.toast.error { border-color: rgba(255,113,109,.5); color: var(--red-text); }
 
 @media (max-width: 1100px) {
   .metric-grid { grid-template-columns: repeat(3, 1fr); }
@@ -288,7 +412,7 @@ dialog::backdrop { background: rgba(0,0,0,.72); backdrop-filter: blur(4px); }
 @media (max-width: 780px) {
   .topbar { height: auto; min-height: 64px; flex-wrap: wrap; padding-block: .7rem; }
   .topbar nav { order: 3; width: 100%; }
-  .mode-pill { font-size: 0; }
+  .mode-pill { font-size: .7rem; padding: .45rem .65rem; }
   #main { padding: 1rem; min-height: calc(100vh - 112px); }
   .page-header { align-items: start; flex-direction: column; }
   .metric-grid { grid-template-columns: repeat(2, 1fr); }
@@ -333,20 +457,32 @@ dialog::backdrop { background: rgba(0,0,0,.72); backdrop-filter: blur(4px); }
         <a href="#/explorer" data-nav="explorer">How it works</a>
         <a href="#/console" data-nav="console">Payload console</a>
       </nav>
-      <button class="mode-pill" id="connection-button" type="button" data-action="settings">
+      <button class="mode-pill" id="connection-button" type="button" data-action="settings" aria-label="Connection and settings">
         <span class="status-dot"></span><span id="connection-label">Connecting</span>
       </button>
+      <button class="icon-button theme-toggle" type="button" data-action="toggle-theme" aria-label="Switch between light and dark">
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" /><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" /></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.2A8 8 0 0 1 9.8 4a8 8 0 1 0 10.2 10.2z" /></svg>
+      </button>
     </header>
+    <div id="offline-banner" class="offline-banner" hidden>
+      <span class="status-dot"></span><span data-banner-text>Offline demo data.</span>
+      <span class="banner-actions"><button class="button small secondary" type="button" data-action="reconnect">Try live again</button><button class="button small secondary" type="button" data-action="settings">Settings</button></span>
+    </div>
     <main id="main" tabindex="-1">
       <div class="loading"><span></span>Loading Oak operations…</div>
     </main>
     <div id="toast-region" class="toasts" aria-live="polite"></div>
     <dialog id="settings-dialog">
       <form method="dialog" class="dialog-card">
-        <header><div><p class="eyebrow">Local security</p><h2>Control Center settings</h2></div><button value="cancel" class="icon-button" aria-label="Close">×</button></header>
-        <p>The admin key is held in this tab’s session storage and sent only to this local server for mutations. n8n secrets never reach the browser.</p>
+        <header><div><p class="eyebrow">Connection and security</p><h2>Control Center settings</h2></div><button value="cancel" class="icon-button" aria-label="Close">×</button></header>
+        <div class="conn-status" id="conn-status"></div>
+        <label>n8n API base URL<input id="api-base" type="url" spellcheck="false" autocomplete="off" placeholder="https://oak-noam.app.n8n.cloud/webhook/oak-api" /></label>
+        <p class="field-help">Workflow 08 serves static webhook paths under this base. <span class="mono">/api/leads/:id</span> becomes <span class="mono">/leads/item?scan_id=</span>, and the same for policy activation and competitor ids.</p>
+        <label class="check"><input id="force-offline" type="checkbox" /> <span>Use the offline demo data only, for a demo without Wi-Fi</span></label>
         <label>Admin key<input id="admin-token" type="password" autocomplete="off" placeholder="OAK_CONTROL_ADMIN_TOKEN" /></label>
-        <div class="dialog-actions"><button value="cancel" class="button secondary">Cancel</button><button value="save" class="button" data-action="save-settings">Save locally</button></div>
+        <p class="field-help">The admin key stays in this tab’s session storage. It is sent only to the Oak n8n Control Center API (workflow 08), as the <span class="mono">x-oak-admin-token</span> header on changes. n8n secrets never reach the browser.</p>
+        <div class="dialog-actions"><button value="reset" class="button secondary" data-action="reset-settings">Reset to default</button><button value="cancel" class="button secondary">Cancel</button><button value="save" class="button" data-action="save-settings">Save and reconnect</button></div>
       </form>
     </dialog>
     <script>window.OAK_OFFLINE=true;window.OAK_OFFLINE_STATE={"snapshot_at":"2026-09-28T12:00:00.000Z","policy":{"version":"oak-event-v5","status":"active","activated_at":"2026-09-22T06:05:58.957Z","document":{"version":"oak-event-v5","company_fit":{"qualified_employee_min":1000,"review_employee_min":500,"disqualified_employee_max":499,"target_industries":["financial_services","fintech","technology","healthcare"],"disqualifiers":["saas-only","single-cloud"],"personal_email_domains":["gmail.com","googlemail.com","outlook.com","hotmail.com","live.com","yahoo.com","icloud.com","proton.me","protonmail.com"]},"personas":{"ciso":{"title_patterns":["ciso","chief information security officer","chief security officer","vp information security","vice president information security","head of information security"],"score":30,"oak_angle":"Board-ready identity risk, continuous compliance, and reducing the identity attack surface.","listen_for":["board pressure","identity breach exposure","SailPoint replacement timing","audit commitments"]},"iam":{"title_patterns":["identity architect","identity engineer","iam engineer","iam manager","identity manager","access governance","identity infrastructure","identity and access management","iga architect"],"score":30,"oak_angle":"Reduce manual identity work, legacy IGA fatigue, and non-human identity or AI-agent sprawl.","listen_for":["manual access requests","legacy IGA fatigue","connector backlog","non-human identity ownership"]},"compliance":{"title_patterns":["compliance auditor","compliance manager","compliance director","internal auditor","it auditor","grc manager","sox manager"],"score":30,"oak_angle":"Automate access certifications and maintain continuous audit readiness.","listen_for":["access certification backlog","manual audit evidence","control exceptions","active audit deadline"]},"other":{"title_patterns":[],"score":0,"oak_angle":"No Oak target persona was established.","listen_for":[]}},"relevance_signals":["identity","identities","iam","iga","access governance","access review","access reviews","access request","access requests","access certification","sailpoint","non-human identities","non human identities","non-human identity","nhi","machine identities","service accounts","api keys","ai agent","ai agents","agent sprawl","sox","audit","compliance"],"relevance_signals_are_scored":false,"competitors":{"confirmed_names":["veza","sailpoint","saviynt","omada identity","one identity","okta identity governance","microsoft entra id governance","ping identity","cyberark","beyondtrust","delinea","astrix security","oasis security","silverfort","aembit","token security","clutch security"],"possible_keywords":["identity governance platform","identity security platform","access governance platform","iga platform","privileged access management platform","non-human identity platform","identity security posture management"],"possible_name_tokens":["identity security","identity governance","access governance","identity platform","privileged access","non-human identity","machine identity","identity fabric","identity management","access management"]},"incumbent_tools":[{"name":"SailPoint","aliases":["sailpoint","identityiq"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"task_defined"},{"name":"Saviynt","aliases":["saviynt"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"Omada Identity","aliases":["omada","omada identity"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"One Identity","aliases":["one identity","identity manager"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"Okta Identity Governance","aliases":["okta iga","okta identity governance"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"Microsoft Entra ID Governance","aliases":["entra id governance","microsoft entra id governance"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"},{"name":"Ping Identity","aliases":["ping identity","pingidentity"],"category":"iga","active":true,"renewal_trigger":true,"verification_status":"user_confirmed_overlap"}],"urgency":{"renewal_max_months":6,"breach_score":40,"audit_deadline_score":40},"scoring":{"persona_points":30,"company_size_points":15,"industry_points":15,"urgency_points":40,"max":100,"rationale":"Every component maps to a line in the Oak ICP summary: the three core personas, the 1,000+ company size bar, the four target industries, and the Tier 1 high-urgency buying triggers. Nothing else earns points."},"classifications":{"tier_1":"Target persona with an active Tier 1 trigger and no disqualifier. Headcount is confirmed at the booth when public evidence does not establish it.","matched":"Target persona without a Tier 1 trigger.","needs_review":"Ambiguous persona, or a known 500-999 employee company.","competitor_intel":"Company or email domain matches an active competitor row.","out_of_scope":"Explicitly below 500 employees, SaaS-only/single-cloud, or no relevant persona/context."},"notifications":{"tier_1":{"channel":"booth-hot","owner_dm":true},"matched":{"channel":"booth-matched","owner_dm":false},"needs_review":{"channel":"booth-review","owner_dm":false},"competitor_intel":{"channel":"competitive-intel","owner_dm":false},"out_of_scope":{"channel":"booth-out-of-scope","owner_dm":false},"ops_alerts":{"channel":"oak-revops","owner_dm":false},"mention_tiers":["tier_1"],"owner_overrides":{}},"slack":{"owner_directory":{},"private_channels":["competitive-intel"]},"enrichment":{"company_cache_ttl_days":30,"max_results":5,"person_results":3,"search_enabled":true,"person_search_enabled":true,"employee_search_enabled":true,"employee_confidence":{"hubspot_company":1,"booth_notes":0.9,"official_website":0.85,"domain_matched_public_search":0.7},"employee_verification_required_below":1},"crm":{"create_company_if_missing":true,"write_enrichment_to_company":true},"llm":{"provider":"gemini","temperature":0,"prompt_version":"oak-persona-v5","minimum_confidence":0.7},"security":{"notes_are_untrusted":true,"webhook_header":"x-oak-webhook-secret","webhook_enforced_when_secret_set":true},"competitor_dont_say":["Do not discuss ConnectAny implementation details."],"policy_fallback":true}},"competitors":[{"id":1,"name":"Veza","domains":["veza.com"],"aliases":["veza","veza technologies"],"category":"identity_security","status":"active","active":true,"verification_status":"task_defined","source_note":"Named competitor in the Oak task.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":2,"name":"SailPoint","domains":["sailpoint.com"],"aliases":["sailpoint","identityiq"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"Employee is competitor; product renewal in notes is a separate incumbent trigger.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":3,"name":"Saviynt","domains":["saviynt.com"],"aliases":["saviynt"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":4,"name":"CyberArk","domains":["cyberark.com"],"aliases":["cyberark"],"category":"pam","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":5,"name":"Okta Identity Governance","domains":[],"aliases":["okta iga","okta identity governance"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied product-line seed; broad corporate domain.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":6,"name":"Omada Identity","domains":["omadaidentity.com"],"aliases":["omada","omada identity"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":7,"name":"One Identity","domains":["oneidentity.com"],"aliases":["one identity"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":8,"name":"Microsoft Entra ID Governance","domains":[],"aliases":["entra id governance","microsoft entra id governance"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied product-line seed; broad corporate domain.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":9,"name":"Ping Identity","domains":["pingidentity.com"],"aliases":["ping identity","pingidentity"],"category":"iga","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":10,"name":"BeyondTrust","domains":["beyondtrust.com"],"aliases":["beyondtrust"],"category":"pam","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":11,"name":"Delinea","domains":["delinea.com"],"aliases":["delinea"],"category":"pam","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":12,"name":"Astrix Security","domains":["astrix.security"],"aliases":["astrix","astrix security"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"Domain verified; Astrix reports it is now part of Cisco.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":13,"name":"Oasis Security","domains":["oasis.security"],"aliases":["oasis","oasis security"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":14,"name":"Silverfort","domains":["silverfort.com"],"aliases":["silverfort"],"category":"identity_security","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":15,"name":"Aembit","domains":["aembit.com"],"aliases":["aembit"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"Verified official domain is aembit.com.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":16,"name":"Token Security","domains":["token.security"],"aliases":["token security"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"},{"id":17,"name":"Clutch Security","domains":["clutch.security"],"aliases":["clutch security"],"category":"nhi_ai_identity","status":"active","active":true,"verification_status":"user_confirmed_overlap","source_note":"User-supplied market seed; domain verified.","updated_at":"2026-09-22T06:05:59.095Z"}],"leads":[{"scan_id":"oak-demo-rachel-2","event_id":"oak-demo-2026","name":"Rachel Green","email":"rachel@apexfinancial.example","company":"Apex Financial Services","title":"Chief Information Security Officer","classification":"tier_1","would_be_classification":null,"score":100,"score_breakdown":{"persona":30,"company_size":15,"industry":15,"urgency":40,"total":100,"max":100},"company_size_band":"qualified_1000_plus","status":"complete","policy_version":"oak-event-v5","channel":"booth-hot","thread_channel":"booth-review","threaded":true,"scanned_at":"2026-09-21T10:42:00.000Z","completed_at":"2026-09-21T10:42:02.600Z","claimed_by":"U123OAK","booth_status":"met","enrichment_status":"cache_hit","persona":"ciso","persona_source":"title_rule","persona_reasoning_required":true,"llm_used":false,"email_valid":true,"repeat_scan":true,"scan_count":2,"prior_classification":"needs_review","notification_mode":"repeat_escalation","decision_reasons":["CISO is a target persona.","12,000 employees stated at the booth (first-party evidence at 0.9 confidence).","SailPoint renewal within six months is a Tier 1 urgency trigger.","Returning visitor: the tier changed from needs review to Tier 1, so 03 replies in the first card's thread, broadcasts it and adds @here."],"evidence":[{"type":"employee_count","source":"booth_notes","quote":"Confirmed 12,000 employees.","confidence":0.9},{"type":"urgency","source":"booth_notes","quote":"SailPoint renews in four months.","confidence":1}]},{"scan_id":"oak-demo-priya","event_id":"oak-demo-2026","name":"Priya Nair","email":"priya.nair@meridianhealth.example","company":"Meridian Health","title":"Head of Access Platforms","classification":"matched","would_be_classification":null,"score":60,"score_breakdown":{"persona":30,"company_size":15,"industry":15,"urgency":0,"total":60,"max":100},"company_size_band":"qualified_1000_plus","status":"complete","policy_version":"oak-event-v5","channel":"booth-matched","scanned_at":"2026-09-21T09:36:00.000Z","completed_at":"2026-09-21T09:36:03.900Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"complete","persona":"iam","persona_source":"ai_resolved_ambiguous","persona_confidence":0.82,"persona_reasoning_required":true,"llm_used":true,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["Title was ambiguous; 05 resolved it as IAM at 0.82 confidence, above the 0.7 floor.","4,800 employees on the HubSpot company record (confidence 1.0).","Healthcare is a target industry.","No Tier 1 trigger in the booth notes, so this is Matched, not Tier 1."],"evidence":[{"type":"employee_count","source":"hubspot_company","quote":"numberofemployees: 4800","confidence":1},{"type":"persona","source":"ai_resolved_ambiguous","quote":"Runs Okta for workforce SSO; owns service-account cleanup.","confidence":0.82}]},{"scan_id":"oak-demo-rachel","event_id":"oak-demo-2026","name":"Rachel Green","email":"rachel@apexfinancial.example","company":"Apex Financial Services","title":"Chief Information Security Officer","classification":"needs_review","would_be_classification":"tier_1","score":85,"score_breakdown":{"persona":30,"company_size":0,"industry":15,"urgency":40,"total":85,"max":100},"company_size_band":"unknown","status":"complete","policy_version":"oak-event-v5","channel":"booth-review","scanned_at":"2026-09-21T08:21:00.000Z","completed_at":"2026-09-21T08:21:03.200Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"partial","persona":"ciso","persona_source":"title_rule","persona_reasoning_required":true,"llm_used":false,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["CISO is a target persona.","SailPoint renewal within six months is a Tier 1 urgency trigger.","Possible Tier 1 - confirm 1,000+ employees before treating as hot."],"evidence":[{"type":"urgency","source":"booth_notes","quote":"SailPoint renews in four months.","confidence":1},{"type":"employee_count","source":"name_matched_public_search","quote":"Apex has 19,000 employees (a different Apex?)","confidence":0.6}]},{"scan_id":"oak-demo-hiroshi","event_id":"oak-demo-2026","name":"Hiroshi Tanaka","email":"hiroshi@northstar.example","company":"Northstar Bank","title":"VP Identity & Access Management","classification":"tier_1","would_be_classification":null,"score":100,"score_breakdown":{"persona":30,"company_size":15,"industry":15,"urgency":40,"total":100,"max":100},"company_size_band":"qualified_1000_plus","status":"complete","policy_version":"oak-event-v5","channel":"booth-hot","scanned_at":"2026-09-21T08:18:00.000Z","completed_at":"2026-09-21T08:18:01.450Z","claimed_by":"U123OAK","booth_status":"met","enrichment_status":"complete","persona":"iam","persona_source":"title_rule","persona_reasoning_required":true,"llm_used":false,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["IAM leadership is a target persona.","2,000 employees stated at the booth (first-party evidence).","SailPoint renewal in five months is a Tier 1 urgency trigger."],"evidence":[{"type":"employee_count","source":"booth_notes","quote":"We have 2,000 employees.","confidence":0.9},{"type":"urgency","source":"booth_notes","quote":"SailPoint renewal in five months.","confidence":1}]},{"scan_id":"oak-demo-tom","event_id":"oak-demo-2026","name":"Tom Becker","email":null,"company":"Ledgerline","title":"Identity Architect","classification":"needs_review","would_be_classification":"matched","score":45,"score_breakdown":{"persona":30,"company_size":0,"industry":15,"urgency":0,"total":45,"max":100},"company_size_band":"unknown","status":"complete","policy_version":"oak-event-v5","channel":"booth-review","scanned_at":"2026-09-21T08:15:00.000Z","completed_at":"2026-09-21T08:15:02.700Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"partial","persona":"iam","persona_source":"title_rule","persona_reasoning_required":true,"llm_used":false,"email_valid":false,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["Identity architect is a target persona.","Fintech is a target industry.","No headcount could be established, so a rep confirms size at the booth.","No email on the badge: HubSpot sync (02) is skipped and the delivery still completes."],"evidence":[{"type":"industry","source":"official_website","quote":"Payments infrastructure for community banks.","confidence":0.9}]},{"scan_id":"oak-demo-david","event_id":"oak-demo-2026","name":"David Stone","email":"david@tiny.example","company":"Tiny Cloud","title":"Founder","classification":"out_of_scope","would_be_classification":null,"score":0,"score_breakdown":{"persona":0,"company_size":0,"industry":0,"urgency":0,"total":0,"max":100},"company_size_band":"disqualified_under_500","status":"complete","policy_version":"oak-event-v5","channel":"booth-out-of-scope","scanned_at":"2026-09-21T08:12:00.000Z","completed_at":"2026-09-21T08:12:02.100Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"homepage_only","persona":"other","persona_source":"none_from_rules","persona_reasoning_required":false,"llm_used":false,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["80 employees stated at the booth; the official site agrees.","Below the 500-employee minimum.","Single-cloud SaaS is a stated disqualifier."],"evidence":[{"type":"employee_count","source":"official_website","quote":"Our team of 80","confidence":0.9}]},{"scan_id":"oak-demo-sarah","event_id":"oak-demo-2026","name":"Sarah Chen","email":"sarah@veza.com","company":"Veza","title":"Product Marketing","classification":"competitor_intel","would_be_classification":null,"score":0,"score_breakdown":{"persona":0,"company_size":0,"industry":0,"urgency":0,"total":0,"max":100},"company_size_band":"unknown","status":"complete","policy_version":"oak-event-v5","channel":"competitive-intel","scanned_at":"2026-09-21T08:08:00.000Z","completed_at":"2026-09-21T08:08:01.100Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"company_only","persona":"other","persona_source":"none_from_rules","persona_reasoning_required":false,"llm_used":false,"email_valid":true,"repeat_scan":false,"scan_count":1,"notification_mode":"first_scan","decision_reasons":["veza.com matches an active competitor domain.","04 read the company homepage but ran no person search: Oak does not profile a competitor's employees."],"evidence":[{"type":"competitor_identity","source":"scanner_email","quote":"sarah@veza.com","confidence":1}]}],"workflowHealth":[{"step":"00","name":"Setup & Seed","id":"PeoS0NF1f7FHzEID","state":"draft only, run manually, never published","health":"healthy"},{"step":"01","name":"Intake & Decision","id":"9SzVHK4vdv7Z3UMH","state":"webhook, active v7d48dcb0","health":"healthy"},{"step":"02A","name":"CRM Context","id":"xnl1bav7McaQIwXC","state":"sub-flow, active vd1d32bc2","health":"healthy"},{"step":"04","name":"Company & Person Enrichment","id":"K9MaVwjIoBmZ0oS9","state":"sub-flow, active v9742a40a","health":"healthy"},{"step":"05","name":"AI Lead Reasoning","id":"McoAVyLN6lxqmLeO","state":"sub-flow, active vd1bb7ad6","health":"healthy"},{"step":"02","name":"HubSpot Sync","id":"WQ2s5hFfpaE8P45o","state":"sub-flow, active vf13df11d","health":"healthy"},{"step":"03","name":"Slack Alerts","id":"gyCxnkoGkh3OJpz5","state":"sub-flow, active v441bda85","health":"healthy"},{"step":"06","name":"Slack Actions","id":"VsKr9HAqOrtOlxZC","state":"Slack webhook, active v87d50258","health":"healthy"},{"step":"07","name":"Task Test Harness","id":"nyht2byorvoxFX2u","state":"manual, active v6f8f8789","health":"healthy"},{"step":"08","name":"Control Center API","id":null,"state":"webhooks /oak-api/*, serves this app","health":"healthy"},{"step":"99","name":"Failure Handler","id":"N4JW7CO6qjdLi6mq","state":"error trigger, active vb4184480","health":"healthy"}]};
@@ -1255,14 +1391,45 @@ window.OAK_GRAPH = {
   const data = window.OAK_DATA;
   const journey = window.OAK_JOURNEY;
   const graph = window.OAK_GRAPH;
+
+  /* Browser storage can throw (private windows, blocked site data, previews), so
+   * every read and write goes through these two wrappers. */
+  const store = {
+    get(key, session) {
+      try {
+        return (session ? window.sessionStorage : window.localStorage).getItem(key);
+      } catch {
+        return null;
+      }
+    },
+    set(key, value, session) {
+      try {
+        const area = session ? window.sessionStorage : window.localStorage;
+        if (value == null || value === '') area.removeItem(key);
+        else area.setItem(key, value);
+      } catch {
+        /* storage unavailable: the setting lasts for this page load only */
+      }
+    },
+  };
+
+  const DEFAULT_API_BASE = 'https://oak-noam.app.n8n.cloud/webhook/oak-api';
+  const conn = {
+    mode: 'connecting',
+    base: store.get('oak-api-base') || DEFAULT_API_BASE,
+    forceOffline: store.get('oak-force-offline') === '1',
+    reason: '',
+    health: null,
+    checkedAt: null,
+  };
+
   const state = {
     health: null,
     dashboard: null,
     leads: [],
     policy: null,
     competitors: [],
-    view: localStorage.getItem('oak-explorer-view') || 'business',
-    flow: 'scan',
+    view: store.get('oak-explorer-view') || 'business',
     preview: null,
     lastResult: null,
   };
@@ -1276,23 +1443,176 @@ window.OAK_GRAPH = {
       .replaceAll("'", '&#039;');
   const pretty = (value) => JSON.stringify(value, null, 2);
   const label = (value) => String(value || '').replaceAll('_', ' ').replace(/\b\w/g, (x) => x.toUpperCase());
-  const date = (value) =>
-    value ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value)) : '-';
-  const api = async (path, options) => {
-    if (window.OAK_OFFLINE) return offlineApi(path, options);
-    const response = await fetch(path, options);
-    const body = await response.json().catch(() => ({}));
+  const date = (value) => {
+    if (!value) return '-';
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? String(value) : new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d);
+  };
+  const asList = (value) => (Array.isArray(value) ? value : []);
+
+  /* ------------------------------------------------------------------ */
+  /* Live API                                                            */
+  /* ------------------------------------------------------------------ */
+
+  /* The app speaks /api/... paths. 08 exposes only static webhook paths, because
+   * n8n puts the node id into the production URL of any path with a :param, so
+   * a dynamic segment moves into the query string. Existing query strings are
+   * kept. Absolute URLs (a status_url from 08, say) pass through untouched. */
+  function apiUrl(path, base) {
+    if (/^https?:\/\//i.test(path)) return path;
+    const url = new URL(path, 'https://oak.local');
+    const params = new URLSearchParams(url.search);
+    let rest = url.pathname.replace(/^\/api\/?/, '').replace(/\/+$/, '');
+    let m;
+    if ((m = rest.match(/^leads\/([^/]+)$/)) && m[1] !== 'item') {
+      rest = 'leads/item';
+      params.set('scan_id', decodeURIComponent(m[1]));
+    } else if ((m = rest.match(/^policy\/([^/]+)\/activate$/))) {
+      rest = 'policy/activate';
+      params.set('version', decodeURIComponent(m[1]));
+    } else if ((m = rest.match(/^competitors\/([^/]+)$/)) && m[1] !== 'item') {
+      rest = 'competitors/item';
+      params.set('id', decodeURIComponent(m[1]));
+    }
+    const query = params.toString();
+    return `${String(base || conn.base).replace(/\/+$/, '')}/${rest}${query ? `?${query}` : ''}`;
+  }
+  window.OAK_API_URL = apiUrl;
+
+  async function liveFetch(path, options = {}, timeoutMs = 12000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let response;
+    try {
+      response = await fetch(apiUrl(path), { ...options, signal: controller.signal, cache: 'no-store' });
+    } catch (cause) {
+      const error = new Error(cause && cause.name === 'AbortError' ? 'The n8n API did not answer in time.' : 'The n8n API could not be reached.');
+      error.unreachable = true;
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+    const text = await response.text().catch(() => '');
+    let body = {};
+    let parsed = true;
+    try {
+      body = text ? JSON.parse(text) : {};
+    } catch {
+      parsed = false;
+    }
     if (!response.ok) {
-      const error = new Error(body.error || `Request failed (${response.status})`);
-      error.details = body.details;
+      const error = new Error((parsed && (body.error || body.message)) || `Request failed (${response.status})`);
+      error.status = response.status;
+      error.details = parsed ? body.details : undefined;
+      /* A missing route (n8n's own "webhook is not registered" 404), a server
+       * error or a non-JSON answer means the API is not really there. A JSON
+       * { error } from 08 is a real answer and is shown as one. */
+      error.unreachable = !parsed || response.status >= 500 || (response.status === 404 && !body.error);
+      throw error;
+    }
+    if (!parsed) {
+      const error = new Error('The n8n API answered with something that is not JSON.');
+      error.unreachable = true;
       throw error;
     }
     return body;
+  }
+
+  const api = async (path, options = {}) => {
+    if (window.OAK_OFFLINE) return offlineApi(path, options);
+    const method = String(options.method || 'GET').toUpperCase();
+    const pathname = new URL(path, 'https://oak.local').pathname;
+    const sideEffectFree = method === 'GET' || /^\/api\/payloads\/(validate|dry-run)$/.test(pathname);
+    try {
+      return await liveFetch(path, options);
+    } catch (error) {
+      /* Reads fall back to the snapshot, loudly. Writes never do: the snapshot
+       * is read-only and a write must not appear to have happened. */
+      if (error.unreachable && sideEffectFree) {
+        goOffline(error.message, true);
+        return offlineApi(path, options);
+      }
+      throw error;
+    }
   };
+
   const mutationHeaders = () => ({
     'content-type': 'application/json',
-    'x-oak-admin-token': sessionStorage.getItem('oak-admin-token') || '',
+    'x-oak-admin-token': store.get('oak-admin-token', true) || '',
   });
+
+  async function connect() {
+    conn.checkedAt = new Date();
+    if (conn.forceOffline) {
+      goOffline('Offline mode is switched on in settings.', false);
+      return;
+    }
+    conn.mode = 'connecting';
+    renderConnection();
+    try {
+      const health = await liveFetch('/api/health', {}, 8000);
+      if (!health || health.ok === false) {
+        const error = new Error((health && health.error) || 'The health check reported a problem.');
+        throw error;
+      }
+      window.OAK_OFFLINE = false;
+      conn.mode = 'live';
+      conn.reason = '';
+      conn.health = health;
+      state.health = health;
+    } catch (error) {
+      goOffline(error.message, false);
+    }
+    renderConnection();
+  }
+
+  function goOffline(reason, announce) {
+    const wasLive = conn.mode === 'live';
+    window.OAK_OFFLINE = true;
+    conn.mode = 'offline';
+    conn.reason = reason || 'The n8n API is unavailable.';
+    state.health = { ok: true, mode: 'offline' };
+    renderConnection();
+    if (announce && wasLive) toast(`Lost the n8n API (${conn.reason}) Showing offline demo data.`, 'error');
+  }
+
+  function renderConnection() {
+    const button = document.querySelector('#connection-button');
+    const text = document.querySelector('#connection-label');
+    const banner = document.querySelector('#offline-banner');
+    button.classList.toggle('connected', conn.mode === 'live');
+    button.classList.toggle('connecting', conn.mode === 'connecting');
+    if (conn.mode === 'live') {
+      const version = conn.health?.policy_version || conn.health?.active_policy_version || conn.health?.policy?.version;
+      text.textContent = 'Live - n8n';
+      button.title = `Connected to ${conn.base}${version ? `. Active policy ${version}.` : ''}`;
+    } else if (conn.mode === 'connecting') {
+      text.textContent = 'Connecting to n8n';
+      button.title = `Checking ${conn.base}`;
+    } else {
+      text.textContent = 'Offline demo data';
+      button.title = conn.reason;
+    }
+    if (banner) {
+      banner.hidden = conn.mode !== 'offline';
+      const snap = window.OAK_OFFLINE_STATE.snapshot_at;
+      banner.querySelector('[data-banner-text]').textContent = conn.forceOffline
+        ? `Offline demo data, chosen in settings. Every view below reads an embedded snapshot${snap ? ` from ${date(snap)}` : ''}, not the live n8n tables.`
+        : `Offline demo data. ${conn.reason} Every view below reads an embedded snapshot${snap ? ` from ${date(snap)}` : ''}, not the live n8n tables.`;
+    }
+    const status = document.querySelector('#conn-status');
+    if (status) status.innerHTML = connectionStatusHtml();
+  }
+
+  function connectionStatusHtml() {
+    if (conn.mode === 'live') return `<span class="status-dot live"></span><span><b>Live.</b> ${esc(conn.base)}</span>`;
+    if (conn.mode === 'connecting') return `<span class="status-dot"></span><span>Checking ${esc(conn.base)}</span>`;
+    return `<span class="status-dot"></span><span><b>Offline demo data.</b> ${esc(conn.reason)}</span>`;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Offline snapshot                                                    */
+  /* ------------------------------------------------------------------ */
 
   async function offlineApi(path, options) {
     const source = window.OAK_OFFLINE_STATE;
@@ -1305,15 +1625,16 @@ window.OAK_GRAPH = {
         return {
           ok: true,
           mode: url.pathname.endsWith('dry-run') ? 'dry-run' : 'validate',
+          source: 'offline snapshot',
           normalized_payload: payload,
           preview,
           side_effects_executed: false,
         };
       }
-      throw new Error('Interviewer mode is read-only. Run the local server for administration or live sends.');
+      throw new Error('Offline demo data is read-only. Connect to the live n8n API in settings to make changes or send a live scan.');
     }
     if (url.pathname === '/api/health') {
-      return { ok: true, mode: 'interviewer', gateway_configured: false, scanner_configured: false };
+      return { ok: true, mode: 'offline', policy_version: source.policy.version, counts: { leads: source.leads.length, competitors: source.competitors.length } };
     }
     if (url.pathname === '/api/dashboard') {
       const eventId = url.searchParams.get('event_id');
@@ -1324,7 +1645,7 @@ window.OAK_GRAPH = {
         .map((row) => new Date(row.completed_at) - new Date(row.scanned_at))
         .sort((a, b) => a - b);
       return {
-        mode: 'interviewer',
+        mode: 'offline',
         generated_at: new Date().toISOString(),
         event_ids: [...new Set(source.leads.map((x) => x.event_id))],
         selected_event_id: eventId || 'all',
@@ -1345,9 +1666,9 @@ window.OAK_GRAPH = {
         recent: rows.slice().sort((a, b) => b.scanned_at.localeCompare(a.scanned_at)).slice(0, 8),
         workflow_health: source.workflowHealth,
         alerts: [
-          { severity: 'critical', text: 'Workflow 07 public form must remain disabled or authenticated.' },
-          { severity: 'warning', text: 'Workflow 06 has unpublished draft improvements.' },
-          { severity: 'warning', text: 'This shareable file is a read-only interviewer demo.' },
+          { severity: 'warning', text: 'Offline demo data: these rows are an embedded snapshot, not the live oak_deliveries table.' },
+          { severity: 'info', text: '00 Setup & Seed runs from its draft by design and is never published.' },
+          { severity: 'info', text: 'Slack buttons fail closed unless OAK_SLACK_SIGNING_SECRET verifies the request.' },
         ],
       };
     }
@@ -1355,13 +1676,13 @@ window.OAK_GRAPH = {
     if (url.pathname.startsWith('/api/leads/')) {
       const scanId = decodeURIComponent(url.pathname.slice('/api/leads/'.length));
       const lead = source.leads.find((x) => x.scan_id === scanId);
-      if (!lead) throw new Error('Lead not found.');
+      if (!lead) throw new Error(`Lead ${scanId} is not in the offline snapshot.`);
       return lead;
     }
     if (url.pathname === '/api/policy') return source.policy;
     if (url.pathname === '/api/competitors') return { items: source.competitors };
     if (url.pathname === '/api/workflows') return { items: source.workflowHealth };
-    throw new Error('This route is unavailable in interviewer mode.');
+    throw new Error('This route is not available in the offline snapshot.');
   }
 
   function offlinePreview(payload, policy) {
@@ -1372,9 +1693,9 @@ window.OAK_GRAPH = {
     const notes = String(payload.notes_from_booth || '').toLowerCase();
     const persona = /\bciso\b|chief information security|identity|iam|security/.test(title);
     const urgency = /renew|breach|audit|deadline|sailpoint/.test(notes);
-    const competitor = /\bveza\b/.test(
-      `${payload.email || ''} ${payload.company_name || ''} ${notes}`.toLowerCase()
-    );
+    const competitorDomains = window.OAK_OFFLINE_STATE.competitors.flatMap((c) => (c.active ? c.domains || [] : []));
+    const domain = String(payload.company_domain || String(payload.email || '').split('@')[1] || '').toLowerCase();
+    const competitor = Boolean(domain && competitorDomains.includes(domain));
     const count = payload.employee_count_observed == null ? null : Number(payload.employee_count_observed);
     const reviewMin = Number(policy.company_fit.review_employee_min);
     const qualifiedMin = Number(policy.company_fit.qualified_employee_min);
@@ -1393,10 +1714,11 @@ window.OAK_GRAPH = {
     else if (persona && urgency) classification = 'tier_1';
     else if (persona) classification = 'matched';
     else classification = 'needs_review';
-    const score =
-      (persona ? policy.scoring.persona_points : 0) +
-      (sizeBand === 'qualified_1000_plus' ? policy.scoring.company_size_points : 0) +
-      (urgency ? policy.scoring.urgency_points : 0);
+    const score = competitor
+      ? 0
+      : (persona ? policy.scoring.persona_points : 0) +
+        (sizeBand === 'qualified_1000_plus' ? policy.scoring.company_size_points : 0) +
+        (urgency ? policy.scoring.urgency_points : 0);
     return {
       classification,
       would_be_classification:
@@ -1404,6 +1726,7 @@ window.OAK_GRAPH = {
       company_size_band: sizeBand,
       needs_headcount_verification: sizeBand === 'unknown',
       score,
+      score_note: 'Offline estimate before enrichment: industry points are added once 04 resolves the industry.',
       mutations: {
         hubspot: Boolean(payload.email),
         slack_channel: policy.notifications[classification]?.channel || null,
@@ -1415,49 +1738,40 @@ window.OAK_GRAPH = {
 
   function groupOffline(items, key) {
     return Object.fromEntries(
-      [...new Set(items.map((item) => item[key]))].map((value) => [
-        value,
-        items.filter((item) => item[key] === value).length,
-      ])
+      [...new Set(items.map((item) => item[key]))].map((value) => [value, items.filter((item) => item[key] === value).length])
     );
   }
 
+  /* ------------------------------------------------------------------ */
+  /* Routing                                                             */
+  /* ------------------------------------------------------------------ */
+
   async function boot() {
-    try {
-      if (window.OAK_OFFLINE) {
-        state.health = { mode: 'offline' };
-        document.querySelector('#connection-label').textContent = 'interviewer demo';
-        await route();
-        return;
-      }
-      state.health = await api('/api/health');
-      const button = document.querySelector('#connection-button');
-      button.classList.add('connected');
-      document.querySelector('#connection-label').textContent = `${state.health.mode} mode`;
-      await route();
-    } catch (error) {
-      renderError(error);
-    }
+    renderConnection();
+    await connect();
+    await route();
   }
 
   async function route() {
     const hash = location.hash || '#/';
+    stopPlayer();
     setActiveNav(hash);
-    main.innerHTML = '<div class="loading"><span></span>Loading view…</div>';
+    main.innerHTML = '<div class="loading"><span></span>Loading view...</div>';
     try {
-      if (hash === '#/' || hash === '#') return renderDashboard();
-      if (hash === '#/leads') return renderLeads();
-      if (hash.startsWith('#/leads/')) return renderLead(decodeURIComponent(hash.slice('#/leads/'.length)));
-      if (hash === '#/policy') return renderPolicy();
-      if (hash === '#/competitors') return renderCompetitors();
-      if (hash === '#/explorer') return renderExplorer();
+      if (hash === '#/' || hash === '#') return await renderDashboard();
+      if (hash === '#/leads') return await renderLeads();
+      if (hash.startsWith('#/leads/')) return await renderLead(decodeURIComponent(hash.slice('#/leads/'.length)));
+      if (hash === '#/policy') return await renderPolicy();
+      if (hash === '#/competitors') return await renderCompetitors();
+      if (hash === '#/explorer' || hash === '#/map') return await renderExplorer(null);
+      if (hash.startsWith('#/map/lead/')) return await renderExplorer({ lead: decodeURIComponent(hash.slice('#/map/lead/'.length)) });
+      if (hash.startsWith('#/map/')) return await renderExplorer({ flow: decodeURIComponent(hash.slice('#/map/'.length)) });
       if (hash === '#/flow') return renderStage(journey.stages[0].id);
       if (hash.startsWith('#/flow/')) return renderStage(hash.slice('#/flow/'.length));
       if (hash === '#/scenarios') return renderScenarios();
       if (hash.startsWith('#/scenarios/')) return renderScenario(hash.slice('#/scenarios/'.length));
       if (hash === '#/use-cases') return renderUseCases();
       if (hash.startsWith('#/explorer/')) return renderUseCase(hash.slice('#/explorer/'.length));
-      if (hash === '#/map') return renderMap();
       if (hash === '#/console') return renderConsole();
       location.hash = '#/';
     } catch (error) {
@@ -1467,23 +1781,36 @@ window.OAK_GRAPH = {
 
   function setActiveNav(hash) {
     const explainerRoutes = ['explorer', 'flow', 'scenarios', 'use-cases', 'map'];
-    const raw = hash === '#/' ? 'dashboard' : hash.split('/')[1];
+    const raw = hash === '#/' || hash === '#' ? 'dashboard' : hash.split('/')[1];
     const key = explainerRoutes.includes(raw) ? 'explorer' : raw;
     document.querySelectorAll('[data-nav]').forEach((node) => node.classList.toggle('active', node.dataset.nav === key));
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Operations views                                                    */
+  /* ------------------------------------------------------------------ */
+
+  function sourceTag() {
+    return window.OAK_OFFLINE
+      ? '<span class="pill warning" title="Embedded snapshot, not live n8n data">snapshot</span>'
+      : '<span class="pill live" title="Read from n8n just now">live</span>';
   }
 
   async function renderDashboard(provided) {
     state.dashboard = provided || (await api('/api/dashboard'));
     const d = state.dashboard;
+    const m = d.metrics || {};
     const metrics = [
-      ['Scans', d.metrics.scans, 'current selection'],
-      ['Complete', `${d.metrics.complete_rate}%`, 'delivery status'],
-      ['Tier 1', d.metrics.tier_1, '#booth-hot'],
-      ['Needs review', d.metrics.needs_review, 'human check'],
-      ['Claimed', d.metrics.claimed, 'encounters'],
-      ['Median latency', `${(d.metrics.median_latency_ms / 1000).toFixed(1)}s`, 'scan → complete'],
+      ['Scans', m.scans ?? 0, 'current selection'],
+      ['Complete', `${m.complete_rate ?? 0}%`, 'delivery status'],
+      ['Tier 1', m.tier_1 ?? 0, '#booth-hot'],
+      ['Needs review', m.needs_review ?? 0, '#booth-review'],
+      ['Claimed', m.claimed ?? 0, 'encounters'],
+      ['Median latency', `${(Number(m.median_latency_ms || 0) / 1000).toFixed(1)}s`, 'scan → complete'],
     ];
-    const maxTier = Math.max(...Object.values(d.classification_counts), 1);
+    const counts = d.classification_counts || {};
+    const maxTier = Math.max(...Object.values(counts).map(Number), 1);
+    const health = asList(d.workflow_health);
     main.innerHTML = `
       <section class="page-header">
         <div><p class="eyebrow">Live-event operations</p><h1>Booth signal, without the noise.</h1>
@@ -1491,7 +1818,7 @@ window.OAK_GRAPH = {
         <div class="header-actions">
           <select id="event-filter" aria-label="Event">
             <option value="">All events</option>
-            ${d.event_ids.map((x) => `<option ${d.selected_event_id === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}
+            ${asList(d.event_ids).map((x) => `<option ${d.selected_event_id === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}
           </select>
           <a class="button secondary" href="#/console">Test a payload</a>
         </div>
@@ -1500,58 +1827,62 @@ window.OAK_GRAPH = {
         ${metrics
           .map(
             ([name, value, note], index) => `<article class="metric"><span class="metric-label">${esc(name)}</span>
-              <strong>${esc(value)}</strong><small>${esc(note)}</small><i class="metric-accent" style="transform:scaleX(${Math.max(.12, 1 - index * .12)})"></i></article>`
+              <strong>${esc(value)}</strong><small>${esc(note)}</small><i class="metric-accent" style="transform:scaleX(${Math.max(0.12, 1 - index * 0.12)})"></i></article>`
           )
           .join('')}
       </section>
       <section class="dashboard-grid">
         <div class="stack">
-          <article class="panel"><header class="panel-header"><h2>Classification mix</h2><span class="pill">${esc(d.selected_event_id)}</span></header>
+          <article class="panel"><header class="panel-header"><h2>Classification mix</h2><span class="header-actions">${sourceTag()}<span class="pill">${esc(d.selected_event_id || 'all')}</span></span></header>
             <div class="panel-body tier-bars">${data.classifications
               .map((tier) => {
-                const count = d.classification_counts[tier.id] || 0;
+                const count = Number(counts[tier.id] || 0);
                 return `<div class="bar-row ${tier.id}"><span>${esc(tier.label)}</span><div class="bar-track"><div class="bar-fill" style="width:${(count / maxTier) * 100}%"></div></div><b>${count}</b></div>`;
               })
               .join('')}</div></article>
           <article class="panel"><header class="panel-header"><h2>Recent scans</h2><a href="#/leads" class="button small secondary">View all</a></header>
-            ${leadTable(d.recent)}</article>
+            ${leadTable(asList(d.recent))}</article>
         </div>
         <aside class="stack">
-          <article class="panel"><header class="panel-header"><h2>Operational alerts</h2><span class="pill warning">${d.alerts.length}</span></header>
-            <div class="panel-body"><ul class="alert-list">${d.alerts.map((a) => `<li class="alert" data-severity="${esc(a.severity)}">${esc(a.text)}</li>`).join('')}</ul></div></article>
-          <article class="panel"><header class="panel-header"><h2>Workflow health</h2><a href="#/map" class="button small secondary">Open map</a></header>
-            <div class="panel-body workflow-list">${d.workflow_health.slice(0, 7).map(workflowRow).join('')}</div>
-            <footer class="panel-footer">${d.workflow_health.filter((x) => x.health === 'healthy').length}/${d.workflow_health.length} healthy</footer></article>
+          <article class="panel"><header class="panel-header"><h2>Operational alerts</h2><span class="pill warning">${asList(d.alerts).length}</span></header>
+            <div class="panel-body"><ul class="alert-list">${asList(d.alerts).map((a) => `<li class="alert" data-severity="${esc(a.severity)}">${esc(a.text)}</li>`).join('') || '<li class="muted">No alerts.</li>'}</ul></div></article>
+          <article class="panel"><header class="panel-header"><h2>Workflows</h2><a href="#/explorer" class="button small secondary">Open map</a></header>
+            <div class="panel-body workflow-list">${health.map(workflowRow).join('')}</div>
+            <footer class="panel-footer">${health.filter((x) => x.health === 'healthy').length}/${health.length} healthy${window.OAK_OFFLINE ? ' in the snapshot' : ''}</footer></article>
         </aside>
       </section>`;
   }
 
   async function renderLeads() {
     const result = await api('/api/leads');
-    state.leads = result.items;
+    state.leads = asList(result.items);
     main.innerHTML = `
       <section class="page-header"><div><p class="eyebrow">Encounter ledger</p><h1>Every scan has a reason.</h1>
-        <p>Filter final delivery outcomes. Open a row to see the evidence, confidence, policy version, and human state behind the classification.</p></div></section>
+        <p>Filter final delivery outcomes. Open a row to see the evidence, confidence, policy version, and human state behind the classification, or trace it on the system map.</p></div></section>
       <div class="filters"><input type="search" id="lead-search" placeholder="Search person, company, email, scan id" />
         <select id="tier-filter"><option value="">All classifications</option>${data.classifications.map((x) => `<option value="${x.id}">${esc(x.label)}</option>`).join('')}</select>
-        <span class="muted" id="lead-count">${result.count} scans</span></div>
-      <article class="panel" id="lead-results">${leadTable(state.leads)}</article>`;
+        <span class="muted" id="lead-count">${result.count ?? state.leads.length} scans</span>${sourceTag()}</div>
+      <article class="panel" id="lead-results">${leadTable(state.leads, true)}</article>`;
   }
 
   async function renderLead(scanId) {
     const lead = await api(`/api/leads/${encodeURIComponent(scanId)}`);
+    const d = decisionOf(lead);
+    const aiRan = d.persona_reasoning_required ?? ['tier_1', 'matched', 'needs_review'].includes(lead.classification);
     main.innerHTML = `
-      <div class="header-actions"><a href="#/leads" class="button small secondary">← All leads</a></div>
+      <div class="header-actions"><a href="#/leads" class="button small secondary">← All leads</a>
+        <a href="#/map/lead/${encodeURIComponent(lead.scan_id)}" class="button small">Trace this lead on the map</a>${sourceTag()}</div>
       <section class="detail-grid" style="margin-top:1rem">
         <article class="panel">
           <div class="detail-hero"><p class="eyebrow">${esc(lead.scan_id)}</p><span class="pill ${esc(lead.classification)}">${esc(label(lead.classification))}</span>
-            <h1>${esc(lead.name)}</h1><p class="company">${esc(lead.title)} · ${esc(lead.company)}</p></div>
+            <h1>${esc(lead.name || d.full_name || 'Unknown visitor')}</h1><p class="company">${esc(lead.title || d.job_title || '')} · ${esc(lead.company || d.company_name || '')}</p></div>
           <div class="fact-grid">
-            ${fact('Score', `${lead.score}/100`)}${fact('Size band', label(lead.company_size_band))}${fact('Status', label(lead.status))}
-            ${fact('Policy', lead.policy_version)}${fact('Slack route', `#${lead.channel}`)}${fact('Scanned', date(lead.scanned_at))}
+            ${fact('Score', `${lead.score ?? 0}/100`)}${fact('Size band', label(lead.company_size_band || d.company_size_band))}${fact('Status', label(lead.status))}
+            ${fact('Policy', lead.policy_version || d.policy_version)}${fact('Slack route', `#${String(lead.channel || d.routing?.channel || '').replace(/^#/, '')}`)}${fact('Scanned', date(lead.scanned_at))}
+            ${fact('Persona source', label(d.persona_source || 'not recorded'))}${fact('05 AI reasoning', aiRan ? (isAiResolved(d) ? 'Ran, resolved the title' : 'Ran, question only') : 'Skipped')}${fact('HubSpot sync', (d.email_valid ?? Boolean(lead.email)) ? '02 ran' : 'Skipped, no email')}
           </div>
-          <section class="editor-section"><h3>Deterministic reasons</h3><ol class="reason-list">${(lead.decision_reasons || []).map((x) => `<li>${esc(x)}</li>`).join('')}</ol></section>
-          <section class="editor-section"><h3>Sourced evidence</h3><div class="evidence-list">${(lead.evidence || [])
+          <section class="editor-section"><h3>Deterministic reasons</h3><ol class="reason-list">${asList(lead.decision_reasons || d.decision_reasons).map((x) => `<li>${esc(x)}</li>`).join('')}</ol></section>
+          <section class="editor-section"><h3>Sourced evidence</h3><div class="evidence-list">${asList(lead.evidence)
             .map(
               (e) => `<article class="evidence-card"><b>${esc(label(e.type))}</b>“${esc(e.quote)}”
                 <div class="evidence-meta"><span>${esc(label(e.source))}</span><span>${Math.round(Number(e.confidence || 0) * 100)}% confidence</span></div></article>`
@@ -1559,9 +1890,10 @@ window.OAK_GRAPH = {
             .join('') || '<p class="muted">No evidence retained.</p>'}</div></section>
         </article>
         <aside class="stack sticky">
-          ${lead.would_be_classification ? `<article class="warning-box"><b>Possible ${esc(label(lead.would_be_classification))}</b><br/>Confirm 1,000+ employees before treating this lead as hot.</article>` : ''}
+          ${lead.would_be_classification ? `<article class="warning-box"><b>Possible ${esc(label(lead.would_be_classification))}</b><br/>Confirm 1,000+ employees before treating this lead as hot. The card carries the triage row: Promote to Tier 1 | Matched | Not a fit.</article>` : ''}
           <article class="panel"><header class="panel-header"><h3>Encounter state</h3></header><div class="panel-body">
-            ${fact('Claimed by', lead.claimed_by || 'Unclaimed')}${fact('Booth status', label(lead.booth_status))}${fact('Enrichment', label(lead.enrichment_status))}
+            ${fact('Claimed by', lead.claimed_by || 'Unclaimed')}${fact('Booth status', label(lead.booth_status))}${fact('Enrichment', label(lead.enrichment_status || d.enrichment_status))}
+            ${d.scan_count > 1 || d.repeat_scan ? fact('Visit', `Scan #${d.scan_count || 2}, ${label(d.notification_mode || 'repeat')}`) : ''}
           </div></article>
           <article class="panel"><header class="panel-header"><h3>Identity model</h3></header><div class="panel-body muted">
             <p><b>Person</b><br>${esc(lead.email || 'No email')}</p><p><b>Encounter</b><br>${esc(lead.event_id)} + person</p><p><b>Delivery</b><br><span class="mono">${esc(lead.scan_id)}</span></p>
@@ -1570,49 +1902,65 @@ window.OAK_GRAPH = {
       </section>`;
   }
 
+  /* The live policy row and the older mock use slightly different key names, so
+   * every read here tolerates both. */
+  function flagList(doc) {
+    if (doc.feature_flags && typeof doc.feature_flags === 'object') {
+      return Object.entries(doc.feature_flags).filter(([, v]) => typeof v === 'boolean').map(([k, v]) => ({ group: 'feature_flags', key: k, value: v }));
+    }
+    return Object.entries(doc.enrichment || {}).filter(([, v]) => typeof v === 'boolean').map(([k, v]) => ({ group: 'enrichment', key: k, value: v }));
+  }
+  const DEFAULT_PRECEDENCE = ['hubspot_company', 'booth_notes', 'official_website', 'domain_matched_public_search'];
+
   async function renderPolicy() {
     state.policy = await api('/api/policy');
     const p = state.policy;
-    const doc = p.document;
-    const confidence = doc.enrichment.employee_confidence;
+    const doc = p.document || {};
+    const fit = doc.company_fit || {};
+    const enr = doc.enrichment || {};
+    const scoring = doc.scoring || {};
+    const confidence = enr.employee_confidence || {};
+    const ttl = enr.cache_ttl_days ?? enr.company_cache_ttl_days ?? '';
+    const flags = flagList(doc);
+    const precedence = asList(enr.employee_source_precedence).length ? enr.employee_source_precedence : DEFAULT_PRECEDENCE;
+    const readOnly = window.OAK_OFFLINE ? 'disabled title="Read-only: offline demo data"' : '';
     main.innerHTML = `
       <section class="page-header"><div><p class="eyebrow">Policy as data</p><h1>Change the rules, not the workflow.</h1>
         <p>Edits create a new draft. Oak validates confidence and routing invariants, runs canonical regressions, and activates only after an explicit confirmation.</p></div>
-        <div class="header-actions"><span class="pill active">${esc(p.status)}</span><span class="mono">${esc(p.version)}</span></div></section>
+        <div class="header-actions">${sourceTag()}<span class="pill active">${esc(p.status || 'active')}</span><span class="mono">${esc(p.version)}</span></div></section>
       <section class="editor-grid">
         <form class="panel" id="policy-form">
           <section class="editor-section"><h3>Version</h3><div class="field-grid">
             <label>New version<input name="version" value="${esc(nextVersion(p.version))}" required /></label>
-            <label>Event id<input name="event_id" value="${esc(doc.event_id)}" /></label>
+            <label>Activated<input value="${esc(date(p.activated_at))}" disabled /></label>
           </div></section>
           <section class="editor-section"><h3>Company-size gates</h3><div class="field-grid">
-            <label>Review band begins<input name="review_employee_min" type="number" value="${doc.company_fit.review_employee_min}" /></label>
-            <label>Qualified begins<input name="qualified_employee_min" type="number" value="${doc.company_fit.qualified_employee_min}" /></label>
-            <label>Trust threshold<input name="verification_threshold" type="number" min="0" max="1" step=".05" value="${doc.enrichment.employee_verification_required_below}" /></label>
-            <label>Cache TTL days<input name="cache_ttl_days" type="number" value="${doc.enrichment.cache_ttl_days}" /></label>
+            <label>Review band begins<input name="review_employee_min" type="number" value="${esc(fit.review_employee_min)}" /></label>
+            <label>Qualified begins<input name="qualified_employee_min" type="number" value="${esc(fit.qualified_employee_min)}" /></label>
+            <label>Verify below confidence<input name="verification_threshold" type="number" min="0" max="1" step=".05" value="${esc(enr.employee_verification_required_below)}" /></label>
+            <label>Cache TTL days<input name="cache_ttl_days" type="number" value="${esc(ttl)}" /></label>
           </div></section>
           <section class="editor-section"><h3>Evidence confidence</h3><div class="field-grid">
-            ${Object.entries(confidence).map(([key, value]) => `<label>${esc(label(key))}<input name="confidence_${esc(key)}" type="number" min="0" max="1" step=".05" value="${value}" /></label>`).join('')}
+            ${Object.entries(confidence).map(([key, value]) => `<label>${esc(label(key))}<input name="confidence_${esc(key)}" type="number" min="0" max="1" step=".05" value="${esc(value)}" /></label>`).join('')}
           </div></section>
           <section class="editor-section"><h3>Scoring</h3><div class="field-grid">
-            ${['persona_points', 'company_size_points', 'industry_points', 'urgency_points'].map((key) => `<label>${esc(label(key))}<input name="${key}" type="number" value="${doc.scoring[key]}" /></label>`).join('')}
+            ${['persona_points', 'company_size_points', 'industry_points', 'urgency_points'].map((key) => `<label>${esc(label(key))}<input name="${key}" type="number" value="${esc(scoring[key])}" /></label>`).join('')}
           </div></section>
           <section class="editor-section"><h3>Slack routes</h3><div class="field-grid">
-            ${data.classifications.map((tier) => `<label>${esc(tier.label)}<input name="channel_${tier.id}" value="${esc(doc.notifications[tier.id]?.channel || '')}" /></label>`).join('')}
+            ${data.classifications.map((tier) => `<label>${esc(tier.label)}<input name="channel_${tier.id}" value="${esc(doc.notifications?.[tier.id]?.channel || '')}" /></label>`).join('')}
           </div></section>
-          <section class="editor-section"><h3>Feature flags</h3><div class="field-grid">
-            <label><span>Slack actions</span><select name="slack_actions_enabled"><option value="true" ${doc.feature_flags.slack_actions_enabled ? 'selected' : ''}>Enabled</option><option value="false" ${!doc.feature_flags.slack_actions_enabled ? 'selected' : ''}>Disabled</option></select></label>
-            <label><span>Public search</span><select name="public_search_enabled"><option value="true" ${doc.feature_flags.public_search_enabled ? 'selected' : ''}>Enabled</option><option value="false" ${!doc.feature_flags.public_search_enabled ? 'selected' : ''}>Disabled</option></select></label>
-          </div></section>
+          ${flags.length ? `<section class="editor-section"><h3>Feature flags</h3><div class="field-grid">
+            ${flags.map((f) => `<label><span>${esc(label(f.key))}</span><select name="flag__${esc(f.group)}__${esc(f.key)}"><option value="true" ${f.value ? 'selected' : ''}>Enabled</option><option value="false" ${!f.value ? 'selected' : ''}>Disabled</option></select></label>`).join('')}
+          </div></section>` : ''}
         </form>
         <aside class="stack sticky">
           <article class="panel"><header class="panel-header"><h3>Activation gate</h3></header><div class="panel-body">
-            <div id="policy-validation" class="validation"><div class="validation-item">Current active policy loaded.</div></div>
-            <div class="console-actions"><button class="button" data-action="save-policy-draft" ${window.OAK_OFFLINE ? 'disabled title="Read-only interviewer mode"' : ''}>Save new draft</button></div>
+            <div id="policy-validation" class="validation"><div class="validation-item">Current active policy loaded${window.OAK_OFFLINE ? ' from the offline snapshot' : ' from n8n'}.</div></div>
+            <div class="console-actions"><button class="button" data-action="save-policy-draft" ${readOnly}>Save new draft</button></div>
           </div></article>
-          <article class="warning-box"><b>Headcount contract</b><br/>Booth-stated counts are first-party evidence. Domain-matched or official evidence at ≥0.9 may qualify. Name-only search remains review-only.</article>
+          <article class="warning-box"><b>Headcount contract</b><br/>Booth-stated counts are first-party evidence. A count found only by company name is shown as a candidate and never counted.</article>
           <article class="panel"><header class="panel-header"><h3>Source precedence</h3></header><div class="panel-body">
-            <ol class="reason-list">${doc.enrichment.employee_source_precedence.map((x) => `<li>${esc(label(x))}</li>`).join('')}</ol>
+            <ol class="reason-list">${precedence.map((x) => `<li>${esc(label(x))}</li>`).join('')}</ol>
           </div></article>
         </aside>
       </section>`;
@@ -1620,14 +1968,14 @@ window.OAK_GRAPH = {
 
   async function renderCompetitors() {
     const result = await api('/api/competitors');
-    state.competitors = result.items;
+    state.competitors = asList(result.items);
     main.innerHTML = `
       <section class="page-header"><div><p class="eyebrow">Closed competitor set</p><h1>Identity is not incumbency.</h1>
         <p>Active domains and aliases route competitor intel. Products a prospect already uses belong in policy as incumbent tools and may create urgency.</p></div>
-        <button class="button" data-action="new-competitor" ${window.OAK_OFFLINE ? 'disabled title="Read-only interviewer mode"' : ''}>Add competitor</button></section>
+        <div class="header-actions">${sourceTag()}<span class="muted">${state.competitors.length} rows</span><button class="button" data-action="new-competitor" ${window.OAK_OFFLINE ? 'disabled title="Read-only: offline demo data"' : ''}>Add competitor</button></div></section>
       <div class="competitor-grid">${state.competitors.map(competitorCard).join('')}</div>
       <dialog id="competitor-dialog"><form method="dialog" class="dialog-card" id="competitor-form">
-        <header><div><p class="eyebrow">Competitor record</p><h2 id="competitor-dialog-title">Add competitor</h2></div><button value="cancel" class="icon-button">×</button></header>
+        <header><div><p class="eyebrow">Competitor record</p><h2 id="competitor-dialog-title">Add competitor</h2></div><button value="cancel" class="icon-button" aria-label="Close">×</button></header>
         <input name="id" type="hidden" />
         <div class="field-grid">
           <label>Name<input name="name" required /></label><label>Category<input name="category" value="identity_security" /></label>
@@ -1639,21 +1987,1068 @@ window.OAK_GRAPH = {
       </form></dialog>`;
   }
 
-  function renderExplorer() {
+  /* ------------------------------------------------------------------ */
+  /* System map: geometry and static SVG                                 */
+  /* ------------------------------------------------------------------ */
+
+  const NODE = Object.fromEntries(graph.nodes.map((n) => [n.id, n]));
+  const TICK = Object.fromEntries(graph.ticks.map((t) => [t.id, t]));
+  const TR = graph.track;
+  const CORNER = 8;
+  const ERROR_SOURCES = ['wf01', 'wf02A', 'wf02', 'wf03', 'wf04', 'wf05', 'wf06', 'wf07'];
+  const reducedMotion = () => Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  function cleanPts(pts) {
+    return pts.filter((p, i) => i === 0 || p[0] !== pts[i - 1][0] || p[1] !== pts[i - 1][1]);
+  }
+
+  /* Orthogonal path with rounded corners through a list of points. */
+  function orth(input) {
+    const pts = cleanPts(input);
+    if (!pts.length) return '';
+    let d = `M ${pts[0][0]} ${pts[0][1]}`;
+    for (let i = 1; i < pts.length - 1; i += 1) {
+      const a = pts[i - 1];
+      const p = pts[i];
+      const b = pts[i + 1];
+      const r = Math.min(CORNER, Math.hypot(p[0] - a[0], p[1] - a[1]) / 2, Math.hypot(b[0] - p[0], b[1] - p[1]) / 2);
+      const i1 = [p[0] + Math.sign(a[0] - p[0]) * r, p[1] + Math.sign(a[1] - p[1]) * r];
+      const i2 = [p[0] + Math.sign(b[0] - p[0]) * r, p[1] + Math.sign(b[1] - p[1]) * r];
+      d += ` L ${i1[0]} ${i1[1]} Q ${p[0]} ${p[1]} ${i2[0]} ${i2[1]}`;
+    }
+    const last = pts[pts.length - 1];
+    return `${d} L ${last[0]} ${last[1]}`;
+  }
+
+  const moveD = (move) => (Array.isArray(move) ? orth(move) : move.d);
+  const moveEnd = (move) => (Array.isArray(move) ? move[move.length - 1] : move.end);
+
+  function errDot(n) {
+    return n.bar ? [n.x + n.w - 12, n.y + 12] : [n.x + n.w - 10, n.y + 10];
+  }
+
+  function failureCurve(id) {
+    const [x1, y1] = errDot(NODE[id]);
+    const t = NODE.wf99;
+    const x2 = t.port;
+    const y2 = t.y;
+    return { d: `M ${x1} ${y1} C ${x1 + (x1 < x2 ? 60 : -40)} ${y1 + 90}, ${x2} ${Math.max(y1 + 60, y2 - 150)}, ${x2} ${y2}`, end: [x2, y2] };
+  }
+
+  function mapSvg(opts = {}) {
+    const { w, h } = graph.viewBox;
+    const pfx = opts.mini ? 'mini-' : 'map-';
+    const hi = opts.highlight || null;
+    const cls = (kind, id) => {
+      if (!hi) return '';
+      return (hi[kind] || []).includes(id) ? ' cur' : ' off';
+    };
+    const marker = (k) =>
+      `<marker id="${pfx}ah-${k}" viewBox="0 0 10 10" refX="8.6" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ah ah-${k}" d="M 0 0 L 10 5 L 0 10 z" /></marker>`;
+    const lanes = graph.lanes
+      .map(
+        (l) => `<g class="lane"><rect class="lane-band" x="8" y="${l.y}" width="${w - 16}" height="${l.h}" rx="12" />
+          <text class="lane-label" transform="translate(26 ${l.y + l.h / 2}) rotate(-90)" text-anchor="middle">${esc(l.label)}</text></g>`
+      )
+      .join('');
+    const bar = NODE.wf01;
+    const ticks = graph.ticks
+      .map((t) => {
+        const tc = cls('ticks', t.id);
+        if (t.port) {
+          return `<g class="tick port${tc}" data-tick="${t.id}"><line class="port-stub" x1="${t.x}" y1="${TR}" x2="${t.x}" y2="${bar.y + bar.h}" /><rect class="port-mark" x="${t.x - 4}" y="${TR - 4}" width="8" height="8" rx="1.5" transform="rotate(45 ${t.x} ${TR})" /></g>`;
+        }
+        return `<g class="tick${tc}" data-tick="${t.id}"><circle cx="${t.x}" cy="${TR}" r="5.5" /><text x="${t.x}" y="${TR + 24}" text-anchor="middle">${esc(t.label)}</text></g>`;
+      })
+      .join('');
+    const barNode = `<g class="node bar k-orch${cls('nodes', 'wf01')}" data-node="wf01" tabindex="0" role="button" aria-label="${esc(bar.title)}">
+        <rect class="box" x="${bar.x}" y="${bar.y}" width="${bar.w}" height="${bar.h}" rx="12" />
+        <rect class="pulse" x="${bar.x}" y="${bar.y}" width="${bar.w}" height="${bar.h}" rx="12" />
+        <rect class="mark" x="${bar.x}" y="${bar.y + 14}" width="3" height="${bar.h - 28}" rx="1.5" />
+        <text class="n-title bar-title" x="${bar.x + 30}" y="${bar.y + 26}">${esc(bar.title)}</text>
+        <text class="n-sub" x="${bar.x + 30}" y="${bar.y + 44}">${esc(bar.sub)}</text>
+        <path class="inlet" d="M ${bar.x} 55 L ${bar.x + 18} 55 L ${bar.x + 18} 125 L ${bar.x} 125" />
+        <line class="track" x1="${bar.x + 18}" y1="${TR}" x2="${bar.x + bar.w - 14}" y2="${TR}" />
+        ${ticks}
+        <circle class="err-dot" cx="${errDot(bar)[0]}" cy="${errDot(bar)[1]}" r="3.5"><title>Hard failures go to 99</title></circle>
+      </g>`;
+    const edges = graph.edges
+      .map((e) => {
+        const label = e.label ? `<text class="edge-label" data-edge-label="${e.id}" x="${e.lx}" y="${e.ly}" text-anchor="${e.anchor || 'middle'}">${esc(e.label)}</text>` : '';
+        return `<g class="edge k-${e.kind}${cls('edges', e.id)}" data-edge="${e.id}"><path class="wire" d="${orth(e.pts)}" marker-end="url(#${pfx}ah-${hi && (hi.edges || []).includes(e.id) ? 'cur' : 'idle'})" />${label}</g>`;
+      })
+      .join('');
+    const nodes = graph.nodes
+      .filter((n) => !n.bar)
+      .map((n) => {
+        const dot = n.err ? `<circle class="err-dot" cx="${errDot(n)[0]}" cy="${errDot(n)[1]}" r="3.5"><title>Hard failures go to 99</title></circle>` : '';
+        return `<g class="node k-${n.kind}${cls('nodes', n.id)}" data-node="${n.id}" tabindex="0" role="button" aria-label="${esc(n.title)}">
+          <rect class="box" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="10" />
+          <rect class="pulse" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="10" />
+          <rect class="mark" x="${n.x}" y="${n.y + 10}" width="3" height="${n.h - 20}" rx="1.5" />
+          <text class="n-title" x="${n.x + 14}" y="${n.y + 24}">${esc(n.title)}</text>
+          <text class="n-sub" x="${n.x + 14}" y="${n.y + 41}">${esc(n.sub)}</text>
+          <text class="n-tag" data-tag="${n.id}" x="${n.x + 14}" y="${n.y + n.h - 9}"></text>
+          ${dot}
+        </g>`;
+      })
+      .join('');
+    const failure = hi && hi.err
+      ? ERROR_SOURCES.map((id) => `<path class="err-wire" d="${failureCurve(id).d}" />`).join('')
+      : '';
+    const c = graph.caption;
+    const caption = opts.caption
+      ? `<foreignObject x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}"><div class="map-caption" id="map-caption"></div></foreignObject>`
+      : '';
+    return `<svg class="map-svg${opts.mini ? ' mini' : ''}${hi ? ' has-focus' : ''}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Map of the Oak workflows: five lanes, ten workflows plus the 08 Control API">
+      <defs>${['idle', 'done', 'cur'].map(marker).join('')}</defs>
+      ${lanes}${barNode}${edges}<g class="trails" id="${pfx}trails"></g>${nodes}${failure}
+      <g class="token-layer" id="${pfx}tokens"><g class="token" id="${pfx}token" transform="translate(-60 -60)"><circle class="token-halo" r="13" /><circle class="token-core" r="6.5" /></g></g>
+      ${caption}
+    </svg>`;
+  }
+
+  const STAGE_WHERE = {
+    capture: { nodes: ['scanner', 'wf07', 'wf01'], ticks: ['verify', 'ack'], edges: ['scan-01', '07-01'] },
+    identity: { nodes: ['wf01', 'tables'], ticks: ['identity'] },
+    policy: { nodes: ['wf01', 'tables'], ticks: ['policy'] },
+    gates: { nodes: ['wf01'], ticks: ['classify', 'gate'] },
+    size: { nodes: ['wf01', 'wf02A', 'wf04'], ticks: ['p02A', 'p04', 'gate'], edges: ['01-02A', '01-04'] },
+    enrichment: { nodes: ['wf01', 'wf04'], ticks: ['p04'], edges: ['01-04'] },
+    ai: { nodes: ['wf01', 'wf05'], ticks: ['p05', 'gate'], edges: ['01-05'] },
+    crm: { nodes: ['wf01', 'wf02'], ticks: ['p02'], edges: ['01-02'] },
+    persistence: { nodes: ['wf01', 'tables'], ticks: ['persist', 'receipt'] },
+    slack: { nodes: ['wf01', 'wf03', 'slack'], ticks: ['p03'], edges: ['01-03', '03-slack'] },
+    human: { nodes: ['slack', 'wf06', 'wf03'], edges: ['slack-06', '06-03'] },
+    failure: { nodes: ['wf99', 'revops', ...ERROR_SOURCES], edges: ['99-revops'], err: true },
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Traces: the truthful path a scan takes                              */
+  /* ------------------------------------------------------------------ */
+
+  const DEFAULT_CHANNEL = {
+    tier_1: 'booth-hot',
+    matched: 'booth-matched',
+    needs_review: 'booth-review',
+    competitor_intel: 'competitive-intel',
+    out_of_scope: 'booth-out-of-scope',
+  };
+  /* The buttons 03 attaches per classification (Attach Core Action Buttons). */
+  const BUTTON_ROWS = {
+    tier_1: [['Claim', 'Why this score?'], ['Mark met', 'Meeting booked', 'Not a fit'], ['Add note', 'Send to owner', 'Snooze']],
+    matched: [['Claim', 'Why this score?'], ['Mark met', 'Meeting booked', 'Not a fit'], ['Add note', 'Send to owner', 'Snooze', 'Promote to Tier 1']],
+    needs_review: [['Claim', 'Why this score?'], ['Promote to Tier 1', 'Matched', 'Not a fit'], ['Mark met', 'Meeting booked'], ['Add note', 'Send to owner', 'Snooze']],
+    competitor_intel: [['Why this score?', 'Flag for competitive intel', 'False alarm']],
+    out_of_scope: [],
+  };
+  const buttonsFor = (cls) => (BUTTON_ROWS[cls] || []).flat();
+  function channelFor(cls) {
+    const doc = state.policy?.document || window.OAK_OFFLINE_STATE.policy.document;
+    return String(doc?.notifications?.[cls]?.channel || DEFAULT_CHANNEL[cls] || 'booth-review').replace(/^#/, '');
+  }
+
+  function buildPipelineTrace(f) {
+    const T = (stage) => (f.text && f.text[stage]) || {};
+    const steps = [];
+    let pos = null;
+    const from = () => {
+      if (!pos) return [];
+      if (pos.t === 'track') return [[pos.x, TR]];
+      if (pos.t === 'sub') {
+        const n = NODE[pos.id];
+        return [[n.port, n.y], [n.port, TR]];
+      }
+      return [pos.p];
+    };
+    const toTrack = (tickId) => {
+      const x = TICK[tickId].x;
+      const pts = cleanPts([...from(), [x, TR]]);
+      pos = { t: 'track', x };
+      return pts;
+    };
+    const toSub = (id) => {
+      const n = NODE[id];
+      const pts = cleanPts([...from(), [n.port, TR], [n.port, n.y]]);
+      pos = { t: 'sub', id };
+      return pts;
+    };
+    const toPts = (list) => {
+      const pts = cleanPts([...(pos && pos.t === 'pt' ? [pos.p] : []), ...list]);
+      pos = { t: 'pt', p: list[list.length - 1] };
+      return pts;
+    };
+    const add = (step) => steps.push({ nodes: [], ticks: [], edges: [], skip: [], glow: [], tags: {}, moves: [], ...step });
+    const ch = channelFor(f.final);
+    const fromHarness = f.source === '07';
+    const src = fromHarness ? NODE.wf07 : NODE.scanner;
+    const srcY = src.y + src.h / 2;
+
+    pos = { t: 'pt', p: [src.x + src.w, srcY] };
+    add({
+      key: 'verify', stage: 'capture', where: '01 Intake & Decision',
+      title: T('capture').action || 'Scan accepted',
+      happened: T('capture').detail || 'The booth webhook receives the scan.',
+      decided: f.repeat
+        ? 'Signature verified. A new scan_id, so this is not a replay: it runs in full.'
+        : 'Signature verified, payload normalized, and the scan_id is new, so it is not a replay.',
+      moves: [toPts([[src.x + src.w, srcY], [bar().x + 18, srcY], [bar().x + 18, TR], [TICK.verify.x, TR]])],
+      nodes: [fromHarness ? 'wf07' : 'scanner', 'wf01'], edges: [fromHarness ? '07-01' : 'scan-01'], ticks: ['verify'],
+    });
+    pos = { t: 'track', x: TICK.verify.x };
+    add({
+      key: 'identity', stage: 'identity', where: '01 Intake & Decision',
+      title: T('identity').action || 'Encounter resolved',
+      happened: T('identity').detail || 'Person, encounter and delivery are kept as three separate keys.',
+      decided: f.repeat
+        ? `Returning visitor: scan #${f.scanCount || 2} on an existing encounter${f.thread ? ', and the first card\'s Slack thread is remembered' : ''}.`
+        : 'First visit: a new encounter and a new delivery row.',
+      moves: [toTrack('identity')], nodes: ['wf01'], ticks: ['identity'], glow: ['tables'],
+    });
+    add({
+      key: 'policy', stage: 'policy', where: '01 Intake & Decision',
+      title: T('policy').action || 'Version pinned',
+      happened: T('policy').detail || `${f.policyVersion || 'The active policy'} is loaded from oak_policies.`,
+      decided: `Every decision below is stamped with ${f.policyVersion || 'the active version'}; the competitor rows load with it.`,
+      moves: [toTrack('policy')], nodes: ['wf01'], ticks: ['policy'], glow: ['tables'],
+    });
+    add({
+      key: 'classify', stage: 'gates', where: '01 Intake & Decision',
+      title: T('gates').action || `Classified ${label(f.intake)}`,
+      happened: T('gates').detail || 'The deterministic gates run in a fixed order.',
+      decided: `Intake decision: ${label(f.intake)}${f.wouldBe ? `, would-be ${label(f.wouldBe)}` : ''}.${f.intake === 'competitor_intel' ? ' Persona and size are never evaluated.' : ''}`,
+      moves: [toTrack('classify')], nodes: ['wf01'], ticks: ['classify'],
+    });
+    add({
+      key: 'ack', stage: 'capture', where: '01 Intake & Decision',
+      title: 'Provisional 202 to the scanner',
+      happened: 'The accepted delivery row is written and the scanner gets its answer in about two seconds. Everything after this runs while the rep is already talking to the visitor.',
+      decided: 'Accepted is not complete. Success is judged later, on the delivery row.',
+      moves: [toTrack('ack')], nodes: ['wf01'], ticks: ['ack'], glow: ['tables'],
+    });
+    add({
+      key: '02A', stage: 'size', where: '02A CRM Context',
+      title: '02A reads HubSpot',
+      happened: f.t02A || 'Contact by email, company by exact domain, owner and open deals. Every call is a GET or a search.',
+      decided: 'Read-only: nothing is written to HubSpot here. The HubSpot record is first in the headcount precedence.',
+      moves: [toSub('wf02A')], nodes: ['wf02A'], edges: ['01-02A'], ticks: ['p02A'],
+    });
+    const searchDecided = {
+      full: 'Homepage read, gated public search and an identity-checked person search, each claim kept with its source URL.',
+      company_only: 'Person search skipped: Oak never profiles a competitor\'s employee. The homepage and company evidence are kept.',
+      homepage: 'Paid public search is gated off for out of scope. Only the free homepage read ran.',
+      cache: 'Cache hit on the company domain: company evidence is reused, nothing is fetched again.',
+    };
+    const searchTag = { full: '', company_only: 'NO PERSON SEARCH', homepage: 'HOMEPAGE ONLY', cache: 'CACHE HIT' };
+    add({
+      key: '04', stage: 'enrichment', where: '04 Company & Person Enrichment',
+      title: T('enrichment').action || '04 enriches the company',
+      happened: [T('enrichment').detail, T('size').detail && f.search !== 'company_only' ? `Headcount: ${T('size').detail}` : ''].filter(Boolean).join(' '),
+      decided: searchDecided[f.search] || searchDecided.full,
+      moves: [toSub('wf04')], nodes: ['wf04'], edges: ['01-04'], ticks: ['p04'],
+      tags: searchTag[f.search] ? { wf04: searchTag[f.search] } : {},
+    });
+    if (f.ai === 'skip') {
+      add({
+        key: '05', stage: 'ai', where: '05 AI Lead Reasoning',
+        title: '05 is skipped',
+        happened: T('ai').detail || `${label(f.intake)} never reaches the model.`,
+        decided: `${label(f.intake)} never reaches the model, and the final gate that follows 05 is skipped too: the intake decision stands.`,
+        moves: [toTrack('p05')], ticks: ['p05'], skip: ['wf05', 'gate', '01-05'], tags: { wf05: 'SKIPPED ON THIS PATH' },
+      });
+    } else {
+      add({
+        key: '05', stage: 'ai', where: '05 AI Lead Reasoning',
+        title: T('ai').action || (f.ai === 'resolve' ? '05 resolves an ambiguous title' : '05 writes the opening question'),
+        happened: T('ai').detail || 'Bounded Gemini synthesis at temperature 0.',
+        decided: f.ai === 'resolve'
+          ? `Persona resolved above the 0.7 confidence floor${f.personaConfidence ? ` (${f.personaConfidence})` : ''}. The model informs the persona; it never writes a channel or a mention.`
+          : 'The title matched a rule, so there is no persona call: opening question and listen-fors only.',
+        moves: [toSub('wf05')], nodes: ['wf05'], edges: ['01-05'], ticks: ['p05'],
+      });
+      add({
+        key: 'gate', stage: 'gates', where: '01 Intake & Decision',
+        title: 'Final deterministic gate',
+        happened: f.intake !== f.final
+          ? `The rules run again on the enriched facts: ${label(f.intake)} becomes ${label(f.final)}.`
+          : `The rules run again on the enriched facts and confirm ${label(f.final)}${f.wouldBe ? `, would-be ${label(f.wouldBe)}` : ''}.`,
+        decided: `Final classification: ${label(f.final)}. The channel, #${ch}, comes from the policy row, not from the model.`,
+        moves: [toTrack('gate')], nodes: ['wf01'], ticks: ['gate'],
+      });
+    }
+    if (f.crm) {
+      add({
+        key: '02', stage: 'crm', where: '02 HubSpot Sync',
+        title: T('crm').action || '02 writes HubSpot',
+        happened: T('crm').detail || 'Contact, company, meeting, note and the oak_* properties.',
+        decided: 'Human-typed values win via keep(). Owner, lifecycle stage and deal stage are never touched.',
+        moves: [toSub('wf02')], nodes: ['wf02'], edges: ['01-02'], ticks: ['p02'],
+      });
+    } else {
+      add({
+        key: '02', stage: 'crm', where: '02 HubSpot Sync',
+        title: '02 is skipped: no email',
+        happened: 'The badge carried no valid email, so there is no contact to upsert.',
+        decided: 'The run continues without HubSpot and still reaches complete.',
+        moves: [toTrack('p02')], ticks: ['p02'], skip: ['wf02', '01-02'], tags: { wf02: 'SKIPPED: NO EMAIL' },
+      });
+    }
+    add({
+      key: 'persist', stage: 'persistence', where: '01 Intake & Decision',
+      title: T('persistence').action || 'Delivery complete',
+      happened: T('persistence').detail || 'The delivery row reaches complete.',
+      decided: 'oak_deliveries.status is complete and raw_json holds the whole decision, before any card is posted.',
+      moves: [toTrack('persist')], nodes: ['wf01'], ticks: ['persist'], glow: ['tables'],
+    });
+    const threadCh = f.thread ? String(f.thread.channel || 'the first card\'s channel').replace(/^#/, '') : null;
+    add({
+      key: '03', stage: 'slack', where: '03 Slack Alerts',
+      title: '03 picks the channel and builds the card',
+      happened: f.thread
+        ? 'A returning visitor with a stored thread anchor: 03 replies under the first card instead of posting a new root message.'
+        : `The channel is looked up by classification in the active policy: ${label(f.final)} goes to #${ch}.`,
+      decided: f.thread
+        ? `Thread reply in #${threadCh}, broadcast back to the channel${f.thread.escalation ? ', with @here because the tier changed' : ''}.`
+        : `#${ch}${f.final === 'tier_1' ? ' with @here, plus a DM to the HubSpot owner when mapped' : ', no mention'}.`,
+      moves: [toSub('wf03')], nodes: ['wf03'], edges: ['01-03'], ticks: ['p03'],
+    });
+    const w3 = NODE.wf03;
+    const sl = NODE.slack;
+    const mention = f.final === 'tier_1' || (f.thread && f.thread.escalation && f.final !== 'out_of_scope');
+    pos = { t: 'pt', p: [w3.port, w3.y] };
+    add({
+      key: 'card', stage: 'slack', where: 'Slack',
+      title: T('slack').action || `Card lands in #${ch}`,
+      happened: T('slack').detail || 'The card is posted.',
+      decided: f.final === 'out_of_scope'
+        ? 'No buttons, no coaching, no mention: the card exists for the record.'
+        : `Buttons: ${buttonsFor(f.final).join(', ')}.${f.final === 'needs_review' ? ' The triage row is Promote to Tier 1 | Matched | Not a fit.' : ''}`,
+      moves: [toPts([[w3.port, w3.y], [sl.cx, sl.y]])], nodes: ['slack'], edges: ['03-slack'],
+      channel: `#${f.thread ? `${threadCh} thread` : ch}${mention ? ' @here' : ''}`,
+    });
+    add({
+      key: 'receipt', stage: 'persistence', where: '01 Intake & Decision',
+      title: '01 stores the Slack receipt',
+      happened: '03 returns what Slack accepted: the channel, the message ts kept as a string, and the thread anchor. 01 writes it to oak_deliveries.slack_json.',
+      decided: 'The test harness (07) asserts on this receipt, so a silent drop fails a test instead of passing unnoticed.',
+      moves: [toPts([[sl.cx, sl.y], [sl.cx, TR], [TICK.receipt.x, TR]])], nodes: ['wf01'], ticks: ['receipt'], glow: ['tables'],
+    });
+    const w6 = NODE.wf06;
+    const tap = [[sl.cx, sl.y], [sl.cx, sl.y + sl.h / 2], [w6.x + w6.w, sl.y + sl.h / 2]];
+    if (f.rep) {
+      const b = f.rep.button;
+      const decided = {
+        Claim: `06 verifies the Slack signature, then claims conditionally so two reps cannot both own the lead.${f.rep.then ? ` ${f.rep.then} is one more tap.` : ''}`,
+        'Promote to Tier 1': '06 verifies the Slack signature and records the override with who made it and when.',
+        Matched: '06 verifies the Slack signature and records the override with who made it and when.',
+        'Not a fit': '06 verifies the Slack signature and records why the lead was ruled out.',
+        'Flag for competitive intel': '06 verifies the Slack signature and logs what the competitor asked about.',
+      };
+      pos = { t: 'pt', p: tap[0] };
+      add({
+        key: 'rep', stage: 'human', where: '06 Slack Actions', spawn: true,
+        title: T('human').action || `A rep taps ${b}`,
+        happened: T('human').detail || `A rep taps ${b} on the card.`,
+        decided: decided[b] || '06 verifies the Slack signature and records the action on the encounter.',
+        moves: [toPts(tap)], nodes: ['slack', 'wf06'], edges: ['slack-06'],
+      });
+      if (f.reclassify) {
+        const to = f.reclassify.to;
+        add({
+          key: 'reclassify', stage: 'human', where: '06 Slack Actions → 03 Slack Alerts',
+          title: '06 calls 03 with the stored decision',
+          happened: `06 reloads the decision 01 stored in oak_deliveries.raw_json, swaps the classification to ${label(to)}, drops the old routing and calls 03 as a sub-workflow.`,
+          decided: '03 resolves the channel from the policy and attaches the buttons that tier deserves. No card is assembled by hand anywhere else.',
+          moves: [toPts([[w6.x + w6.w, sl.y + sl.h / 2], [1062, sl.y + sl.h / 2], [1062, 448], [1190, 448], [1190, w3.y + w3.h]])],
+          nodes: ['wf06', 'wf03'], edges: ['06-03'], glow: ['tables'],
+        });
+        add({
+          key: 'repost', stage: 'slack', where: '03 Slack Alerts',
+          title: `Reposted to #${channelFor(to)}${to === 'tier_1' ? ' with @here' : ''}`,
+          happened: 'An override banner under the header names who moved it and why, so the repost reads as a correction rather than a duplicate scan.',
+          decided: `${label(to)} card with ${label(to)} buttons: ${buttonsFor(to).join(', ')}.`,
+          moves: [toPts([[1190, w3.y + w3.h], [w3.port, w3.y + w3.h], [sl.cx, sl.y]])], nodes: ['wf03', 'slack'], edges: ['03-slack'],
+          channel: `#${channelFor(to)}${to === 'tier_1' ? ' @here' : ''}`,
+        });
+      }
+    } else {
+      add({
+        key: 'rep', stage: 'human', where: 'Slack',
+        title: T('human').action || 'No rep action yet',
+        happened: T('human').detail || 'Nothing has been tapped on this card.',
+        decided: f.final === 'out_of_scope' ? 'The card has no buttons, so 06 is never involved.' : 'Waiting for a rep: 06 runs only when someone taps a button.',
+        skip: f.final === 'out_of_scope' ? ['wf06', 'slack-06'] : [], tags: f.final === 'out_of_scope' ? { wf06: 'NOT USED' } : {},
+      });
+    }
+    return steps;
+  }
+  function bar() {
+    return NODE.wf01;
+  }
+
+  function scenarioTrace(s) {
+    const text = Object.fromEntries(s.steps.map(([stage, action, detail]) => [stage, { action, detail }]));
+    return {
+      id: s.id,
+      kind: 'scenario',
+      title: s.title,
+      persona: s.persona,
+      outcome: s.outcome,
+      outcomeLabel: s.outcomeLabel,
+      notes: s.notes,
+      card: s.card,
+      counterfactual: s.counterfactual,
+      steps: buildPipelineTrace({ ...s.map, text, source: 'scanner', policyVersion: 'oak-event-v5' }),
+    };
+  }
+
+  function failureTrace() {
+    const w99 = NODE.wf99;
+    return {
+      id: 'failure',
+      kind: 'system',
+      title: 'When a step fails',
+      persona: 'Eight workflows, one error handler',
+      outcome: 'critical',
+      outcomeLabel: 'Reported as a consequence',
+      steps: [
+        {
+          key: 'soft', stage: 'failure', where: 'The pipeline', title: 'Soft failures stay inside the run',
+          happened: 'Enrichment, AI, HubSpot and Slack all carry continueRegularOutput. A timeout there produces a partial lead with a warning on the card, not a lost lead.',
+          decided: 'Only a hard failure leaves the run. The webhook itself is the one step that must not soft-fail.',
+          nodes: ['wf02A', 'wf04', 'wf05', 'wf02', 'wf03'], moves: [], ticks: [], edges: [], skip: [], glow: [], tags: {},
+        },
+        {
+          key: 'trigger', stage: 'failure', where: 'n8n error trigger', title: 'A hard failure fires the error trigger',
+          happened: 'The eight running workflows (01, 02A, 02, 03, 04, 05, 06, 07) all name 99 as their error workflow. n8n starts 99 with the failed execution; 99 has no other caller.',
+          decided: 'One handler for the whole system, so every failure is reported the same way.',
+          nodes: [...ERROR_SOURCES, 'wf99'], moves: ERROR_SOURCES.map(failureCurve), spawn: true, errWires: true,
+          ticks: [], edges: [], skip: [], glow: [], tags: {},
+        },
+        {
+          key: 'report', stage: 'failure', where: '99 Failure Handler', title: '99 reports the consequence',
+          happened: 'The alert names the stage, the scan and what the business lost: no card was posted, or no CRM note was written.',
+          decided: 'Operational alerts go to #oak-revops, away from booth traffic, so they are read instead of muted.',
+          nodes: ['wf99', 'revops'], edges: ['99-revops'], moves: [[[w99.port, w99.y], [w99.port, w99.y + w99.h / 2], [NODE.revops.x, w99.y + w99.h / 2]]],
+          ticks: [], skip: [], glow: [], tags: {},
+        },
+      ],
+    };
+  }
+
+  function controlTrace() {
+    const y = NODE.wf08.y + NODE.wf08.h / 2;
+    const base = { ticks: [], skip: [], glow: [], tags: {}, edges: [] };
+    return {
+      id: 'control',
+      kind: 'system',
+      title: 'Setup and this Control Center',
+      persona: '00, the Data Tables, 08 and this page',
+      outcome: 'active',
+      outcomeLabel: 'Control plane',
+      steps: [
+        { ...base, key: 'seed', stage: 'policy', where: '00 Setup & Seed', title: '00 seeds the tables, once', spawn: true,
+          happened: '00 runs from its draft and is never published. It creates the six Data Tables, seeds the active policy, 17 competitor rows and the test payloads, and provisions the HubSpot properties.',
+          decided: 'Policy and competitors are data. Changing them needs no redeploy.',
+          nodes: ['wf00', 'tables'], edges: ['00-tables'], moves: [[[NODE.wf00.x + NODE.wf00.w, y], [NODE.tables.x, y]]] },
+        { ...base, key: 'read', stage: null, where: 'This page → 08', title: 'This page calls 08', spawn: true,
+          happened: 'Every view reads through static webhooks under /webhook/oak-api. Ids travel in the query string, because n8n puts the node id into any webhook path that has a :param.',
+          decided: 'Reads are open. If 08 cannot be reached, this page switches to its offline snapshot and says so in the connection pill.',
+          nodes: ['app', 'wf08'], edges: ['app-08'], moves: [[[NODE.app.x, y], [NODE.wf08.x + NODE.wf08.w, y]]] },
+        { ...base, key: 'tables', stage: 'persistence', where: '08 → Data Tables', title: '08 reads the tables',
+          happened: 'Leads come from oak_deliveries, whose raw_json holds the complete decision; the policy from oak_policies; competitors from oak_competitors.',
+          decided: 'The page renders the same shapes live or offline.',
+          nodes: ['wf08', 'tables'], edges: ['08-tables'], moves: [[[NODE.wf08.x, y], [NODE.tables.x + NODE.tables.w, y]]] },
+        { ...base, key: 'admin', stage: 'policy', where: 'This page → 08 → Data Tables', title: 'Changes need the admin key', spawn: true,
+          happened: 'Policy drafts, activation, competitor edits and live sends carry x-oak-admin-token. 08 compares it with OAK_CONTROL_ADMIN_TOKEN and refuses when it is wrong, missing or unset.',
+          decided: 'Fail closed. A live send adds the webhook secret on the server and forwards the scan to 01, where it is an ordinary scan.',
+          nodes: ['app', 'wf08', 'tables', 'wf01'], edges: ['app-08', '08-tables'], moves: [[[NODE.app.x, y], [NODE.tables.x + NODE.tables.w, y]]] },
+      ],
+    };
+  }
+
+  function traceById(id) {
+    if (id === 'failure') return failureTrace();
+    if (id === 'control') return controlTrace();
+    const s = journey.scenarios.find((x) => x.id === id);
+    return s ? scenarioTrace(s) : null;
+  }
+
+  /* A lead from 08 may carry its full stored decision (raw_json from
+   * oak_deliveries) as an object or a string. Fields found there fill in what
+   * the summary row does not have. */
+  function decisionOf(lead) {
+    const parse = (v) => {
+      if (!v) return {};
+      if (typeof v === 'object') return v;
+      try {
+        return JSON.parse(v);
+      } catch {
+        return {};
+      }
+    };
+    const raw = { ...parse(lead.raw_json), ...parse(lead.raw), ...parse(lead.decision) };
+    const slack = parse(lead.slack_json || lead.slack);
+    const merged = { ...raw };
+    Object.entries(lead).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') merged[k] = v;
+    });
+    merged.slack_receipt = slack;
+    return merged;
+  }
+  const isAiResolved = (d) => d.persona_source === 'ai_resolved_ambiguous' || d.llm_used === true || d.decision_basis?.llm_used === true;
+
+  function leadTrace(lead) {
+    const d = decisionOf(lead);
+    const final = d.classification || 'needs_review';
+    const resolved = isAiResolved(d);
+    const aiRan = d.persona_reasoning_required ?? ['tier_1', 'matched', 'needs_review'].includes(final);
+    const override = d.rep_override && d.rep_override !== final ? d.rep_override : null;
+    const decisionCls = override ? d.prior_classification || final : final;
+    const intake = resolved ? 'needs_review' : decisionCls;
+    const cacheHit = d.enrichment_status === 'cache_hit' || d.enrichment_cache_hit === true;
+    const search = final === 'out_of_scope' ? 'homepage' : final === 'competitor_intel' ? 'company_only' : cacheHit ? 'cache' : 'full';
+    const email = d.email_valid ?? Boolean(d.email);
+    const repeat = Boolean(d.repeat_scan) || Number(d.scan_count || 1) > 1;
+    const threaded = repeat && (d.threaded || d.slack_receipt?.threaded || String(d.notification_mode || '').startsWith('repeat'));
+    const reasons = asList(d.decision_reasons);
+    const empEvidence = asList(d.evidence).find((e) => e.type === 'employee_count');
+    const who = `${d.name || d.full_name || 'Visitor'}, ${d.title || d.job_title || 'no title'} at ${d.company || d.company_name || 'unknown company'}`;
+    let rep = null;
+    if (override) rep = { button: override === 'tier_1' ? 'Promote to Tier 1' : override === 'matched' ? 'Matched' : override === 'out_of_scope' ? 'Not a fit' : 'Flag for competitive intel' };
+    else if (d.claimed_by) rep = { button: 'Claim', then: d.booth_status === 'met' ? 'Mark met' : d.booth_status === 'meeting_booked' ? 'Meeting booked' : '' };
+    else if (['met', 'meeting_booked'].includes(d.booth_status)) rep = { button: d.booth_status === 'met' ? 'Mark met' : 'Meeting booked' };
+    const text = {
+      capture: { action: 'Scan accepted', detail: `${d.scan_id}: ${who}, scanned ${date(d.scanned_at)}.` },
+      identity: { action: repeat ? 'Same encounter, new delivery' : 'Encounter created', detail: repeat ? `Scan #${d.scan_count || 2} for ${d.email || 'this person'}; prior classification ${label(d.prior_classification || 'unknown')}.` : `First recorded visit for ${d.email || 'this visitor (no email)'} at ${d.event_id}.` },
+      policy: { action: 'Version pinned', detail: `${d.policy_version || 'The active policy'} was active for this scan.` },
+      gates: { action: `Classified ${label(intake)}`, detail: reasons.slice(0, 2).join(' ') || 'No reasons were returned with this lead.' },
+      size: empEvidence ? { action: 'Headcount', detail: `"${empEvidence.quote}" from ${label(empEvidence.source)} at ${Math.round(Number(empEvidence.confidence || 0) * 100)}% confidence.` } : { action: 'Headcount', detail: 'No headcount evidence was stored for this scan.' },
+      enrichment: { action: `Enrichment: ${label(d.enrichment_status || 'recorded')}`, detail: asList(d.enrichment_warnings)[0] || `04 finished with status ${label(d.enrichment_status || 'unknown')}.` },
+      ai: aiRan
+        ? { action: resolved ? '05 resolved the title' : '05 wrote the opening question', detail: resolved ? `Persona source ai_resolved_ambiguous${d.persona_confidence ? ` at ${d.persona_confidence}` : ''}.` : `Persona source ${d.persona_source || 'title rule'}; no persona call was needed.` }
+        : { action: 'Skipped', detail: `${label(final)} never reaches 05.` },
+      crm: { action: 'HubSpot written', detail: `Contact and note for ${d.email}.` },
+      persistence: { action: 'Delivery complete', detail: `Status ${label(d.status || 'complete')}, classification ${label(final)}, completed ${date(d.completed_at)}.` },
+      slack: { action: `Card in #${String(d.channel || d.routing?.channel || channelFor(final)).replace(/^#/, '')}`, detail: threaded ? 'Posted as a reply in the first card\'s thread and broadcast to the channel.' : 'Posted as a new card.' },
+      human: rep
+        ? { action: `Rep action: ${rep.button}`, detail: d.claimed_by ? `Claimed by ${d.claimed_by}; booth status ${label(d.booth_status || 'scanned')}.` : `Recorded action on the encounter: ${rep.button}.` }
+        : { action: final === 'out_of_scope' ? 'Nothing to press' : 'No rep action yet', detail: final === 'out_of_scope' ? 'Out-of-scope cards carry no buttons.' : 'Nobody has tapped a button on this card yet.' },
+    };
+    return {
+      id: `lead:${d.scan_id}`,
+      kind: 'lead',
+      title: `Traced from the stored decision of ${d.name || d.scan_id}`,
+      persona: who,
+      outcome: final,
+      outcomeLabel: label(final),
+      lead: d,
+      steps: buildPipelineTrace({
+        source: String(d.scan_id || '').startsWith('oak-ui-test') ? '07' : 'scanner',
+        intake,
+        wouldBe: d.would_be_classification,
+        final: decisionCls,
+        ai: aiRan ? (resolved ? 'resolve' : 'question') : 'skip',
+        personaConfidence: d.persona_confidence,
+        search,
+        crm: email,
+        repeat,
+        scanCount: d.scan_count,
+        thread: threaded ? { channel: d.thread_channel || (String(d.previous_slack_channel || '').startsWith('C') ? '' : d.previous_slack_channel) || channelFor(d.prior_classification || final), escalation: d.notification_mode === 'repeat_escalation' || d.classification_changed === true } : null,
+        rep,
+        reclassify: override ? { to: override } : null,
+        policyVersion: d.policy_version,
+        text,
+        t02A: d.crm_context ? `HubSpot: ${label(d.crm_context.customer_status || 'looked up')}${d.crm_context.owner_name ? `, owner ${d.crm_context.owner_name}` : ''}. Read-only.` : null,
+      }),
+    };
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* System map: player                                                  */
+  /* ------------------------------------------------------------------ */
+
+  const player = {
+    trace: null,
+    i: -1,
+    playing: false,
+    raf: 0,
+    timer: 0,
+    speed: Number(store.get('oak-map-speed')) === 2 ? 2 : 1,
+    tokenAt: null,
+    selected: null,
+  };
+
+  function stopPlayer() {
+    player.playing = false;
+    cancelAnimationFrame(player.raf);
+    clearTimeout(player.timer);
+    player.raf = 0;
+    player.timer = 0;
+    const button = document.querySelector('#map-play');
+    if (button) button.textContent = 'Play';
+  }
+
+  const $svg = () => main.querySelector('.map-svg:not(.mini)');
+  const allNodes = () => [...main.querySelectorAll('.map-svg:not(.mini) [data-node]')];
+
+  function traceUniverse(trace) {
+    const u = { nodes: new Set(), ticks: new Set(), edges: new Set() };
+    trace.steps.forEach((s) => {
+      s.nodes.forEach((x) => u.nodes.add(x));
+      s.ticks.forEach((x) => u.ticks.add(x));
+      s.edges.forEach((x) => u.edges.add(x));
+      s.skip.forEach((x) => (NODE[x] ? u.nodes : TICK[x] ? u.ticks : u.edges).add(x));
+      s.glow.forEach((x) => u.nodes.add(x));
+    });
+    return u;
+  }
+
+  function paintStates() {
+    const svg = $svg();
+    if (!svg) return;
+    const trace = player.trace;
+    const i = player.i;
+    const status = { nodes: {}, ticks: {}, edges: {} };
+    const tags = {};
+    let channel = null;
+    let errWires = false;
+    if (trace) {
+      const u = traceUniverse(trace);
+      graph.nodes.forEach((n) => (status.nodes[n.id] = u.nodes.has(n.id) ? 'on' : 'off'));
+      graph.ticks.forEach((t) => (status.ticks[t.id] = u.ticks.has(t.id) ? 'on' : 'off'));
+      graph.edges.forEach((e) => (status.edges[e.id] = u.edges.has(e.id) ? 'on' : 'off'));
+      trace.steps.forEach((s, j) => {
+        if (j > i) return;
+        const st = j === i ? 'cur' : 'done';
+        s.nodes.forEach((x) => (status.nodes[x] = st === 'cur' || status.nodes[x] !== 'cur' ? st : status.nodes[x]));
+        s.ticks.forEach((x) => (status.ticks[x] = st));
+        s.edges.forEach((x) => (status.edges[x] = st));
+        s.glow.forEach((x) => (status.nodes[x] = j === i ? 'touch' : status.nodes[x] === 'on' ? 'done' : status.nodes[x]));
+        s.skip.forEach((x) => {
+          if (NODE[x]) status.nodes[x] = 'skip';
+          else if (TICK[x]) status.ticks[x] = 'skip';
+          else status.edges[x] = 'skip';
+        });
+        Object.assign(tags, s.tags);
+        if (s.channel) channel = s.channel;
+        if (s.errWires && j <= i) errWires = true;
+      });
+      /* The step in focus always wins over anything it passed earlier. */
+      const cur = trace.steps[i];
+      if (cur) {
+        cur.nodes.forEach((x) => (status.nodes[x] = 'cur'));
+        cur.ticks.forEach((x) => (status.ticks[x] = 'cur'));
+      }
+    }
+    const set = (el, st) => {
+      el.classList.remove('on', 'off', 'cur', 'done', 'skip', 'touch');
+      if (st) el.classList.add(st);
+    };
+    svg.querySelectorAll('[data-node]').forEach((el) => {
+      set(el, status.nodes[el.dataset.node]);
+      el.classList.toggle('sel', player.selected === el.dataset.node);
+    });
+    svg.querySelectorAll('[data-tick]').forEach((el) => set(el, status.ticks[el.dataset.tick]));
+    svg.querySelectorAll('[data-edge]').forEach((el) => {
+      const st = status.edges[el.dataset.edge];
+      set(el, st);
+      el.querySelector('.wire').setAttribute('marker-end', `url(#map-ah-${st === 'cur' ? 'cur' : st === 'done' ? 'done' : 'idle'})`);
+    });
+    svg.querySelectorAll('[data-tag]').forEach((el) => (el.textContent = tags[el.dataset.tag] || ''));
+    const chLabel = svg.querySelector('[data-edge-label="03-slack"]');
+    if (chLabel) chLabel.textContent = channel || 'posts card';
+    svg.classList.toggle('has-focus', Boolean(trace));
+    svg.classList.toggle('show-err', errWires);
+  }
+
+  function tokenEl() {
+    return document.querySelector('#map-token');
+  }
+  function placeToken(point, visible) {
+    const el = tokenEl();
+    if (!el) return;
+    if (!point) {
+      el.style.opacity = '0';
+      return;
+    }
+    el.setAttribute('transform', `translate(${point[0]} ${point[1]})`);
+    el.style.opacity = visible === false ? '0' : '1';
+  }
+
+  function tokenPointAt(i) {
+    for (let j = i; j >= 0; j -= 1) {
+      const moves = player.trace.steps[j].moves;
+      if (moves && moves.length) return moveEnd(moves[0]);
+    }
+    return null;
+  }
+
+  function drawTrails(uptoExclusive) {
+    const g = document.querySelector('#map-trails');
+    if (!g) return;
+    const parts = [];
+    player.trace.steps.forEach((s, j) => {
+      if (j >= uptoExclusive) return;
+      (s.moves || []).forEach((m) => parts.push(`<path class="trail done${s.errWires ? ' err' : ''}" d="${moveD(m)}" />`));
+    });
+    g.innerHTML = parts.join('');
+  }
+
+  const inside = (p, n) => p[0] > n.x + 3 && p[0] < n.x + n.w - 3 && p[1] > n.y + 3 && p[1] < n.y + n.h - 3;
+
+  function animateStep(step, onDone) {
+    const g = document.querySelector('#map-trails');
+    const moves = step.moves || [];
+    if (!g || !moves.length || reducedMotion()) {
+      drawTrails(player.i + 1);
+      const end = tokenPointAt(player.i);
+      placeToken(end, Boolean(end));
+      onDone();
+      return;
+    }
+    const layer = document.querySelector('#map-tokens');
+    const runs = moves.map((m, k) => {
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', moveD(m));
+      path.setAttribute('class', `trail cur${step.errWires ? ' err' : ''}`);
+      g.append(path);
+      const len = Math.max(1, path.getTotalLength());
+      path.style.strokeDasharray = `${len}`;
+      path.style.strokeDashoffset = `${len}`;
+      let token = tokenEl();
+      if (k > 0) {
+        token = tokenEl().cloneNode(true);
+        token.removeAttribute('id');
+        token.classList.add('extra');
+        layer.append(token);
+      }
+      if (step.errWires) token.classList.add('err');
+      return { path, len, token };
+    });
+    const longest = Math.max(...runs.map((r) => r.len));
+    const duration = Math.min(2600, Math.max(520, (longest / (360 * player.speed)) * 1000));
+    const obstacles = graph.nodes.filter((n) => !n.bar);
+    const t0 = performance.now();
+    const frame = (now) => {
+      const t = Math.min(1, (now - t0) / duration);
+      const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      runs.forEach((r) => {
+        const pt = r.path.getPointAtLength(e * r.len);
+        const p = [pt.x, pt.y];
+        r.token.setAttribute('transform', `translate(${p[0]} ${p[1]})`);
+        const hidden = t < 1 && t > 0 && obstacles.some((n) => inside(p, n));
+        let opacity = hidden ? 0.18 : 1;
+        if (step.spawn && t < 0.15) opacity = Math.min(opacity, t / 0.15);
+        r.token.style.opacity = String(opacity);
+        r.path.style.strokeDashoffset = `${r.len * (1 - e)}`;
+      });
+      if (t < 1) {
+        player.raf = requestAnimationFrame(frame);
+        return;
+      }
+      player.raf = 0;
+      runs.forEach((r, k) => {
+        r.path.style.strokeDasharray = '';
+        r.path.style.strokeDashoffset = '';
+        if (k > 0) r.token.remove();
+      });
+      tokenEl()?.classList.remove('err');
+      placeToken(moveEnd(moves[0]), true);
+      onDone();
+    };
+    tokenEl().style.opacity = step.spawn ? '0' : '1';
+    player.raf = requestAnimationFrame(frame);
+  }
+
+  function setStep(i, animate) {
+    const trace = player.trace;
+    if (!trace) return;
+    cancelAnimationFrame(player.raf);
+    clearTimeout(player.timer);
+    tokenEl()?.classList.remove('err');
+    document.querySelectorAll('#map-tokens .extra').forEach((x) => x.remove());
+    player.i = Math.max(-1, Math.min(i, trace.steps.length - 1));
+    player.selected = null;
+    paintStates();
+    renderCaption();
+    renderPathList();
+    renderDetail();
+    const step = trace.steps[player.i];
+    const arrived = () => {
+      if (!player.playing) return;
+      if (player.i >= trace.steps.length - 1) {
+        stopPlayer();
+        return;
+      }
+      const words = `${step.happened} ${step.decided}`.split(/\s+/).length;
+      const dwell = Math.min(6200, Math.max(2600, 1400 + words * 95)) / player.speed;
+      player.timer = setTimeout(() => setStep(player.i + 1, true), dwell);
+    };
+    if (!step) {
+      drawTrails(0);
+      placeToken(null);
+      return;
+    }
+    if (animate) {
+      drawTrails(player.i);
+      animateStep(step, arrived);
+    } else {
+      drawTrails(player.i + 1);
+      const end = tokenPointAt(player.i);
+      placeToken(end, Boolean(end));
+      arrived();
+    }
+  }
+
+  function play() {
+    if (!player.trace) mountTrace(traceById(journey.scenarios[0].id));
+    if (player.playing) {
+      stopPlayer();
+      return;
+    }
+    player.playing = true;
+    const button = document.querySelector('#map-play');
+    if (button) button.textContent = 'Pause';
+    if (player.i >= player.trace.steps.length - 1) {
+      player.i = -1;
+      drawTrails(0);
+    }
+    setStep(player.i + 1, true);
+  }
+
+  function mountTrace(trace) {
+    stopPlayer();
+    player.trace = trace;
+    player.i = -1;
+    player.selected = null;
+    document.querySelectorAll('[data-flow]').forEach((chip) => chip.setAttribute('aria-pressed', String(trace ? chip.dataset.flow === trace.id : chip.dataset.flow === '')));
+    const title = document.querySelector('#map-title');
+    const sub = document.querySelector('#map-sub');
+    if (title) title.textContent = trace ? trace.title : 'The whole system';
+    if (sub) sub.innerHTML = trace ? `${esc(trace.persona)} <span class="pill ${esc(trace.outcome)}">${esc(trace.outcomeLabel)}</span>` : 'Ten workflows plus 08, in five lanes';
+    drawTrails(0);
+    placeToken(null);
+    paintStates();
+    renderCaption();
+    renderPathList();
+    renderDetail();
+    renderMapCard();
+  }
+
+  function renderCaption() {
+    const el = document.querySelector('#map-caption');
+    if (!el) return;
+    const trace = player.trace;
+    if (!trace) {
+      el.innerHTML = `<p class="cap-eyebrow">How to read this map</p>
+        <h2 class="cap-title">One scan, five lanes, one orchestrator.</h2>
+        <p class="cap-text">01 runs left to right along its track and calls each sub-flow where it hangs off the bar, then waits for it. Dashed lines come from outside n8n. Red dots mark the eight workflows that report hard failures to 99.</p>
+        <div class="cap-actions"><button class="button" data-map="play">Play a Tier 1 visitor</button></div>
+        <p class="cap-hint">Or pick any visitor above. Click a box for what it is.</p>`;
+      return;
+    }
+    const step = trace.steps[player.i];
+    if (!step) {
+      el.innerHTML = `<p class="cap-eyebrow">${esc(trace.kind === 'lead' ? 'Real lead' : trace.kind === 'system' ? 'System path' : 'Scenario')} · ${trace.steps.length} steps</p>
+        <h2 class="cap-title">${esc(trace.title)}</h2>
+        <p class="cap-text">${esc(trace.persona)}</p>
+        ${trace.notes ? `<p class="cap-quote">Booth notes: “${esc(trace.notes)}”</p>` : ''}
+        <div class="cap-actions"><button class="button" data-map="play">Play</button><button class="button secondary" data-map="next">Step through</button></div>`;
+      return;
+    }
+    el.innerHTML = `<p class="cap-eyebrow">Step ${player.i + 1} of ${trace.steps.length} · ${esc(step.where)}</p>
+      <h2 class="cap-title">${esc(step.title)}</h2>
+      <p class="cap-text">${esc(step.happened)}</p>
+      <div class="cap-decided"><b>Decided</b>${esc(step.decided)}</div>`;
+    const count = document.querySelector('#map-count');
+    if (count) count.textContent = `${player.i + 1} / ${trace.steps.length}`;
+  }
+
+  function renderPathList() {
+    const list = document.querySelector('#path-list');
+    const count = document.querySelector('#map-count');
+    const bar = document.querySelector('#map-progress');
+    const trace = player.trace;
+    if (count) count.textContent = trace ? `${Math.max(0, player.i + 1)} / ${trace.steps.length}` : '';
+    if (bar) bar.style.width = trace ? `${((player.i + 1) / trace.steps.length) * 100}%` : '0%';
+    if (!list) return;
+    if (!trace) {
+      list.innerHTML = graph.nodes
+        .filter((n) => n.wf)
+        .sort((a, b) => a.wf.localeCompare(b.wf))
+        .map((n) => `<li><button class="path-step" data-node-info="${n.id}"><span class="n">${esc(n.wf)}</span><span><b>${esc(n.title.replace(/^\S+\s/, ''))}</b>${esc(n.trigger)}</span></button></li>`)
+        .join('');
+      return;
+    }
+    list.innerHTML = trace.steps
+      .map((s, j) => {
+        const skipped = s.skip.some((x) => NODE[x]) && !s.nodes.length;
+        const cls = `${j === player.i ? 'cur' : j < player.i ? 'done' : ''}${skipped ? ' skip' : ''}`;
+        return `<li><button class="path-step ${cls}" data-step="${j}"><span class="n">${j + 1}</span><span><b>${esc(s.title)}</b>${esc(s.where)}${skipped ? ' <em class="pill">skipped</em>' : ''}</span></button></li>`;
+      })
+      .join('');
+    const cur = list.querySelector('.path-step.cur');
+    if (cur && list.scrollHeight > list.clientHeight) {
+      list.scrollTop = Math.max(0, cur.offsetTop - list.clientHeight / 2);
+    }
+  }
+
+  function stageBlocks(stage) {
+    const business = state.view === 'business';
+    return `<p class="stage-question">${esc(stage.question)}</p>
+      <section class="uc-block"><h2>What happens</h2><p>${esc(stage.business)}</p></section>
+      ${business ? '' : `<section class="uc-block"><h2>How it works</h2><ol>${stage.mechanics.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></section>`}
+      <section class="uc-block accent"><h2>Hypothesis</h2><p>${esc(stage.hypothesis)}</p></section>
+      <section class="uc-block"><h2>What we rejected, and why</h2><p>${esc(stage.rejected)}</p></section>
+      ${business ? '' : `<section class="uc-block"><h2>Evidence produced</h2><p>${esc(stage.evidence)}</p></section>
+        <section class="uc-block"><h2>When it fails</h2><p>${esc(stage.failure)}</p></section>`}`;
+  }
+
+  function renderDetail() {
+    const el = document.querySelector('#map-detail');
+    if (!el) return;
+    if (player.selected) {
+      el.innerHTML = nodeInfo(player.selected);
+      return;
+    }
+    const trace = player.trace;
+    const step = trace && trace.steps[player.i];
+    if (!trace || !step) {
+      el.innerHTML = trace
+        ? `<article class="panel"><header class="panel-header"><div><p class="eyebrow">${esc(trace.kind === 'lead' ? 'Real lead' : 'Scenario')}</p><h2>${esc(trace.title)}</h2></div><span class="pill ${esc(trace.outcome)}">${esc(trace.outcomeLabel)}</span></header>
+            <div class="panel-body"><p class="muted">${esc(trace.persona)}</p>
+            ${trace.counterfactual ? `<section class="uc-block accent"><h2>Why the design matters here</h2><p>${esc(trace.counterfactual)}</p></section>` : ''}
+            ${trace.kind === 'lead' ? `<p class="muted">Every step below is derived from what 01 stored for this scan: its classification, persona source, whether 05 ran, whether it had an email for 02, and the channel 03 used.</p>` : ''}
+            <p class="muted">Press Play, or use the arrow keys to step through.</p></div></article>`
+        : `<article class="panel"><header class="panel-header"><h2>What the map shows</h2></header><div class="panel-body">
+            <ul class="reason-list">
+              <li><b>Intake.</b> The booth scanner, or 07 replaying test payloads, posts to 01's webhook.</li>
+              <li><b>Enrich and reason.</b> 02A reads HubSpot, 04 reads the web, 05 reasons in a bounded way. 01 calls them in that order and waits for each.</li>
+              <li><b>Write and notify.</b> 02 writes HubSpot, then 03 posts the card to the channel the policy names.</li>
+              <li><b>Rep actions.</b> 06 handles the twelve buttons and calls 03 again on a reclassification.</li>
+              <li><b>Operations.</b> 00 seeds the tables once, 08 serves this page, 99 reports failures from the eight running workflows.</li>
+            </ul></div></article>`;
+      return;
+    }
+    const stage = step.stage && journey.stages.find((x) => x.id === step.stage);
+    el.innerHTML = `<article class="panel step-detail">
+      <header class="panel-header"><div><p class="eyebrow">Step ${player.i + 1} · ${esc(step.where)}</p><h2>${esc(step.title)}</h2></div>
+        ${stage ? `<a class="button small secondary" href="#/flow/${esc(stage.id)}">Stage ${stage.number}</a>` : ''}</header>
+      <div class="panel-body">
+        <section class="uc-block accent"><h2>What happened here</h2><p>${esc(step.happened)}</p></section>
+        <section class="uc-block"><h2>What it decided</h2><p>${esc(step.decided)}</p></section>
+        ${stage ? `<div class="stage-inline"><p class="eyebrow">Stage ${stage.number} · ${esc(stage.title)}</p>${stageBlocks(stage)}</div>` : ''}
+      </div></article>`;
+  }
+
+  function renderMapCard() {
+    const el = document.querySelector('#map-card');
+    if (!el) return;
+    const trace = player.trace;
+    if (trace && trace.card) {
+      el.innerHTML = `<p class="eyebrow card-eyebrow">The card it produces</p>${slackCard(trace.card)}`;
+    } else if (trace && trace.kind === 'lead') {
+      const d = trace.lead;
+      el.innerHTML = `<article class="panel"><header class="panel-header"><h3>Stored decision</h3><a class="button small secondary" href="#/leads/${encodeURIComponent(d.scan_id)}">Open lead</a></header><div class="panel-body">
+        ${fact('Classification', label(d.classification))}${fact('Persona source', label(d.persona_source || 'not recorded'))}${fact('Channel', `#${String(d.channel || channelFor(d.classification)).replace(/^#/, '')}`)}${fact('Policy', d.policy_version || '-')}
+      </div></article>`;
+    } else {
+      el.innerHTML = '';
+    }
+  }
+
+  function nodeInfo(id) {
+    const n = NODE[id];
+    const wf = n.wf && asList(window.OAK_OFFLINE_STATE.workflowHealth).find((x) => x.step === n.wf);
+    return `<article class="panel node-card">
+      <header class="panel-header"><div><p class="eyebrow">${esc(graph.kinds[n.kind] || n.kind)}</p><h2>${esc(n.title)}</h2></div><button class="button small secondary" data-map="unselect">${player.trace ? 'Back to the step' : 'Close'}</button></header>
+      <div class="panel-body">
+        <p>${esc(n.what)}</p>
+        <div class="fact-grid node-facts">${fact('Trigger', n.trigger)}${wf ? fact('Workflow id', wf.id || 'assigned on deploy') : ''}${wf ? fact('Snapshot state', wf.state) : ''}</div>
+      </div></article>`;
+  }
+
+  function slackCard(card) {
+    const rows = asList(card.buttons).length && !Array.isArray(card.buttons[0]) ? [card.buttons] : asList(card.buttons);
+    return `<article class="slack-card ${card.mention ? 'hot' : ''}">
+      <header><span class="slack-channel">#${esc(card.channel)}${card.thread ? ' · thread reply, broadcast' : ''}</span>${card.mention ? '<span class="pill tier_1">@here</span>' : ''}</header>
+      <b class="slack-header">${esc(card.header)}</b>
+      <p class="slack-lead">${esc(card.lead)}</p>
+      <dl>${card.facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+      <p class="slack-next"><b>Next at the booth.</b> ${esc(card.next)}</p>
+      ${rows.length
+        ? rows.map((row, r) => `<div class="slack-buttons${card.triageRow === r ? ' triage' : ''}">${card.triageRow === r ? '<small>Triage row</small>' : ''}${row.map((b) => `<span>${esc(b)}</span>`).join('')}</div>`).join('')
+        : '<p class="muted slack-quiet">No action buttons. This card exists for the record.</p>'}
+    </article>`;
+  }
+
+  async function renderExplorer(opts) {
+    let trace = null;
+    let leadError = null;
+    if (opts && opts.lead) {
+      try {
+        trace = leadTrace(await api(`/api/leads/${encodeURIComponent(opts.lead)}`));
+      } catch (error) {
+        leadError = error;
+      }
+    } else if (opts && opts.flow) {
+      trace = traceById(opts.flow);
+    }
+    const business = state.view === 'business';
+    const chip = (id, text, dot) => `<button class="chip" data-flow="${esc(id)}" aria-pressed="false"><i class="${esc(dot || '')}"></i>${esc(text)}</button>`;
     main.innerHTML = `
-      <section class="page-header"><div><p class="eyebrow">How Oak works</p><h1>Follow one badge scan all the way through.</h1>
-        <p>Oak turns a badge scan into a routed, evidenced decision in about two seconds. This section explains the pipeline one stage at a time with the hypothesis behind each decision, then replays real visitors end to end so you can watch that reasoning produce an actual outcome.</p></div></section>
-      <section class="entry-grid">
+      <section class="page-header"><div><p class="eyebrow">How Oak works</p><h1>Watch one badge scan travel through the system.</h1>
+        <p>Ten n8n workflows plus the 08 Control API, in five lanes. Pick a visitor and press Play: the token follows the path that visitor really takes, and each stage lights up with what happened there and what it decided.</p></div>
+        <div class="header-actions"><div class="segmented"><button data-action="set-view" data-view="business" class="${business ? 'active' : ''}">Business</button><button data-action="set-view" data-view="technical" class="${!business ? 'active' : ''}">Technical</button></div>
+          <a class="button secondary" href="#/flow">Stage by stage</a></div></section>
+      <section class="flow-picker" aria-label="Choose a path">
+        <div class="flow-group"><span class="flow-group-label">Visitors</span>${journey.scenarios.map((s) => chip(s.id, s.chip || s.title, s.outcome)).join('')}</div>
+        <div class="flow-group"><span class="flow-group-label">System</span>${chip('', 'Everything at once', 'all')}${chip('failure', 'When a step fails', 'critical')}${chip('control', 'Setup and this Control Center', 'active')}
+          ${trace && trace.kind === 'lead' ? chip(trace.id, `Real lead: ${trace.lead.name || trace.lead.scan_id}`, trace.outcome) : ''}
+          <a class="chip link" href="#/leads">Trace a real lead →</a></div>
+      </section>
+      <section class="map-panel">
+        <div class="map-controls">
+          <div class="map-heading"><b id="map-title">The whole system</b><span id="map-sub" class="muted"></span></div>
+          <div class="map-buttons">
+            <button class="button small secondary" data-map="back" aria-label="Previous step">←</button>
+            <button class="button small play-button" data-map="play" id="map-play">Play</button>
+            <button class="button small secondary" data-map="next" aria-label="Next step">→</button>
+            <button class="button small secondary" data-map="restart">Restart</button>
+            <div class="segmented speed" role="group" aria-label="Speed"><button data-map-speed="1" class="${player.speed === 1 ? 'active' : ''}">1x</button><button data-map-speed="2" class="${player.speed === 2 ? 'active' : ''}">2x</button></div>
+            <span class="step-count" id="map-count"></span>
+          </div>
+        </div>
+        <div class="map-progress"><i id="map-progress"></i></div>
+        <div class="map-scroll">${mapSvg({ caption: true })}</div>
+        <div class="map-legend">
+          <span><i class="lg-call"></i>01 calls a sub-flow and waits</span>
+          <span><i class="lg-hook"></i>Webhook from outside</span>
+          <span><i class="lg-trail"></i>Path taken</span>
+          <span><i class="lg-skip"></i>Skipped on this path</span>
+          <span><i class="lg-err"></i>Hard failures go to 99</span>
+          <span><i class="lg-ext"></i>Outside n8n</span>
+        </div>
+      </section>
+      <section class="trace-layout">
+        <div class="stack">
+          <article class="panel"><header class="panel-header"><h2>The path</h2><span class="muted">click a step to jump</span></header><ol class="path-list" id="path-list"></ol></article>
+          <div id="map-card"></div>
+        </div>
+        <div id="map-detail"></div>
+      </section>
+      <section class="entry-grid" style="margin-top:2rem">
         <a class="entry-card" href="#/flow">
-          <span class="entry-index">Start here</span>
+          <span class="entry-index">Read</span>
           <h2>The pipeline, stage by stage</h2>
           <p>Twelve stages from “a scan arrives” to “a failure is reported as a consequence”. Each states what happens, the hypothesis behind it, and the alternative we deliberately rejected.</p>
           <footer><span class="pill">${journey.stages.length} stages</span><span class="muted">about 6 minutes</span></footer>
         </a>
         <a class="entry-card" href="#/scenarios">
-          <span class="entry-index">Then</span>
+          <span class="entry-index">Compare</span>
           <h2>End-to-end scenarios</h2>
-          <p>Five visitors traced through every stage, including the Slack card each one produces and what a naive design would have done instead.</p>
+          <p>${journey.scenarios.length} visitors traced through every stage, including the Slack card each one produces and what a naive design would have done instead.</p>
           <footer><span class="pill">${journey.scenarios.length} walkthroughs</span><span class="muted">about 5 minutes</span></footer>
         </a>
         <a class="entry-card" href="#/use-cases">
@@ -1668,7 +3063,37 @@ window.OAK_GRAPH = {
           ${data.classifications.map((x) => `<tr><td><span class="pill ${x.id}">${esc(x.label)}</span></td><td>${esc(x.rule)}</td><td>${esc(x.channel)}</td><td>${esc(x.treatment)}</td></tr>`).join('')}
         </tbody></table></div>
         <footer class="panel-footer">Rules decide the outcome. The score explains it. The model never picks a channel.</footer></section>`;
+    mountTrace(trace);
+    if (leadError) toast(`Could not trace that lead: ${leadError.message}`, 'error');
+    if (trace) {
+      if (reducedMotion()) setStep(0, false);
+      else play();
+    }
   }
+
+  function selectFlow(id) {
+    if (id && player.trace && player.trace.id === id) {
+      mountTrace(player.trace);
+      play();
+      return;
+    }
+    const trace = id ? traceById(id) : null;
+    if (id && !trace) return;
+    history.replaceState(null, '', id ? `#/map/${id}` : '#/explorer');
+    mountTrace(trace);
+    if (trace) play();
+  }
+
+  function miniMap(stageId) {
+    const where = STAGE_WHERE[stageId];
+    if (!where) return '';
+    return `<section class="mini-map panel"><header class="panel-header"><h3>Where this happens</h3><a class="button small secondary" href="#/map/northstar">Watch a scan travel →</a></header>
+      <div class="map-scroll">${mapSvg({ mini: true, highlight: where })}</div></section>`;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Narrative views                                                     */
+  /* ------------------------------------------------------------------ */
 
   function renderStage(stageId) {
     const index = Math.max(journey.stages.findIndex((x) => x.id === stageId), 0);
@@ -1693,20 +3118,11 @@ window.OAK_GRAPH = {
         <article class="stage-main">
           <p class="eyebrow">Stage ${stage.number} · ${esc(stage.owner)}</p>
           <h1>${esc(stage.title)}</h1>
-          <p class="stage-question">${esc(stage.question)}</p>
-          <section class="uc-block"><h2>What happens</h2><p>${esc(stage.business)}</p></section>
-          ${business ? '' : `<section class="uc-block"><h2>How it works</h2><ol>${stage.mechanics.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></section>`}
-          <section class="uc-block accent"><h2>Hypothesis</h2><p>${esc(stage.hypothesis)}</p></section>
-          <section class="uc-block"><h2>What we rejected, and why</h2><p>${esc(stage.rejected)}</p></section>
-          ${
-            business
-              ? ''
-              : `<section class="uc-block"><h2>Evidence produced</h2><p>${esc(stage.evidence)}</p></section>
-                 <section class="uc-block"><h2>When it fails</h2><p>${esc(stage.failure)}</p></section>`
-          }
+          ${miniMap(stage.id)}
+          ${stageBlocks(stage)}
           <div class="pager">
             ${previous ? `<a class="button secondary" href="#/flow/${esc(previous.id)}">← ${esc(previous.title)}</a>` : '<span></span>'}
-            ${next ? `<a class="button" href="#/flow/${esc(next.id)}">${esc(next.title)} →</a>` : '<a class="button" href="#/scenarios">See it end to end →</a>'}
+            ${next ? `<a class="button" href="#/flow/${esc(next.id)}">${esc(next.title)} →</a>` : '<a class="button" href="#/explorer">See it end to end →</a>'}
           </div>
         </article>
       </section>`;
@@ -1714,9 +3130,9 @@ window.OAK_GRAPH = {
 
   function renderScenarios() {
     main.innerHTML = `
-      <section class="page-header"><div><p class="eyebrow">End-to-end scenarios</p><h1>The same pipeline, five different visitors.</h1>
-        <p>Each walkthrough follows one badge scan through every stage, shows the Slack card it produces, and states what a naive design would have done instead.</p></div>
-        <a class="button secondary" href="#/flow">Review the stages</a></section>
+      <section class="page-header"><div><p class="eyebrow">End-to-end scenarios</p><h1>The same pipeline, ${journey.scenarios.length} different visitors.</h1>
+        <p>Each walkthrough follows one badge scan through every stage, shows the Slack card it produces, and states what a naive design would have done instead. Every one of them also plays on the system map.</p></div>
+        <div class="header-actions"><a class="button secondary" href="#/flow">Review the stages</a><a class="button" href="#/explorer">Open the map</a></div></section>
       <section class="scenario-grid">${journey.scenarios
         .map(
           (s) => `<a class="scenario-card" href="#/scenarios/${esc(s.id)}">
@@ -1735,7 +3151,7 @@ window.OAK_GRAPH = {
     if (!s) return (location.hash = '#/scenarios');
     const stageOf = (stageId) => journey.stages.find((x) => x.id === stageId) || { title: stageId, number: '·' };
     main.innerHTML = `
-      <div class="header-actions"><a href="#/scenarios" class="button small secondary">← All scenarios</a></div>
+      <div class="header-actions"><a href="#/scenarios" class="button small secondary">← All scenarios</a><a href="#/map/${esc(s.id)}" class="button small">Play it on the map</a></div>
       <section class="page-header" style="margin-top:1rem"><div><p class="eyebrow">${esc(s.persona)}</p><h1>${esc(s.title)}</h1>
         <p>${esc(s.tension)}</p><p class="booth-quote">Booth notes: “${esc(s.notes)}”</p></div>
         <span class="pill ${esc(s.outcome)}">${esc(s.outcomeLabel)}</span></section>
@@ -1750,14 +3166,7 @@ window.OAK_GRAPH = {
             })
             .join('')}</div></article>
         <aside class="stack sticky">
-          <article class="slack-card ${s.card.mention ? 'hot' : ''}">
-            <header><span class="slack-channel">#${esc(s.card.channel)}</span>${s.card.mention ? '<span class="pill tier_1">@here</span>' : ''}</header>
-            <b class="slack-header">${esc(s.card.header)}</b>
-            <p class="slack-lead">${esc(s.card.lead)}</p>
-            <dl>${s.card.facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
-            <p class="slack-next"><b>Next at the booth.</b> ${esc(s.card.next)}</p>
-            ${s.card.buttons.length ? `<div class="slack-buttons">${s.card.buttons.map((b) => `<span>${esc(b)}</span>`).join('')}</div>` : '<p class="muted slack-quiet">No action buttons. This card exists for the record.</p>'}
-          </article>
+          ${slackCard(s.card)}
           <article class="panel"><header class="panel-header"><h3>Why the design matters here</h3></header>
             <div class="panel-body"><p class="muted">${esc(s.counterfactual)}</p></div></article>
         </aside>
@@ -1769,12 +3178,12 @@ window.OAK_GRAPH = {
     main.innerHTML = `
       <section class="page-header"><div><p class="eyebrow">Capability reference</p><h1>The logic behind every route.</h1>
         <p>Business view explains the operator experience and hypothesis. Technical view shows ordered gates, evidence contracts, owning workflows, and open gaps.</p></div>
-        <div class="header-actions"><a class="button secondary" href="#/flow">Pipeline</a><a class="button secondary" href="#/map">System map</a></div></section>
+        <div class="header-actions"><a class="button secondary" href="#/flow">Pipeline</a><a class="button secondary" href="#/explorer">System map</a></div></section>
       <div class="explorer-toolbar"><div class="segmented"><button data-action="set-view" data-view="business" class="${business ? 'active' : ''}">Business</button>
         <button data-action="set-view" data-view="technical" class="${!business ? 'active' : ''}">Technical</button></div>
-        <input id="use-case-search" type="search" placeholder="Search use cases, hypotheses, workflows…" style="max-width:380px" /></div>
+        <input id="use-case-search" type="search" placeholder="Search use cases, hypotheses, workflows..." style="max-width:380px" /></div>
       <section class="use-case-grid" id="use-case-grid">${data.useCases.map(useCaseCard).join('')}</section>
-      <p class="muted" style="margin-top:1rem">Looking for the narrative instead? Walk <a href="#/flow">the pipeline</a> or replay an <a href="#/scenarios">end-to-end scenario</a>.</p>`;
+      <p class="muted" style="margin-top:1rem">Looking for the narrative instead? Watch <a href="#/explorer">a scan travel the map</a>, walk <a href="#/flow">the pipeline</a>, or replay an <a href="#/scenarios">end-to-end scenario</a>.</p>`;
   }
 
   function renderUseCase(id) {
@@ -1791,8 +3200,7 @@ window.OAK_GRAPH = {
         <section class="uc-block"><h2>Hypothesis</h2><p>${esc(uc.hypothesis)}</p></section>
         ${
           business
-            ? `<section class="uc-block"><h2>What happens</h2><p>${esc(uc.business)}</p></section>
-               <section class="uc-block"><h2>Why this treatment</h2><p>${esc(uc.hypothesis)}</p></section>`
+            ? `<section class="uc-block"><h2>What happens</h2><p>${esc(uc.business)}</p></section>`
             : `<section class="uc-block"><h2>Ordered logic</h2><ol>${uc.logic.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></section>
                <section class="uc-block"><h2>Evidence contract</h2><p>${esc(uc.evidence)}</p></section>
                <section class="uc-block"><h2>Gap to verify</h2><p>${esc(uc.gap)}</p></section>`
@@ -1800,51 +3208,38 @@ window.OAK_GRAPH = {
       </article>`;
   }
 
-  function renderMap() {
-    const flow = graph.flows.find((x) => x.id === state.flow) || graph.flows[0];
-    main.innerHTML = `
-      <section class="page-header"><div><p class="eyebrow">System map</p><h1>Follow the evidence.</h1>
-        <p>Each flow shows where deterministic state is created, where enrichment may add evidence, and where a human is allowed to override.</p></div>
-        <select id="flow-select">${graph.flows.map((x) => `<option value="${x.id}" ${x.id === flow.id ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select></section>
-      <section class="panel"><div class="panel-body map"><div class="map-lanes">${graph.lanes.map((x) => `<div class="lane-label">${esc(x)}</div>`).join('')}</div>
-        <div class="map-content">${graph.lanes.map((lane) => `<div class="map-lane">${graph.nodes.filter((x) => x.lane === lane).map((node) => `<article class="map-node"><b>${esc(node.label)}</b><small>${esc(node.detail)}</small></article>`).join('')}</div>`).join('')}</div>
-      </div></section>
-      <section class="dashboard-grid" style="margin-top:1rem"><article class="panel"><header class="panel-header"><h2>${esc(flow.label)}</h2></header><div class="panel-body flow-steps">
-        ${flow.steps.map(([from, to, text]) => `<div class="flow-step"><span><b>${esc(nodeLabel(from))} → ${esc(nodeLabel(to))}</b><br>${esc(text)}</span></div>`).join('')}</div></article>
-        <aside class="panel"><header class="panel-header"><h2>Non-negotiables</h2></header><div class="panel-body"><ul class="reason-list">
-          <li>Rules own tier, channel, competitor identity, size bands, and disqualifiers.</li><li>Scores explain; they do not route.</li><li>Claims require a source URL or booth quote.</li><li>Final success is a complete delivery, not a 202 response.</li>
-        </ul></div></aside></section>`;
-  }
-
   function renderConsole() {
     const first = data.fixtures.apex;
+    const offline = window.OAK_OFFLINE;
     main.innerHTML = `
       <section class="page-header"><div><p class="eyebrow">Dry-run first</p><h1>See the result before the side effects.</h1>
-        <p>Validation and dry-run are local and safe. Live send requires an admin key, an allowlisted <span class="mono">oak-ui-test-*</span> scan id, and the exact confirmation phrase.</p></div></section>
+        <p>Validation and dry-run have no side effects${offline ? ' (offline, they run against the embedded policy)' : ' (08 runs them against the active policy)'}. A live send needs the admin key and the exact confirmation phrase; 08 adds the webhook secret on the server and forwards the scan to 01.</p></div>
+        <div class="header-actions">${sourceTag()}</div></section>
       <section class="console-grid">
         <div class="panel"><header class="panel-header"><h2>Scanner payload</h2><select id="fixture-select" style="max-width:320px">${Object.entries(data.fixtures).map(([key, x]) => `<option value="${key}">${esc(x.label)}</option>`).join('')}</select></header>
           <div class="panel-body"><textarea id="payload-editor" class="json-editor" spellcheck="false">${esc(pretty(first.payload))}</textarea>
-            <div class="console-actions"><button class="button secondary" data-action="validate-payload">Validate</button><button class="button" data-action="dry-run">Dry run</button><button class="button danger" data-action="live-send" ${window.OAK_OFFLINE ? 'disabled title="Read-only interviewer mode"' : ''}>Send live…</button></div>
+            <div class="console-actions"><button class="button secondary" data-action="validate-payload">Validate</button><button class="button" data-action="dry-run">Dry run</button><button class="button danger" data-action="live-send" ${offline ? 'disabled title="Read-only: offline demo data"' : ''}>Send live...</button></div>
             <pre class="result-box" id="console-result">No request yet.</pre></div></div>
         <aside class="stack">
-          <article class="warning-box"><b>Safe-live boundary</b><br/>A 202 means accepted, not completed. After send, this console polls the delivery result. Workflow 07’s public relay is not used.</article>
+          <article class="warning-box"><b>Safe-live boundary</b><br/>A 202 means accepted, not completed. After a send, this console polls the delivery row until it reaches complete. 07 is not involved.</article>
           <article class="preview-card" id="payload-preview">${renderPreview(null)}</article>
           <article class="panel"><header class="panel-header"><h3>Canonical expectations</h3></header><div class="panel-body"><ul class="reason-list">
-            <li>Apex + CISO + renewal + no count → needs review.</li><li>Booth-stated 2,000 → Tier 1.</li><li>Known 800 → needs review.</li><li>Known 80 → out of scope.</li>
+            <li>Apex + CISO + renewal + no count → needs review.</li><li>Booth-stated 2,000 → Tier 1.</li><li>Known 800 → needs review.</li><li>Known 80 → out of scope.</li><li>veza.com → competitor intel.</li>
           </ul></div></article>
         </aside>
       </section>`;
   }
 
-  function leadTable(leads) {
-    return `<div class="data-table-wrap"><table class="data-table"><thead><tr><th>Visitor</th><th>Company</th><th>Classification</th><th>Score</th><th>Status</th><th>Scanned</th></tr></thead><tbody>
+  function leadTable(leads, withTrace) {
+    return `<div class="data-table-wrap"><table class="data-table"><thead><tr><th>Visitor</th><th>Company</th><th>Classification</th><th>Score</th><th>Status</th><th>Scanned</th>${withTrace ? '<th><span class="sr-only">Trace</span></th>' : ''}</tr></thead><tbody>
       ${leads
         .map(
           (lead) => `<tr data-open-lead="${esc(lead.scan_id)}"><td class="name-cell"><b>${esc(lead.name)}</b><span>${esc(lead.title)}</span></td><td>${esc(lead.company)}</td>
             <td><span class="pill ${esc(lead.classification)}">${esc(label(lead.classification))}</span>${lead.would_be_classification ? `<br><small class="muted">possible ${esc(label(lead.would_be_classification))}</small>` : ''}</td>
-            <td>${esc(lead.score)}</td><td>${esc(label(lead.status))}</td><td>${esc(date(lead.scanned_at))}</td></tr>`
+            <td>${esc(lead.score)}</td><td>${esc(label(lead.status))}</td><td>${esc(date(lead.scanned_at))}</td>
+            ${withTrace ? `<td class="trace-cell"><a class="button small secondary" href="#/map/lead/${encodeURIComponent(lead.scan_id)}">Trace</a></td>` : ''}</tr>`
         )
-        .join('') || '<tr><td colspan="6" class="muted">No scans match these filters.</td></tr>'}
+        .join('') || `<tr><td colspan="${withTrace ? 7 : 6}" class="muted">No scans match these filters.</td></tr>`}
       </tbody></table></div>`;
   }
 
@@ -1857,9 +3252,11 @@ window.OAK_GRAPH = {
   }
 
   function competitorCard(c) {
-    return `<article class="competitor-card"><header><div><h3>${esc(c.name)}</h3><span class="muted">${esc(label(c.category))}</span></div><span class="pill ${c.active ? 'active' : 'warning'}">${c.active ? esc(c.status) : 'disabled'}</span></header>
-      <div class="tag-list">${(c.domains || []).map((x) => `<span class="tag">${esc(x)}</span>`).join('')}${(c.aliases || []).map((x) => `<span class="tag">“${esc(x)}”</span>`).join('')}</div>
-      <div class="card-actions"><button class="button small secondary" data-action="edit-competitor" data-id="${esc(c.id)}" ${window.OAK_OFFLINE ? 'disabled' : ''}>Edit</button><button class="button small danger" data-action="delete-competitor" data-id="${esc(c.id)}" ${window.OAK_OFFLINE ? 'disabled' : ''}>Delete</button></div></article>`;
+    const locked = window.OAK_OFFLINE ? 'disabled title="Read-only: offline demo data"' : '';
+    return `<article class="competitor-card"><header><div><h3>${esc(c.name)}</h3><span class="muted">${esc(label(c.category))}</span></div><span class="pill ${c.active ? 'active' : 'warning'}">${c.active ? esc(c.status || 'active') : 'disabled'}</span></header>
+      <div class="tag-list">${asList(c.domains).map((x) => `<span class="tag">${esc(x)}</span>`).join('')}${asList(c.aliases).map((x) => `<span class="tag">“${esc(x)}”</span>`).join('')}</div>
+      ${c.source_note ? `<p class="muted competitor-note">${esc(c.source_note)}</p>` : ''}
+      <div class="card-actions"><button class="button small secondary" data-action="edit-competitor" data-id="${esc(c.id)}" ${locked}>Edit</button><button class="button small danger" data-action="delete-competitor" data-id="${esc(c.id)}" ${locked}>Delete</button></div></article>`;
   }
 
   function useCaseCard(uc) {
@@ -1872,29 +3269,47 @@ window.OAK_GRAPH = {
   function renderPreview(preview) {
     if (!preview) return '<h3>Expected decision</h3><p class="muted">Validate or dry-run a payload to inspect the deterministic preview.</p>';
     return `<h3>Expected decision</h3><span class="pill ${esc(preview.classification)}">${esc(label(preview.classification))}</span>
-      ${preview.would_be_classification ? `<p class="warning-box">Possible ${esc(label(preview.would_be_classification))} - confirm 1,000+.</p>` : ''}
+      ${preview.would_be_classification ? `<p class="warning-box">Possible ${esc(label(preview.would_be_classification))}: confirm 1,000+.</p>` : ''}
       <p><span class="score">${esc(preview.score)}</span><span class="muted"> / 100</span></p>
+      ${preview.score_note ? `<p class="muted small-note">${esc(preview.score_note)}</p>` : ''}
       <div class="mutation-list"><div class="mutation"><span>Size band</span><b>${esc(label(preview.company_size_band))}</b></div>
         <div class="mutation"><span>Slack</span><b>${esc(preview.mutations?.slack_channel ? `#${preview.mutations.slack_channel}` : 'none')}</b></div>
         <div class="mutation"><span>@here</span><b>${preview.mutations?.mention ? 'yes' : 'no'}</b></div>
         <div class="mutation"><span>HubSpot</span><b>${preview.mutations?.hubspot ? 'would sync' : 'skip'}</b></div></div>`;
   }
 
+  /* ------------------------------------------------------------------ */
+  /* Mutations                                                           */
+  /* ------------------------------------------------------------------ */
+
   function collectPolicy() {
     const form = new FormData(document.querySelector('#policy-form'));
-    const clone = structuredClone(state.policy.document);
-    clone.event_id = form.get('event_id');
-    clone.company_fit.review_employee_min = Number(form.get('review_employee_min'));
-    clone.company_fit.qualified_employee_min = Number(form.get('qualified_employee_min'));
-    clone.enrichment.employee_verification_required_below = Number(form.get('verification_threshold'));
-    clone.enrichment.cache_ttl_days = Number(form.get('cache_ttl_days'));
-    for (const key of Object.keys(clone.enrichment.employee_confidence)) {
-      clone.enrichment.employee_confidence[key] = Number(form.get(`confidence_${key}`));
+    const clone = structuredClone(state.policy.document || {});
+    clone.company_fit = clone.company_fit || {};
+    clone.enrichment = clone.enrichment || {};
+    clone.scoring = clone.scoring || {};
+    clone.notifications = clone.notifications || {};
+    const num = (key) => (form.get(key) === '' || form.get(key) == null ? undefined : Number(form.get(key)));
+    clone.company_fit.review_employee_min = num('review_employee_min');
+    clone.company_fit.qualified_employee_min = num('qualified_employee_min');
+    clone.enrichment.employee_verification_required_below = num('verification_threshold');
+    if ('company_cache_ttl_days' in clone.enrichment) clone.enrichment.company_cache_ttl_days = num('cache_ttl_days');
+    else clone.enrichment.cache_ttl_days = num('cache_ttl_days');
+    for (const key of Object.keys(clone.enrichment.employee_confidence || {})) {
+      clone.enrichment.employee_confidence[key] = num(`confidence_${key}`);
     }
-    for (const key of ['persona_points', 'company_size_points', 'industry_points', 'urgency_points']) clone.scoring[key] = Number(form.get(key));
-    for (const tier of data.classifications) clone.notifications[tier.id].channel = form.get(`channel_${tier.id}`);
-    clone.feature_flags.slack_actions_enabled = form.get('slack_actions_enabled') === 'true';
-    clone.feature_flags.public_search_enabled = form.get('public_search_enabled') === 'true';
+    for (const key of ['persona_points', 'company_size_points', 'industry_points', 'urgency_points']) clone.scoring[key] = num(key);
+    for (const tier of data.classifications) {
+      clone.notifications[tier.id] = { ...(clone.notifications[tier.id] || {}), channel: String(form.get(`channel_${tier.id}`) || '').replace(/^#/, '') };
+    }
+    for (const [name, value] of form.entries()) {
+      const m = String(name).match(/^flag__([^_]+(?:_[^_]+)*)__(.+)$/);
+      if (m) {
+        clone[m[1]] = clone[m[1]] || {};
+        clone[m[1]][m[2]] = value === 'true';
+      }
+    }
+    if (clone.version) clone.version = form.get('version');
     return { version: form.get('version'), document: clone };
   }
 
@@ -1903,9 +3318,9 @@ window.OAK_GRAPH = {
     const result = await api('/api/policy/drafts', { method: 'POST', headers: mutationHeaders(), body: JSON.stringify(payload) });
     const target = document.querySelector('#policy-validation');
     target.innerHTML = [
-      ...(result.validation.errors || []).map((x) => `<div class="validation-item error">${esc(x)}</div>`),
-      ...(result.validation.warnings || []).map((x) => `<div class="validation-item warning">${esc(x)}</div>`),
-      ...result.regression.cases.map((x) => `<div class="validation-item ${x.passed ? '' : 'error'}">${esc(x.name)}: ${esc(x.actual)}</div>`),
+      ...asList(result.validation?.errors).map((x) => `<div class="validation-item error">${esc(x)}</div>`),
+      ...asList(result.validation?.warnings).map((x) => `<div class="validation-item warning">${esc(x)}</div>`),
+      ...asList(result.regression?.cases).map((x) => `<div class="validation-item ${x.passed ? '' : 'error'}">${esc(x.name)}: ${esc(x.actual)}</div>`),
     ].join('');
     target.insertAdjacentHTML(
       'beforeend',
@@ -1915,27 +3330,27 @@ window.OAK_GRAPH = {
   }
 
   async function activatePolicy(version) {
-    const confirm = document.querySelector('#activate-confirm')?.value || '';
+    const confirmText = document.querySelector('#activate-confirm')?.value || '';
     const result = await api(`/api/policy/${encodeURIComponent(version)}/activate`, {
       method: 'POST',
       headers: mutationHeaders(),
-      body: JSON.stringify({ confirm }),
+      body: JSON.stringify({ confirm: confirmText }),
     });
-    toast(`${result.version} is now active.`);
+    toast(`${result.version || version} is now active.`);
     await renderPolicy();
   }
 
   function openCompetitor(id) {
-    const competitor = state.competitors.find((x) => x.id === id);
+    const competitor = state.competitors.find((x) => String(x.id) === String(id));
     const dialog = document.querySelector('#competitor-dialog');
     const form = dialog.querySelector('form');
     form.reset();
-    form.elements.id.value = competitor?.id || '';
+    form.elements.id.value = competitor ? competitor.id : '';
     form.elements.name.value = competitor?.name || '';
     form.elements.category.value = competitor?.category || 'identity_security';
-    form.elements.domains.value = (competitor?.domains || []).join(', ');
-    form.elements.aliases.value = (competitor?.aliases || []).join(', ');
-    form.elements.status.value = competitor?.status || 'active';
+    form.elements.domains.value = asList(competitor?.domains).join(', ');
+    form.elements.aliases.value = asList(competitor?.aliases).join(', ');
+    form.elements.status.value = competitor?.status === 'pending' ? 'pending' : 'active';
     form.elements.active.value = String(competitor?.active !== false);
     document.querySelector('#competitor-dialog-title').textContent = competitor ? `Edit ${competitor.name}` : 'Add competitor';
     dialog.showModal();
@@ -1945,11 +3360,12 @@ window.OAK_GRAPH = {
     const form = document.querySelector('#competitor-form');
     const values = new FormData(form);
     const id = values.get('id');
+    const list = (v) => String(v || '').split(',').map((x) => x.trim()).filter(Boolean);
     const payload = {
       name: values.get('name'),
       category: values.get('category'),
-      domains: String(values.get('domains')).split(','),
-      aliases: String(values.get('aliases')).split(','),
+      domains: list(values.get('domains')),
+      aliases: list(values.get('aliases')),
       status: values.get('status'),
       active: values.get('active') === 'true',
     };
@@ -1958,6 +3374,7 @@ window.OAK_GRAPH = {
       headers: mutationHeaders(),
       body: JSON.stringify(payload),
     });
+    document.querySelector('#competitor-dialog')?.close();
     toast(`${payload.name} saved.`);
     await renderCompetitors();
   }
@@ -1996,7 +3413,7 @@ window.OAK_GRAPH = {
 
   async function liveSend() {
     const payload = readPayloadEditor();
-    const confirmation = prompt(`This can mutate Slack and HubSpot in live mode.\n\nType SEND LIVE to send ${payload.scan_id}:`);
+    const confirmation = prompt(`This mutates Slack and HubSpot.\n\nType SEND LIVE to send ${payload.scan_id}:`);
     if (confirmation !== 'SEND LIVE') return;
     const accepted = await api('/api/payloads/send', {
       method: 'POST',
@@ -2004,21 +3421,28 @@ window.OAK_GRAPH = {
       body: JSON.stringify({ payload, confirm: confirmation }),
     });
     document.querySelector('#console-result').textContent = pretty(accepted);
-    toast('Payload accepted. Checking final delivery status…');
+    toast('Payload accepted. Checking final delivery status...');
+    const statusPath = accepted.status_url || `/api/leads/${encodeURIComponent(payload.scan_id)}`;
     let final = null;
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, attempt ? 1200 : 250));
-      final = await api(accepted.status_url);
-      if (final.found && final.status === 'complete') break;
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, attempt ? 1500 : 400));
+      try {
+        final = await api(statusPath);
+      } catch {
+        final = null;
+        continue;
+      }
+      if (final && (final.found !== false) && (final.status === 'complete' || final.result?.status === 'complete')) break;
     }
     document.querySelector('#console-result').textContent = pretty({ accepted, final });
-    if (final?.status === 'complete') {
+    const result = final && (final.result || final);
+    if (result && (final.status === 'complete' || result.status === 'complete')) {
       document.querySelector('#payload-preview').innerHTML = renderPreview({
-        ...final.result,
+        ...result,
         mutations: {
-          slack_channel: final.result.channel,
-          mention: final.result.classification === 'tier_1',
-          hubspot: Boolean(final.result.email),
+          slack_channel: result.channel,
+          mention: result.classification === 'tier_1',
+          hubspot: Boolean(result.email),
         },
       });
       toast('Delivery reached complete.');
@@ -2034,32 +3458,29 @@ window.OAK_GRAPH = {
       const hay = `${lead.name} ${lead.company} ${lead.email} ${lead.scan_id}`.toLowerCase();
       return (!q || hay.includes(q)) && (!tier || lead.classification === tier);
     });
-    document.querySelector('#lead-results').innerHTML = leadTable(filtered);
+    document.querySelector('#lead-results').innerHTML = leadTable(filtered, true);
     document.querySelector('#lead-count').textContent = `${filtered.length} scans`;
   }
 
   function filterUseCases() {
     const query = document.querySelector('#use-case-search').value.toLowerCase();
     document.querySelectorAll('.use-case-card').forEach((card) => {
-      card.hidden = query && !card.dataset.hay.includes(query);
+      card.hidden = Boolean(query) && !card.dataset.hay.includes(query);
     });
   }
 
   function nextVersion(version) {
-    const match = String(version).match(/^(.*?)(\d+)$/);
-    return match ? `${match[1]}${Number(match[2]) + 1}` : `${version}-next`;
-  }
-
-  function nodeLabel(id) {
-    return graph.nodes.find((x) => x.id === id)?.label || id;
+    const match = String(version || '').match(/^(.*?)(\d+)$/);
+    return match ? `${match[1]}${Number(match[2]) + 1}` : `${version || 'policy'}-next`;
   }
 
   function toast(message, tone) {
     const node = document.createElement('div');
     node.className = `toast ${tone || ''}`;
+    node.setAttribute('role', tone === 'error' ? 'alert' : 'status');
     node.textContent = message;
     document.querySelector('#toast-region').append(node);
-    setTimeout(() => node.remove(), 4200);
+    setTimeout(() => node.remove(), 5200);
   }
 
   function renderError(error) {
@@ -2067,7 +3488,111 @@ window.OAK_GRAPH = {
       ${error.details ? `<pre class="result-box">${esc(pretty(error.details))}</pre>` : ''}<button class="button secondary" data-action="retry">Retry</button>`;
   }
 
+  /* ------------------------------------------------------------------ */
+  /* Settings, theme and events                                          */
+  /* ------------------------------------------------------------------ */
+
+  function openSettings() {
+    document.querySelector('#api-base').value = conn.base;
+    document.querySelector('#force-offline').checked = conn.forceOffline;
+    document.querySelector('#admin-token').value = store.get('oak-admin-token', true) || '';
+    renderConnection();
+    document.querySelector('#settings-dialog').showModal();
+  }
+
+  async function saveSettings() {
+    const raw = document.querySelector('#api-base').value.trim();
+    let base = raw || DEFAULT_API_BASE;
+    try {
+      const u = new URL(base);
+      if (!/^https?:$/.test(u.protocol)) throw new Error();
+      base = base.replace(/\/+$/, '');
+    } catch {
+      toast('The API base must be a full http(s) URL.', 'error');
+      return;
+    }
+    conn.base = base;
+    conn.forceOffline = document.querySelector('#force-offline').checked;
+    store.set('oak-api-base', base === DEFAULT_API_BASE ? null : base);
+    store.set('oak-force-offline', conn.forceOffline ? '1' : null);
+    store.set('oak-admin-token', document.querySelector('#admin-token').value, true);
+    document.querySelector('#settings-dialog').close();
+    await reconnect();
+  }
+
+  async function reconnect() {
+    await connect();
+    toast(conn.mode === 'live' ? 'Connected to the live n8n API.' : `Using offline demo data. ${conn.reason}`, conn.mode === 'live' ? '' : 'error');
+    await route();
+  }
+
+  function currentTheme() {
+    const forced = document.documentElement.dataset.theme;
+    if (forced) return forced;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+
+  function toggleTheme() {
+    const next = currentTheme() === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    store.set('oak-theme', next);
+  }
+
+  function onExplorer() {
+    return Boolean(document.querySelector('#map-caption'));
+  }
+
   document.addEventListener('click', async (event) => {
+    const mapButton = event.target.closest('[data-map]');
+    if (mapButton && onExplorer()) {
+      const act = mapButton.dataset.map;
+      if (act === 'play') play();
+      else if (act === 'next') {
+        stopPlayer();
+        if (!player.trace) mountTrace(traceById(journey.scenarios[0].id));
+        if (player.i < player.trace.steps.length - 1) setStep(player.i + 1, true);
+      } else if (act === 'back') {
+        stopPlayer();
+        if (player.trace) setStep(player.i - 1, false);
+      } else if (act === 'restart') {
+        if (!player.trace) mountTrace(traceById(journey.scenarios[0].id));
+        mountTrace(player.trace);
+        play();
+      } else if (act === 'unselect') {
+        player.selected = null;
+        paintStates();
+        renderDetail();
+      }
+      return;
+    }
+    const speed = event.target.closest('[data-map-speed]');
+    if (speed) {
+      player.speed = Number(speed.dataset.mapSpeed) === 2 ? 2 : 1;
+      store.set('oak-map-speed', String(player.speed));
+      document.querySelectorAll('[data-map-speed]').forEach((b) => b.classList.toggle('active', b === speed));
+      return;
+    }
+    const flow = event.target.closest('[data-flow]');
+    if (flow) {
+      selectFlow(flow.dataset.flow);
+      return;
+    }
+    const stepButton = event.target.closest('[data-step]');
+    if (stepButton && player.trace) {
+      stopPlayer();
+      const target = Number(stepButton.dataset.step);
+      setStep(target, target === player.i + 1);
+      return;
+    }
+    const nodeTarget = event.target.closest('[data-node], [data-node-info]');
+    if (nodeTarget && onExplorer() && !nodeTarget.closest('.mini')) {
+      player.selected = nodeTarget.dataset.node || nodeTarget.dataset.nodeInfo;
+      paintStates();
+      renderDetail();
+      document.querySelector('#map-detail')?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'nearest' });
+      return;
+    }
+    if (event.target.closest('a[href]')) return;
     const lead = event.target.closest('[data-open-lead]');
     if (lead) {
       location.hash = `#/leads/${encodeURIComponent(lead.dataset.openLead)}`;
@@ -2077,19 +3602,27 @@ window.OAK_GRAPH = {
     if (!button) return;
     const action = button.dataset.action;
     try {
-      if (action === 'settings') {
-        document.querySelector('#admin-token').value = sessionStorage.getItem('oak-admin-token') || '';
-        document.querySelector('#settings-dialog').showModal();
-      } else if (action === 'save-settings') {
+      if (action === 'settings') openSettings();
+      else if (action === 'save-settings') {
         event.preventDefault();
-        sessionStorage.setItem('oak-admin-token', document.querySelector('#admin-token').value);
-        document.querySelector('#settings-dialog').close();
-        toast('Admin key saved for this tab.');
-      } else if (action === 'retry') route();
+        await saveSettings();
+      } else if (action === 'reset-settings') {
+        event.preventDefault();
+        document.querySelector('#api-base').value = DEFAULT_API_BASE;
+        document.querySelector('#force-offline').checked = false;
+      } else if (action === 'reconnect') {
+        event.preventDefault();
+        document.querySelector('#settings-dialog').open && document.querySelector('#settings-dialog').close();
+        await reconnect();
+      } else if (action === 'toggle-theme') toggleTheme();
+      else if (action === 'retry') route();
       else if (action === 'set-view') {
         state.view = button.dataset.view;
-        localStorage.setItem('oak-explorer-view', state.view);
-        route();
+        store.set('oak-explorer-view', state.view);
+        if (onExplorer()) {
+          document.querySelectorAll('[data-action="set-view"]').forEach((b) => b.classList.toggle('active', b.dataset.view === state.view));
+          renderDetail();
+        } else route();
       } else if (action === 'save-policy-draft') await savePolicyDraft();
       else if (action === 'activate-policy') await activatePolicy(button.dataset.version);
       else if (action === 'new-competitor') openCompetitor();
@@ -2104,7 +3637,18 @@ window.OAK_GRAPH = {
     } catch (error) {
       toast(error.message, 'error');
       if (error.details && document.querySelector('#console-result')) document.querySelector('#console-result').textContent = pretty(error.details);
-      if (error.message.includes('admin key')) document.querySelector('#connection-button').click();
+      if (error.status === 401 || /admin/i.test(error.message)) openSettings();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const node = event.target.closest && event.target.closest('.map-svg [data-node]');
+    if (node && onExplorer()) {
+      event.preventDefault();
+      player.selected = node.dataset.node;
+      paintStates();
+      renderDetail();
     }
   });
 
@@ -2116,10 +3660,7 @@ window.OAK_GRAPH = {
     if (event.target.id === 'tier-filter') filterLeads();
     if (event.target.id === 'event-filter') {
       api(`/api/dashboard${event.target.value ? `?event_id=${encodeURIComponent(event.target.value)}` : ''}`)
-        .then((value) => {
-          state.dashboard = value;
-          renderDashboard(value);
-        })
+        .then((value) => renderDashboard(value))
         .catch(renderError);
     }
     if (event.target.id === 'fixture-select') {
@@ -2127,17 +3668,28 @@ window.OAK_GRAPH = {
       document.querySelector('#payload-preview').innerHTML = renderPreview(null);
       document.querySelector('#console-result').textContent = 'Fixture loaded. Validate or dry-run it.';
     }
-    if (event.target.id === 'flow-select') {
-      state.flow = event.target.value;
-      renderMap();
-    }
   });
   window.addEventListener('hashchange', route);
   window.addEventListener('keydown', (event) => {
-    if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+    const active = document.activeElement;
+    if (active && /INPUT|TEXTAREA|SELECT/.test(active.tagName)) return;
+    if (document.querySelector('dialog[open]')) return;
     if (event.key === '/') {
-      event.preventDefault();
-      document.querySelector('input[type="search"]')?.focus();
+      const search = document.querySelector('input[type="search"]');
+      if (search) {
+        event.preventDefault();
+        search.focus();
+      }
+      return;
+    }
+    if (onExplorer()) {
+      if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+        event.preventDefault();
+        document.querySelector(`[data-map="${event.key === 'ArrowRight' ? 'next' : 'back'}"]`)?.click();
+      } else if (event.key === ' ' && !(active && active.closest && active.closest('button, a, [data-node]'))) {
+        event.preventDefault();
+        play();
+      }
       return;
     }
     if (!location.hash.startsWith('#/flow')) return;
