@@ -33,7 +33,7 @@ caller at all - n8n invokes it when a workflow that names it fails.
 
 ## Standing it up in a fresh n8n
 
-Four steps, in this order. Steps 1 and 2 are the ones most likely to waste your time.
+Three steps, in this order. Step 2 is the one most likely to waste your time.
 
 ### 1. Create the Data Tables
 
@@ -41,11 +41,10 @@ Run `00 Setup & Seed` first. It creates six tables by name with
 `createIfNotExists`, then seeds the active policy row, 17 competitor identities and
 20 test payloads.
 
-**Then add one column by hand:** `oak_deliveries.slack_json`. Workflow 00 provisions
-17 columns and does not include it, but `01` writes it and `07` reads it back to
-assert Slack delivery. Because the create nodes use `createIfNotExists`, re-running
-`00` will never add a missing column - so this step cannot be skipped by running the
-seeder again.
+Every workflow reads and writes these tables **by name**, so once `00` has run there is
+nothing to re-point: the same JSON finds its tables on any instance. That includes
+`oak_deliveries.slack_json`, which `01` writes and `07` reads back to assert Slack
+delivery.
 
 Known limitation worth stating plainly: **`00`'s idempotence is name-based, not
 shape-aware.** It creates what is missing and never inspects what already exists. A
@@ -69,25 +68,7 @@ Sub-workflow node.** Worse, all five carry a `cachedResultName`, so after import
 canvas displays the *correct* sub-workflow name next to a dead ID. It looks right and
 is not. Open each of the five and re-pick the workflow from the list.
 
-### 3. Re-point the Data Table nodes
-
-Twenty nodes reference their table by this instance's table ID rather than by name:
-
-| Workflow | Pinned nodes |
-|---|---|
-| `01` | 10 |
-| `03` | 2 |
-| `04` | 3 |
-| `05` | 1 |
-| `07` | 4 |
-
-Either re-pick the table in each, or switch the resource locator to **name** mode,
-which `06` already uses in production for all four of its Data Table nodes. Name mode
-works for every operation this build uses - `get`, `upsert`, `update`, `deleteRows`
-and `create` - and a misspelled name fails loudly (`NodeOperationError: Data table
-with name "..." not found`) rather than silently returning nothing.
-
-### 4. Credentials, variables and settings
+### 3. Credentials, variables and settings
 
 **Three credentials**, note that two are Slack of different types:
 
@@ -103,21 +84,22 @@ real API keys for both, plus the community package
 `@brave/n8n-nodes-brave-search` installed - without it `04`'s three search nodes will
 not load at all.
 
-**Three n8n variables:**
+**n8n variables:**
 
 | Variable | Read by | Behaviour when unset |
 |---|---|---|
 | `OAK_WEBHOOK_SECRET` | `07` to send, `01` to verify | **Fails open.** The booth webhook accepts anything and reports `auth_mode: open_no_secret_configured` |
 | `OAK_SLACK_SIGNING_SECRET` | `06` | **Fails closed.** Every Slack button stops working |
 | `OAK_SLACK_ACTIONS_ENABLED` | `03`, `06` | Buttons are not rendered |
+| `OAK_BOOTH_WEBHOOK_URL` | `07` | The harness sends to the original instance's webhook, so set it on any other instance |
+| `OAK_TEST_SUITE` | `07` | Runs the rows marked `enabled`; set `task`, `all` or a suite name to choose |
 
 The opposite defaults are deliberate: a booth scan must never be lost because a
 secret was not configured, and a CRM write must never happen on an unverified
 request.
 
 **Also:** re-pick `99` as the error workflow on the eight workflows that name it
-(`01`, `02`, `02A`, `03`, `04`, `05`, `06`, `07`), and edit `WEBHOOK_URL` at the top
-of `07`'s `Build Test Plan` to point at your own `01` webhook.
+(`01`, `02`, `02A`, `03`, `04`, `05`, `06`, `07`).
 
 **Slack channels** are provisioned by workflow `00`, not by hand. `Plan Slack Channels`
 reads the names out of the `notifications` block of the active `oak_policies` row and

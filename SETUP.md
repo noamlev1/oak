@@ -63,6 +63,8 @@ Three, and note that two are Slack of different types:
 | `OAK_WEBHOOK_SECRET` | `01` verifies it, `07` sends it | Turns on webhook authentication. Until it is set, every scan is accepted and the decision records `auth_mode: open_no_secret_configured` |
 | `OAK_SLACK_SIGNING_SECRET` | `06` | Verifies Slack's HMAC. Required for the buttons to work |
 | `OAK_SLACK_ACTIONS_ENABLED` | `03`, `06` | Set to `true` to render the action buttons on cards |
+| `OAK_BOOTH_WEBHOOK_URL` | `07` | Your `01` production webhook URL, `https://<your-instance>/webhook/oak-event/scan`. The test harness sends its scans here |
+| `OAK_TEST_SUITE` | `07` | Optional. Which test rows to run: unset for the enabled rows, `task` for the four task leads, `all` for every row, or any suite name |
 
 ### 4. Run `00 Setup & Seed`
 
@@ -75,14 +77,9 @@ Open it and run it once. It creates:
 - the `oak_*` HubSpot contact properties
 - six Slack channels - `#booth-hot`, `#booth-matched`, `#booth-review`, `#competitive-intel` (private), `#booth-out-of-scope`, `#oak-revops`
 
-It is safe to run again: anything that already exists is counted as provisioned.
+Every workflow finds these tables by name, so nothing needs re-pointing afterwards. It is safe to run again: anything that already exists is counted as provisioned.
 
-### 5. Add one Data Table column
-
-Add a string column `slack_json` to `oak_deliveries`. Workflow `01` writes the Slack
-delivery receipt there and `07` reads it back to assert delivery.
-
-### 6. Connect the five sub-workflows in `01`
+### 5. Connect the five sub-workflows in `01`
 
 Open `01` and re-pick the target workflow on each of these nodes from the dropdown:
 
@@ -97,35 +94,23 @@ Open `01` and re-pick the target workflow on each of these nodes from the dropdo
 Sub-workflow references are stored as IDs, so they point at the source instance until you
 re-pick them. Do this before the first scan.
 
-### 7. Point the Data Table nodes at your tables
-
-Twenty nodes reference a table by ID: ten in `01`, two in `03`, three in `04`, one in `05`
-and four in `07`. Open each and select your table, or switch the selector to **By name**,
-which `06` already uses for all four of its Data Table nodes. Name mode works for every
-operation this build uses - `get`, `upsert`, `update`, `deleteRows` and `create`.
-
-### 8. Set the shared error workflow
+### 6. Set the shared error workflow
 
 On `01`, `02`, `02A`, `03`, `04`, `05`, `06` and `07`: **Settings -> Error workflow ->
 `99 Failure Handler`**. Failures then post to `#oak-revops` naming the stage, the likely
 cause and a link to the execution.
 
-### 9. Point the test harness at your webhook
-
-In `07`, open `Build Test Plan` and set `WEBHOOK_URL` at the top to your own `01`
-production webhook URL.
-
-### 10. Invite the Slack app to the channels
+### 7. Invite the Slack app to the channels
 
 Invite the app to all six channels. `#competitive-intel` is private, so a member has to
 invite it there.
 
-### 11. Point Slack at `06`
+### 8. Point Slack at `06`
 
 In your Slack app settings, set the Interactivity request URL to the production webhook URL
 of `06`'s `Receive Slack Action` node.
 
-### 12. Activate
+### 9. Activate
 
 Activate `01` through `07` and `99`. Leave `00` inactive - it is a manual setup workflow.
 
@@ -149,9 +134,19 @@ A PASS asserts, in order: the webhook accepted the scan, a decision row was stor
 ledger reached `complete`, Slack delivered the alert, and then the expected classification,
 persona and channel.
 
-Choose which scans run by toggling `enabled` in the `oak_test_payloads` table. Rows 1 to 4
-are the four task leads and are enabled by default; the remaining 16 cover edge cases,
-caching, security, personas, triggers, competitors and returning visitors.
+Choose which scans run with the `OAK_TEST_SUITE` variable:
+
+| Value | Runs |
+|---|---|
+| `task` | The four task leads |
+| `all` | Every row in `oak_test_payloads` |
+| a suite name, e.g. `edge-cases` | That suite only |
+| unset | The rows marked `enabled` in the table |
+
+The four task leads are enabled by default. The remaining rows cover edge cases,
+validation, boundaries, caching, security, personas, triggers, competitors and returning
+visitors; `docs/test-cases.md` lists every case and its expected outcome. A suite name that
+matches no row stops the run and lists the suites that exist.
 
 ---
 
