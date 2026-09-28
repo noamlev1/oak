@@ -1,0 +1,2019 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Oak GTM Control Center</title>
+    <style>
+:root {
+  --bg: #0c0d0d;
+  --panel: #141716;
+  --panel-2: #1a1e1c;
+  --line: #2b312e;
+  --line-soft: #202522;
+  --text: #f4f3ec;
+  --muted: #9fa9a3;
+  --green: #b9ef4a;
+  --green-2: #7ca52b;
+  --cream: #e9e6d8;
+  --orange: #ff9c55;
+  --red: #ff716d;
+  --blue: #75bfff;
+  --purple: #c3a2ff;
+  --shadow: 0 24px 60px rgba(0, 0, 0, .35);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+html { min-height: 100%; background: var(--bg); }
+body { margin: 0; min-height: 100vh; background:
+  radial-gradient(circle at 72% -10%, rgba(185, 239, 74, .08), transparent 32rem),
+  var(--bg); }
+button, input, select, textarea { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+a { color: inherit; }
+
+.skip-link { position: fixed; top: -4rem; left: 1rem; z-index: 100; background: var(--green); color: #111; padding: .7rem 1rem; }
+.skip-link:focus { top: 1rem; }
+.topbar { position: sticky; top: 0; z-index: 20; height: 72px; display: flex; align-items: center; gap: 2rem; padding: 0 clamp(1rem, 3vw, 3rem); border-bottom: 1px solid var(--line); background: rgba(12, 13, 13, .92); backdrop-filter: blur(18px); }
+.brand { display: flex; align-items: center; gap: .8rem; min-width: max-content; text-decoration: none; }
+.brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--green); color: var(--green); font: 700 1rem/1 Georgia, serif; }
+.brand b, .brand small { display: block; }
+.brand b { font: 600 1.05rem/1.15 Georgia, serif; letter-spacing: .02em; }
+.brand small { margin-top: .15rem; color: var(--muted); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; }
+nav { display: flex; gap: .25rem; overflow-x: auto; scrollbar-width: none; }
+nav a { padding: .6rem .75rem; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: .82rem; white-space: nowrap; }
+nav a:hover, nav a.active { color: var(--text); background: var(--panel-2); }
+.mode-pill { margin-left: auto; display: flex; align-items: center; gap: .5rem; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: .5rem .75rem; cursor: pointer; white-space: nowrap; font-size: .75rem; }
+.status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 4px rgba(255, 156, 85, .1); }
+.mode-pill.connected .status-dot { background: var(--green); box-shadow: 0 0 0 4px rgba(185, 239, 74, .1); }
+
+#main { width: min(1520px, 100%); margin: 0 auto; padding: clamp(1.4rem, 3vw, 3.25rem); min-height: calc(100vh - 72px); }
+.loading { min-height: 45vh; display: grid; place-content: center; justify-items: center; gap: 1rem; color: var(--muted); }
+.loading span { width: 28px; height: 28px; border: 2px solid var(--line); border-top-color: var(--green); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; margin-bottom: 2rem; }
+.page-header h1 { margin: .2rem 0 .55rem; font: 400 clamp(2.1rem, 4vw, 4.8rem)/.95 Georgia, serif; letter-spacing: -.045em; }
+.page-header p { max-width: 740px; margin: 0; color: var(--muted); line-height: 1.55; }
+.eyebrow { margin: 0 0 .35rem !important; color: var(--green) !important; font-size: .68rem !important; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+.header-actions { display: flex; gap: .65rem; align-items: center; flex-wrap: wrap; }
+.meta-line { display: flex; gap: 1rem; color: var(--muted); font-size: .78rem; }
+
+.button { border: 1px solid var(--green); border-radius: 6px; background: var(--green); color: #10120f; padding: .65rem .9rem; font-weight: 700; cursor: pointer; }
+.button:hover { filter: brightness(1.05); }
+.button.secondary { background: transparent; color: var(--text); border-color: var(--line); }
+.button.danger { background: transparent; border-color: var(--red); color: var(--red); }
+.button.small { padding: .38rem .58rem; font-size: .73rem; }
+.button:disabled { opacity: .45; cursor: not-allowed; }
+
+.metric-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 1rem; background: var(--panel); }
+.metric { position: relative; min-height: 138px; padding: 1.2rem; border-right: 1px solid var(--line); }
+.metric:last-child { border: none; }
+.metric-label { display: block; color: var(--muted); font-size: .69rem; text-transform: uppercase; letter-spacing: .08em; }
+.metric strong { display: block; margin-top: 1.35rem; font: 400 clamp(1.8rem, 3vw, 3rem)/1 Georgia, serif; }
+.metric small { display: block; color: var(--muted); margin-top: .5rem; }
+.metric-accent { position: absolute; height: 2px; left: 1.2rem; right: 1.2rem; bottom: 0; background: var(--green); transform-origin: left; }
+
+.dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, .7fr); gap: 1rem; }
+.stack { display: grid; gap: 1rem; align-content: start; }
+.panel { border: 1px solid var(--line); border-radius: 12px; background: rgba(20, 23, 22, .8); overflow: hidden; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.15rem; border-bottom: 1px solid var(--line-soft); }
+.panel-header h2, .panel-header h3 { margin: 0; font: 400 1.15rem/1.2 Georgia, serif; }
+.panel-body { padding: 1.15rem; }
+.panel-footer { padding: .8rem 1.15rem; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: .75rem; }
+
+.tier-bars { display: grid; gap: .8rem; }
+.bar-row { display: grid; grid-template-columns: 130px minmax(0, 1fr) 28px; gap: .75rem; align-items: center; font-size: .78rem; }
+.bar-track { height: 8px; background: var(--line-soft); border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; min-width: 4px; border-radius: inherit; background: var(--green); }
+.tier_1 .bar-fill, .pill.tier_1 { background: var(--green); color: #111; }
+.matched .bar-fill, .pill.matched { background: var(--blue); color: #111; }
+.needs_review .bar-fill, .pill.needs_review { background: var(--orange); color: #111; }
+.competitor_intel .bar-fill, .pill.competitor_intel { background: var(--purple); color: #111; }
+.out_of_scope .bar-fill, .pill.out_of_scope { background: #68706c; color: white; }
+.pill { display: inline-flex; align-items: center; gap: .35rem; width: fit-content; border-radius: 999px; padding: .25rem .48rem; background: var(--line); color: var(--muted); font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .045em; white-space: nowrap; }
+.pill.live, .pill.healthy, .pill.active { color: var(--green); border: 1px solid rgba(185,239,74,.28); background: rgba(185,239,74,.08); }
+.pill.warning, .pill.partial, .pill.designed { color: var(--orange); border: 1px solid rgba(255,156,85,.25); background: rgba(255,156,85,.07); }
+.pill.critical, .pill.unsafe { color: var(--red); border: 1px solid rgba(255,113,109,.25); background: rgba(255,113,109,.07); }
+
+.alert-list, .workflow-list, .evidence-list, .reason-list { display: grid; gap: .55rem; margin: 0; padding: 0; list-style: none; }
+.alert { display: grid; grid-template-columns: 7px 1fr; gap: .7rem; padding: .75rem; background: var(--panel-2); border-radius: 7px; color: var(--muted); font-size: .78rem; line-height: 1.45; }
+.alert::before { content: ""; width: 7px; height: 7px; margin-top: .35rem; border-radius: 50%; background: var(--orange); }
+.alert[data-severity="critical"]::before { background: var(--red); }
+.workflow { display: grid; grid-template-columns: 36px 1fr auto; gap: .65rem; align-items: center; padding: .55rem 0; border-bottom: 1px solid var(--line-soft); }
+.workflow:last-child { border: none; }
+.workflow-step { color: var(--green); font: 600 .75rem ui-monospace, monospace; }
+.workflow b { font-size: .78rem; }
+.workflow small { display: block; margin-top: .2rem; color: var(--muted); }
+
+.data-table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; min-width: 760px; }
+.data-table th { padding: .72rem .8rem; color: var(--muted); text-align: left; font-size: .65rem; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid var(--line); }
+.data-table td { padding: .85rem .8rem; border-bottom: 1px solid var(--line-soft); font-size: .78rem; vertical-align: top; }
+.data-table tr:last-child td { border-bottom: 0; }
+.data-table tbody tr { cursor: pointer; }
+.data-table tbody tr:hover { background: rgba(255,255,255,.02); }
+.name-cell b, .name-cell span { display: block; }
+.name-cell span { color: var(--muted); margin-top: .2rem; font-size: .7rem; }
+.muted { color: var(--muted); }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .75em; }
+
+.filters { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem; }
+input, select, textarea { width: 100%; color: var(--text); background: #101211; border: 1px solid var(--line); border-radius: 6px; padding: .65rem .7rem; outline: none; }
+input:focus, select:focus, textarea:focus { border-color: var(--green-2); box-shadow: 0 0 0 3px rgba(185,239,74,.06); }
+textarea { min-height: 130px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.5; }
+label { display: grid; gap: .4rem; color: var(--muted); font-size: .72rem; font-weight: 600; }
+.filters input { max-width: 300px; }
+.filters select { max-width: 180px; }
+
+.detail-grid, .editor-grid, .console-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(300px, .7fr); gap: 1rem; align-items: start; }
+.detail-hero { padding: 1.5rem; }
+.detail-hero h1 { margin: .4rem 0; font: 400 2.7rem/1 Georgia, serif; }
+.detail-hero .company { color: var(--muted); font-size: 1rem; }
+.fact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line-soft); border-top: 1px solid var(--line-soft); }
+.fact { background: var(--panel); padding: 1rem; }
+.fact small { display: block; color: var(--muted); margin-bottom: .45rem; }
+.fact b { font-weight: 500; }
+.reason-list li, .evidence-card { padding: .8rem; border: 1px solid var(--line-soft); border-radius: 7px; color: var(--muted); font-size: .78rem; line-height: 1.5; }
+.evidence-card b { display: block; color: var(--text); margin-bottom: .3rem; }
+.evidence-meta { display: flex; gap: .65rem; margin-top: .5rem; font-size: .68rem; }
+
+.editor-section { padding: 1.15rem; border-bottom: 1px solid var(--line-soft); }
+.editor-section:last-child { border: none; }
+.editor-section h3 { margin: 0 0 1rem; font: 400 1rem Georgia, serif; }
+.field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .85rem; }
+.validation { display: grid; gap: .45rem; }
+.validation-item { padding: .65rem .75rem; border-radius: 6px; background: rgba(185,239,74,.06); color: var(--green); font-size: .74rem; }
+.validation-item.error { color: var(--red); background: rgba(255,113,109,.06); }
+.validation-item.warning { color: var(--orange); background: rgba(255,156,85,.06); }
+.sticky { position: sticky; top: 88px; }
+
+.competitor-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.competitor-card { padding: 1.1rem; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.competitor-card header { display: flex; justify-content: space-between; align-items: start; gap: .5rem; }
+.competitor-card h3 { margin: 0; font: 400 1.2rem Georgia, serif; }
+.tag-list { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .8rem; }
+.tag { padding: .26rem .42rem; border-radius: 4px; color: var(--muted); background: var(--panel-2); font: .68rem ui-monospace, monospace; }
+.card-actions { display: flex; gap: .5rem; margin-top: 1rem; }
+
+.explorer-toolbar { display: flex; gap: .65rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.segmented { display: inline-flex; padding: 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; }
+.segmented button { border: 0; border-radius: 5px; background: transparent; color: var(--muted); padding: .45rem .7rem; cursor: pointer; font-size: .75rem; }
+.segmented button.active { background: var(--cream); color: #111; }
+.use-case-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.use-case-card { position: relative; min-height: 265px; display: flex; flex-direction: column; padding: 1.15rem; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); text-decoration: none; transition: transform .15s, border-color .15s; }
+.use-case-card:hover { transform: translateY(-2px); border-color: #465048; }
+.uc-number { color: var(--green); font: .7rem ui-monospace, monospace; }
+.use-case-card h2 { margin: .75rem 0 .55rem; font: 400 1.35rem/1.1 Georgia, serif; }
+.use-case-card > p { color: var(--muted); line-height: 1.5; font-size: .8rem; }
+.use-case-card footer { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-top: auto; padding-top: 1rem; }
+.uc-detail { max-width: 980px; margin: 0 auto; }
+.uc-detail h1 { font: 400 clamp(2.2rem, 5vw, 4.5rem)/.95 Georgia, serif; margin: .5rem 0 1.3rem; }
+.uc-block { margin: 1rem 0; padding: 1.2rem; border-left: 2px solid var(--line); background: rgba(20,23,22,.55); }
+.uc-block h2 { margin: 0 0 .8rem; font: 400 1.15rem Georgia, serif; }
+.uc-block p, .uc-block li { color: var(--muted); line-height: 1.65; font-size: .86rem; }
+.uc-block ol { margin: 0; padding-left: 1.2rem; }
+
+.entry-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.entry-card { display: flex; flex-direction: column; min-height: 260px; padding: 1.4rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); text-decoration: none; transition: transform .15s, border-color .15s; }
+.entry-card:hover { transform: translateY(-2px); border-color: var(--green-2); }
+.entry-index { color: var(--green); font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.entry-card h2 { margin: .7rem 0 .6rem; font: 400 1.6rem/1.1 Georgia, serif; }
+.entry-card p { margin: 0; color: var(--muted); line-height: 1.55; font-size: .84rem; }
+.entry-card footer { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-top: auto; padding-top: 1.2rem; font-size: .72rem; }
+
+.progress-track { height: 3px; margin: 1rem 0 1.5rem; border-radius: 999px; background: var(--line-soft); overflow: hidden; }
+.progress-fill { height: 100%; background: var(--green); transition: width .25s ease; }
+.stage-grid { display: grid; grid-template-columns: minmax(230px, .32fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+.stage-rail { position: sticky; top: 88px; max-height: calc(100vh - 110px); overflow: auto; }
+.stage-list { display: grid; gap: .1rem; padding: .6rem; }
+.stage-link { display: grid; grid-template-columns: 24px 1fr; gap: .6rem; align-items: start; padding: .55rem; border-radius: 6px; color: var(--muted); text-decoration: none; }
+.stage-link:hover { background: var(--panel-2); color: var(--text); }
+.stage-link span { width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; font-size: .68rem; }
+.stage-link b { display: block; font-size: .78rem; font-weight: 500; }
+.stage-link small { display: block; margin-top: .15rem; font-size: .66rem; opacity: .75; }
+.stage-link.done span { border-color: var(--green-2); color: var(--green); }
+.stage-link.current { background: var(--panel-2); color: var(--text); }
+.stage-link.current span { border-color: var(--green); background: var(--green); color: #111; font-weight: 700; }
+.stage-main { max-width: 820px; }
+.stage-main h1 { margin: .4rem 0 .8rem; font: 400 clamp(2rem, 4vw, 3.4rem)/1 Georgia, serif; letter-spacing: -.035em; }
+.stage-question { margin: 0 0 1.5rem; padding-left: 1rem; border-left: 2px solid var(--green); color: var(--cream); font-size: 1.05rem; line-height: 1.5; }
+.uc-block.accent { border-left-color: var(--green); background: rgba(185, 239, 74, .05); }
+.uc-block.accent p { color: var(--cream); }
+.pager { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem; }
+
+.scenario-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.scenario-card { display: flex; flex-direction: column; min-height: 230px; padding: 1.3rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); text-decoration: none; transition: transform .15s, border-color .15s; }
+.scenario-card:hover { transform: translateY(-2px); border-color: var(--green-2); }
+.scenario-card h2 { margin: .8rem 0 .4rem; font: 400 1.45rem/1.15 Georgia, serif; }
+.scenario-persona { margin: 0 0 .7rem; color: var(--cream); font-size: .8rem; }
+.scenario-card p { margin: 0; color: var(--muted); line-height: 1.55; font-size: .82rem; }
+.scenario-card footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 1.1rem; font-size: .74rem; }
+.link-arrow { color: var(--green); font-weight: 600; }
+.booth-quote { margin-top: .9rem !important; color: var(--cream) !important; font-style: italic; }
+
+.trace { display: grid; gap: 0; }
+.trace-step { display: grid; grid-template-columns: 30px 1fr; gap: .9rem; padding: .85rem 0; border-bottom: 1px solid var(--line-soft); }
+.trace-step:last-child { border-bottom: 0; }
+.trace-marker { width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--green); font-size: .7rem; }
+.trace-stage { display: block; margin-bottom: .3rem; color: var(--muted); font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; text-decoration: none; }
+.trace-stage:hover { color: var(--green); }
+.trace-body b { font-size: .84rem; }
+.trace-body p { margin: .3rem 0 0; color: var(--muted); line-height: 1.55; font-size: .8rem; }
+
+.slack-card { padding: 1.1rem; border: 1px solid var(--line); border-left: 3px solid #68706c; border-radius: 8px; background: var(--panel); }
+.slack-card.hot { border-left-color: var(--green); }
+.slack-card header { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-bottom: .7rem; }
+.slack-channel { color: var(--muted); font: .75rem ui-monospace, monospace; }
+.slack-header { display: block; font: 600 .82rem/1.3 ui-sans-serif, sans-serif; letter-spacing: .03em; }
+.slack-lead { margin: .35rem 0 .9rem; color: var(--cream); font-size: .82rem; line-height: 1.5; }
+.slack-card dl { display: grid; gap: .4rem; margin: 0 0 .9rem; }
+.slack-card dl div { display: grid; grid-template-columns: 78px 1fr; gap: .6rem; }
+.slack-card dt { color: var(--muted); font-size: .7rem; }
+.slack-card dd { margin: 0; font-size: .76rem; line-height: 1.45; }
+.slack-next { margin: 0; padding: .7rem; border-radius: 6px; background: var(--panel-2); color: var(--muted); font-size: .76rem; line-height: 1.5; }
+.slack-next b { color: var(--text); }
+.slack-buttons { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .9rem; }
+.slack-buttons span { padding: .38rem .6rem; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2); font-size: .72rem; }
+.slack-quiet { margin: .9rem 0 0; font-size: .74rem; }
+
+.map { display: grid; grid-template-columns: 160px 1fr; gap: 1rem; overflow-x: auto; }
+.map-lanes { display: grid; gap: .45rem; }
+.lane-label { min-height: 112px; display: flex; align-items: center; color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; }
+.map-content { min-width: 750px; display: grid; gap: .45rem; }
+.map-lane { min-height: 112px; display: flex; gap: .7rem; align-items: center; padding: .75rem; border: 1px solid var(--line-soft); border-radius: 8px; }
+.map-node { min-width: 135px; max-width: 165px; padding: .75rem; border: 1px solid var(--line); border-radius: 7px; background: var(--panel-2); font-size: .76rem; }
+.map-node small { display: block; color: var(--muted); margin-top: .35rem; line-height: 1.35; }
+.flow-steps { counter-reset: flow; display: grid; gap: .5rem; }
+.flow-step { counter-increment: flow; display: grid; grid-template-columns: 24px 1fr; gap: .6rem; align-items: start; padding: .65rem; border: 1px solid var(--line-soft); border-radius: 6px; color: var(--muted); font-size: .76rem; }
+.flow-step::before { content: counter(flow); width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--green); color: #111; font-weight: 700; }
+.flow-step b { color: var(--text); }
+
+.json-editor { min-height: 470px; }
+.preview-card { padding: 1rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.preview-card h3 { margin: 0 0 .8rem; font: 400 1.2rem Georgia, serif; }
+.score { font: 400 2.6rem Georgia, serif; }
+.mutation-list { display: grid; gap: .45rem; margin-top: .8rem; }
+.mutation { display: flex; justify-content: space-between; gap: 1rem; padding: .6rem; border-radius: 5px; background: var(--panel-2); font-size: .75rem; }
+.console-actions { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: .8rem; }
+.result-box { margin-top: 1rem; padding: 1rem; max-height: 330px; overflow: auto; border: 1px solid var(--line); border-radius: 7px; background: #090a09; color: #b7c2bb; white-space: pre-wrap; font: .72rem/1.55 ui-monospace, monospace; }
+.warning-box { padding: .8rem; border: 1px solid rgba(255,156,85,.25); border-radius: 7px; color: var(--orange); background: rgba(255,156,85,.05); font-size: .75rem; line-height: 1.5; }
+
+dialog { max-width: 560px; width: calc(100% - 2rem); padding: 0; color: var(--text); background: transparent; border: 0; }
+dialog::backdrop { background: rgba(0,0,0,.72); backdrop-filter: blur(4px); }
+.dialog-card { padding: 1.25rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow); }
+.dialog-card header { display: flex; align-items: start; justify-content: space-between; }
+.dialog-card h2 { margin: .2rem 0; font: 400 1.5rem Georgia, serif; }
+.dialog-card > p { color: var(--muted); line-height: 1.5; font-size: .8rem; }
+.icon-button { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: .6rem; margin-top: 1rem; }
+.toasts { position: fixed; right: 1rem; bottom: 1rem; z-index: 50; display: grid; gap: .55rem; }
+.toast { min-width: 280px; max-width: 420px; padding: .8rem 1rem; border: 1px solid var(--line); border-radius: 7px; background: var(--panel-2); box-shadow: var(--shadow); font-size: .78rem; }
+.toast.error { border-color: rgba(255,113,109,.5); color: var(--red); }
+
+@media (max-width: 1100px) {
+  .metric-grid { grid-template-columns: repeat(3, 1fr); }
+  .metric:nth-child(3) { border-right: 0; }
+  .metric:nth-child(-n+3) { border-bottom: 1px solid var(--line); }
+  .use-case-grid, .competitor-grid, .entry-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stage-grid { grid-template-columns: minmax(190px, .3fr) minmax(0, 1fr); }
+  .topbar { gap: 1rem; }
+  .brand small { display: none; }
+}
+@media (max-width: 780px) {
+  .topbar { height: auto; min-height: 64px; flex-wrap: wrap; padding-block: .7rem; }
+  .topbar nav { order: 3; width: 100%; }
+  .mode-pill { font-size: 0; }
+  #main { padding: 1rem; min-height: calc(100vh - 112px); }
+  .page-header { align-items: start; flex-direction: column; }
+  .metric-grid { grid-template-columns: repeat(2, 1fr); }
+  .metric:nth-child(2), .metric:nth-child(4) { border-right: 0; }
+  .metric:nth-child(3) { border-right: 1px solid var(--line); }
+  .metric:nth-child(-n+4) { border-bottom: 1px solid var(--line); }
+  .dashboard-grid, .detail-grid, .editor-grid, .console-grid { grid-template-columns: 1fr; }
+  .sticky { position: static; }
+  .use-case-grid, .competitor-grid, .entry-grid, .scenario-grid { grid-template-columns: 1fr; }
+  .stage-grid { grid-template-columns: 1fr; }
+  .stage-rail { position: static; max-height: none; }
+  .stage-list { grid-auto-flow: column; grid-auto-columns: 190px; overflow-x: auto; }
+  .pager { flex-direction: column; }
+  .fact-grid { grid-template-columns: 1fr; }
+  .field-grid { grid-template-columns: 1fr; }
+}
+@media print {
+  :root { color: #111; background: white; }
+  body { background: white; }
+  .topbar, .header-actions, .filters, .button, dialog, .toasts { display: none !important; }
+  #main { width: 100%; padding: 0; }
+  .panel, .use-case-card, .competitor-card, .uc-block, .entry-card, .scenario-card, .slack-card { color: #111; background: white; border-color: #aaa; break-inside: avoid; }
+  .muted, .panel p, .uc-block p, .uc-block li, .trace-body p { color: #444; }
+  .stage-grid { grid-template-columns: 1fr; }
+  .stage-rail, .progress-track, .pager { display: none !important; }
+}
+
+</style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="topbar">
+      <a class="brand" href="#/">
+        <span class="brand-mark">O</span>
+        <span><b>Oak</b><small>GTM Control Center</small></span>
+      </a>
+      <nav aria-label="Primary">
+        <a href="#/" data-nav="dashboard">Overview</a>
+        <a href="#/leads" data-nav="leads">Leads</a>
+        <a href="#/policy" data-nav="policy">Policy</a>
+        <a href="#/competitors" data-nav="competitors">Competitors</a>
+        <a href="#/explorer" data-nav="explorer">How it works</a>
+        <a href="#/console" data-nav="console">Payload console</a>
+      </nav>
+      <button class="mode-pill" id="connection-button" type="button" data-action="settings">
+        <span class="status-dot"></span><span id="connection-label">Connecting</span>
+      </button>
+    </header>
+    <main id="main" tabindex="-1">
+      <div class="loading"><span></span>Loading Oak operations…</div>
+    </main>
+    <div id="toast-region" class="toasts" aria-live="polite"></div>
+    <dialog id="settings-dialog">
+      <form method="dialog" class="dialog-card">
+        <header><div><p class="eyebrow">Local security</p><h2>Control Center settings</h2></div><button value="cancel" class="icon-button" aria-label="Close">×</button></header>
+        <p>The admin key is held in this tab’s session storage and sent only to this local server for mutations. n8n secrets never reach the browser.</p>
+        <label>Admin key<input id="admin-token" type="password" autocomplete="off" placeholder="OAK_CONTROL_ADMIN_TOKEN" /></label>
+        <div class="dialog-actions"><button value="cancel" class="button secondary">Cancel</button><button value="save" class="button" data-action="save-settings">Save locally</button></div>
+      </form>
+    </dialog>
+    <script>window.OAK_OFFLINE=true;window.OAK_OFFLINE_STATE={"policy":{"version":"oak-event-v5","status":"active","activated_by":"setup-workflow-121","activated_at":"2026-09-21T08:30:00.000Z","document":{"event_id":"oak-live-event","company_fit":{"review_employee_min":500,"qualified_employee_min":1000,"target_industries":["financial_services","fintech","technology","healthcare"],"disqualifiers":["saas_only","single_cloud"]},"scoring":{"max":100,"persona_points":30,"company_size_points":15,"industry_points":15,"urgency_points":40},"enrichment":{"cache_ttl_days":30,"employee_verification_required_below":0.9,"employee_source_precedence":["hubspot_company","booth_notes","official_website","domain_matched_public_search","name_matched_public_search"],"employee_confidence":{"hubspot_company":1,"booth_notes":0.9,"official_website":0.9,"domain_matched_public_search":0.9,"name_matched_public_search":0.6,"not_established":0}},"notifications":{"tier_1":{"channel":"booth-hot","mention":true},"matched":{"channel":"booth-matched","mention":false},"needs_review":{"channel":"booth-review","mention":false},"competitor_intel":{"channel":"competitive-intel","mention":false},"out_of_scope":{"channel":"booth-out-of-scope","mention":false,"quiet":true}},"incumbent_tools":[{"name":"SailPoint","active":true,"renewal_trigger":true},{"name":"Okta","active":true,"renewal_trigger":false}],"owner_directory":{},"feature_flags":{"slack_actions_enabled":true,"public_search_enabled":true}}},"competitors":[{"id":"cmp_veza","name":"Veza","domains":["veza.com"],"aliases":["veza"],"category":"identity_security","status":"active","active":true,"updated_at":"2026-09-21T08:30:00.000Z"},{"id":"cmp_sailpoint","name":"SailPoint","domains":["sailpoint.com"],"aliases":["sail point"],"category":"identity_governance","status":"active","active":true,"updated_at":"2026-09-21T08:30:00.000Z"}],"leads":[{"scan_id":"oak-demo-rachel","event_id":"oak-demo-2026","name":"Rachel Green","email":"rachel@example.test","company":"Apex Financial Services","title":"Chief Information Security Officer","classification":"needs_review","would_be_classification":"tier_1","score":70,"company_size_band":"unknown","status":"complete","policy_version":"oak-event-v5","channel":"booth-review","scanned_at":"2026-09-21T08:21:00.000Z","completed_at":"2026-09-21T08:21:03.200Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"partial","decision_reasons":["CISO is a target persona.","SailPoint renewal within six months is a Tier 1 urgency trigger.","Possible Tier 1 — confirm 1,000+ employees before treating as hot."],"evidence":[{"type":"urgency","source":"booth_notes","quote":"SailPoint renews in four months.","confidence":1}]},{"scan_id":"oak-demo-hiroshi","event_id":"oak-demo-2026","name":"Hiroshi Tanaka","email":"hiroshi@example.test","company":"Northstar Bank","title":"VP Identity & Access Management","classification":"tier_1","score":85,"company_size_band":"qualified_1000_plus","status":"complete","policy_version":"oak-event-v5","channel":"booth-hot","scanned_at":"2026-09-21T08:18:00.000Z","completed_at":"2026-09-21T08:18:01.450Z","claimed_by":"U123OAK","booth_status":"met","enrichment_status":"complete","decision_reasons":["IAM leadership is a target persona.","2,000 employees stated at the booth (first-party evidence).","Non-human identity program creates urgency."],"evidence":[{"type":"employee_count","source":"booth_notes","quote":"We have 2,000 employees.","confidence":0.9}]},{"scan_id":"oak-demo-david","event_id":"oak-demo-2026","name":"David Stone","email":"david@example.test","company":"Tiny Cloud","title":"Founder","classification":"out_of_scope","score":0,"company_size_band":"disqualified_under_500","status":"complete","policy_version":"oak-event-v5","channel":"booth-out-of-scope","scanned_at":"2026-09-21T08:12:00.000Z","completed_at":"2026-09-21T08:12:02.100Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"complete","decision_reasons":["80 employees from the official company domain.","Below the 500-employee minimum."],"evidence":[{"type":"employee_count","source":"official_website","quote":"Our team of 80","confidence":0.9}]},{"scan_id":"oak-demo-sarah","event_id":"oak-demo-2026","name":"Sarah Chen","email":"sarah@veza.com","company":"Veza","title":"Product Marketing","classification":"competitor_intel","score":0,"company_size_band":"unknown","status":"complete","policy_version":"oak-event-v5","channel":"competitive-intel","scanned_at":"2026-09-21T08:08:00.000Z","completed_at":"2026-09-21T08:08:01.100Z","claimed_by":null,"booth_status":"scanned","enrichment_status":"skipped","decision_reasons":["veza.com matches an active competitor domain."],"evidence":[{"type":"competitor_identity","source":"scanner_email","quote":"sarah@veza.com","confidence":1}]}],"workflowHealth":[{"step":"00","name":"Setup & Seed","id":"PeoS0NF1f7FHzEID","state":"manual","health":"healthy"},{"step":"01","name":"Intake & Decision","id":"9SzVHK4vdv7Z3UMH","state":"active","health":"healthy"},{"step":"02A","name":"CRM Context","id":"xnl1bav7McaQIwXC","state":"active","health":"warning"},{"step":"02","name":"HubSpot Sync","id":"WQ2s5hFfpaE8P45o","state":"active","health":"healthy"},{"step":"03","name":"Slack Alerts","id":"gyCxnkoGkh3OJpz5","state":"active","health":"healthy"},{"step":"04","name":"Company & Person Enrichment","id":"K9MaVwjIoBmZ0oS9","state":"active","health":"warning"},{"step":"05","name":"AI Lead Reasoning","id":"McoAVyLN6lxqmLeO","state":"active","health":"healthy"},{"step":"06","name":"Slack Actions","id":"VsKr9HAqOrtOlxZC","state":"draft-drift","health":"warning"},{"step":"07","name":"Task Test Harness","id":"nyht2byorvoxFX2u","state":"unsafe","health":"critical"},{"step":"99","name":"Failure Handler","id":"N4JW7CO6qjdLi6mq","state":"active","health":"healthy"}]};
+window.OAK_DATA = {
+  fixtures: {
+    apex: {
+      label: 'Apex — possible Tier 1, size unknown',
+      payload: {
+        scan_id: 'oak-ui-test-apex-review',
+        event_id: 'oak-demo-2026',
+        scanned_at: '2026-09-21T09:00:00.000Z',
+        first_name: 'Rachel',
+        last_name: 'Green',
+        email: 'rachel@apexfinancial.example',
+        job_title: 'Chief Information Security Officer',
+        company_name: 'Apex Financial Services',
+        company_domain: 'apexfinancial.example',
+        employee_count_observed: null,
+        notes_from_booth: 'SailPoint renews in four months. Wants to discuss migration risk.',
+      },
+    },
+    booth2000: {
+      label: 'Booth-stated 2,000 — Tier 1',
+      payload: {
+        scan_id: 'oak-ui-test-booth-2000',
+        event_id: 'oak-demo-2026',
+        scanned_at: '2026-09-21T09:02:00.000Z',
+        first_name: 'Hiroshi',
+        last_name: 'Tanaka',
+        email: 'hiroshi@northstar.example',
+        job_title: 'VP Identity & Access Management',
+        company_name: 'Northstar Bank',
+        company_domain: 'northstar.example',
+        employee_count_observed: 2000,
+        notes_from_booth: 'SailPoint renewal in five months; evaluating non-human identity governance.',
+      },
+    },
+    review800: {
+      label: 'Known 800 — needs review',
+      payload: {
+        scan_id: 'oak-ui-test-review-800',
+        event_id: 'oak-demo-2026',
+        first_name: 'Maya',
+        last_name: 'Singh',
+        email: 'maya@middleco.example',
+        job_title: 'CISO',
+        company_name: 'Middle Co',
+        company_domain: 'middleco.example',
+        employee_count_observed: 800,
+        notes_from_booth: 'Audit deadline in Q4.',
+      },
+    },
+    out80: {
+      label: 'Known 80 — out of scope',
+      payload: {
+        scan_id: 'oak-ui-test-out-80',
+        event_id: 'oak-demo-2026',
+        first_name: 'David',
+        last_name: 'Stone',
+        email: 'david@tiny.example',
+        job_title: 'Founder',
+        company_name: 'Tiny Cloud',
+        company_domain: 'tiny.example',
+        employee_count_observed: 80,
+        notes_from_booth: 'Single-cloud SaaS team.',
+      },
+    },
+  },
+  classifications: [
+    {
+      id: 'tier_1',
+      label: 'Tier 1',
+      channel: '#booth-hot',
+      rule: 'Target persona + urgency + 1,000+ employees at confidence ≥ 0.9.',
+      treatment: '@here; immediate booth action.',
+    },
+    {
+      id: 'matched',
+      label: 'Matched',
+      channel: '#booth-matched',
+      rule: 'Target persona + 1,000+ employees; no Tier 1 urgency.',
+      treatment: 'No mention; normal booth follow-up.',
+    },
+    {
+      id: 'needs_review',
+      label: 'Needs review',
+      channel: '#booth-review',
+      rule: 'Unknown/low-confidence size, known 500–999, or ambiguous persona.',
+      treatment: 'No @here. Would-be Tier 1 card asks the rep to confirm 1,000+.',
+    },
+    {
+      id: 'competitor_intel',
+      label: 'Competitor intel',
+      channel: '#competitive-intel',
+      rule: 'Identity matches an active competitor domain or alias.',
+      treatment: 'Intel only; competitor identity is separate from incumbent tooling.',
+    },
+    {
+      id: 'out_of_scope',
+      label: 'Out of scope',
+      channel: '#booth-out-of-scope',
+      rule: 'Under 500 at confidence ≥ 0.9, SaaS-only, single-cloud, or irrelevant.',
+      treatment: 'Quiet record; no coaching, mentions, or actions.',
+    },
+  ],
+  useCases: [
+    {
+      id: 'intake',
+      number: '01',
+      title: 'Accept and classify a booth scan',
+      owner: 'Deterministic rules',
+      status: 'live',
+      hypothesis: 'Rules, not a model, should own tier and route so the same evidence always produces the same booth response.',
+      business: 'A scanner submits one visit. Oak acknowledges quickly, blocks duplicate scan IDs, and decides where the lead belongs.',
+      logic: [
+        'Authenticate and normalize the scanner payload.',
+        'No-op only when the same scan_id is already complete.',
+        'Load one explicit policy version and the active competitor rows.',
+        'Apply competitor, size, persona, urgency, and disqualifier gates.',
+        'Persist the final delivery before Slack, including scans without email.',
+      ],
+      evidence: 'scan_id, event_id, notes, policy version, competitor row and every deterministic decision reason.',
+      gap: 'No-email scans currently need the shared complete persistence path.',
+      workflows: ['01', '04', '02A', '05', '02', '03'],
+    },
+    {
+      id: 'headcount',
+      number: '02',
+      title: 'Resolve headcount without trusting the wrong Apex',
+      owner: 'Enrichment + final gates',
+      status: 'designed',
+      hypothesis: 'The cost of a false hot lead is higher than asking one size question, while a wrong disqualification is equally damaging.',
+      business: 'Oak uses a count the visitor stated. If the only count is attached to a similarly named company, Oak asks for confirmation instead of guessing.',
+      logic: [
+        'Precedence: HubSpot → booth notes → official website → domain-matched search → name-matched search.',
+        'Booth-stated counts are first-party evidence and qualify at 0.9.',
+        'Only confidence ≥ 0.9 may promote, disqualify, award size points, or write HubSpot numberofemployees.',
+        'A low-confidence count remains visible as a sourced claim but routes as unknown.',
+      ],
+      evidence: 'Numeric value, source, URL or booth quote, confidence, entity-match method, and verification flag.',
+      gap: 'Live 04 currently lets public search outrank booth notes and does not gate routing by confidence.',
+      workflows: ['04', '01', '02', '03'],
+    },
+    {
+      id: 'would-be-tier1',
+      number: '03',
+      title: 'Handle a would-be Tier 1 with unknown size',
+      owner: 'Booth rep',
+      status: 'designed',
+      hypothesis: 'Preserving urgency while withholding @here keeps the hot channel credible without losing real enterprise buyers.',
+      business: 'A CISO with an imminent SailPoint renewal but no established headcount lands in review with a prominent “Possible Tier 1” message.',
+      logic: [
+        'Keep classification needs_review and store would_be_classification=tier_1.',
+        'Award persona and urgency points, but not the 15 size points.',
+        'Lead with “confirm 1,000+” in NEXT AT THE BOOTH.',
+        'Promote to Tier 1 after confirmation; mark Not a fit when under 500.',
+      ],
+      evidence: 'Persona match, exact urgency quote, absent/low-confidence headcount and human override.',
+      gap: '01 currently annotates unknown size instead of demoting it.',
+      workflows: ['01', '03', '06'],
+    },
+    {
+      id: 'competitor',
+      number: '04',
+      title: 'Separate competitors from incumbent tools',
+      owner: 'Closed competitor table',
+      status: 'live',
+      hypothesis: 'A competitor identity is deterministic routing; an incumbent renewal is a prospect urgency signal.',
+      business: 'A Veza employee goes to competitive intel. A bank replacing SailPoint may be Tier 1 rather than a competitor.',
+      logic: [
+        'Match only active competitor domains and aliases.',
+        'Keep SailPoint/Okta incumbent tools in policy with renewal semantics.',
+        'Allow False alarm and Flag for competitive intel as human corrections.',
+      ],
+      evidence: 'Matched domain/alias, competitor row id and source field.',
+      gap: 'Pending competitors must never route until activated.',
+      workflows: ['00', '01', '06'],
+    },
+    {
+      id: 'returning',
+      number: '05',
+      title: 'Thread a returning visitor',
+      owner: 'Encounter model',
+      status: 'live',
+      hypothesis: 'One person can visit repeatedly; event encounter and delivery identities prevent lost history and noisy duplicate roots.',
+      business: 'The same visitor scanned again gets a new CRM note and a Slack thread update. A material tier increase escalates.',
+      logic: [
+        'Person identity is normalized email.',
+        'Encounter identity is event_id + email.',
+        'Delivery identity is scan_id.',
+        'Same complete scan_id is a no-op; new scan_id adds history.',
+      ],
+      evidence: 'Encounter key, scan count, prior classification, new reasons and root Slack ts as a string.',
+      gap: 'Regression must cover silent, threaded, and escalation modes.',
+      workflows: ['01', '02', '03'],
+    },
+    {
+      id: 'actions',
+      number: '06',
+      title: 'Act from the Slack card',
+      owner: 'Human rep',
+      status: 'partial',
+      hypothesis: 'A rep should correct, claim, or advance the lead where the context already is, with one honest result reply.',
+      business: 'Claim, explain, promote, reject, note, snooze, send to owner, mark met, or correct competitive intel without leaving Slack.',
+      logic: [
+        'Verify Slack HMAC over the raw body and reject requests older than five minutes.',
+        'Keep thread_ts as an opaque string.',
+        'Continue after bounded side-effect failures and post one truthful thread result.',
+        'Never PATCH an empty HubSpot properties object.',
+      ],
+      evidence: 'Slack user, action id, encounter, before/after state and each side-effect result.',
+      gap: 'Draft grouping exists; signed clicks and error-path replies remain unproven.',
+      workflows: ['06', '02'],
+    },
+    {
+      id: 'policy',
+      number: '07',
+      title: 'Change ICP policy safely',
+      owner: 'RevOps admin',
+      status: 'new',
+      hypothesis: 'Policy-as-data is useful only when every activation is versioned, validated, regressed, and atomic.',
+      business: 'RevOps edits thresholds and routes as a draft, sees exactly what changes, runs canonical cases, then explicitly activates.',
+      logic: [
+        'Validate schema and Oak invariants.',
+        'Create a new draft version; never edit the active document in place.',
+        'Run canonical classification fixtures.',
+        'On confirmation, supersede the old active row and activate one version.',
+      ],
+      evidence: 'Author, timestamp, validation, regression cases, old version and new version.',
+      gap: 'Requires the Admin Gateway workflow before live writes.',
+      workflows: ['00', 'Admin Gateway'],
+    },
+    {
+      id: 'test-console',
+      number: '08',
+      title: 'Test a scan without turning the form into a production relay',
+      owner: 'Operator',
+      status: 'new',
+      hypothesis: 'A dry-run-first console makes demos repeatable without letting arbitrary browser input mutate HubSpot and Slack.',
+      business: 'An operator previews a known fixture, sees its route and side effects, then deliberately sends only an allowlisted test scan.',
+      logic: [
+        'Validate and normalize locally on the server.',
+        'Dry-run by default and show the expected mutations.',
+        'Require an admin key, exact confirmation phrase, test prefix, and allowlist for live send.',
+        'Poll oak_deliveries until status=complete; never infer success from the 202 body.',
+      ],
+      evidence: 'Correlation id, normalized payload, accepted response and final delivery row.',
+      gap: 'Workflow 07 public form must be disabled or authenticated.',
+      workflows: ['01', '07', 'Admin Gateway'],
+    },
+  ],
+};
+</script>
+    <script>
+window.OAK_JOURNEY = {
+  stages: [
+    {
+      id: 'capture',
+      number: 1,
+      title: 'A scan arrives',
+      owner: '01 Intake',
+      question: 'Is this a real scan, and have we already finished it?',
+      business:
+        'A rep scans a badge. Within about two seconds the scanner gets an acknowledgement, because the booth cannot wait for enrichment, HubSpot, and Slack before the next visitor walks up.',
+      mechanics: [
+        'The scanner posts JSON with a shared secret; an unsigned request is rejected with 401.',
+        'Email, domain, and job title are normalized before anything else reads them.',
+        'The scan_id is looked up in oak_deliveries.',
+        'A scan_id already marked complete is a no-op. An accepted-but-unfinished scan is allowed to run again.',
+        'The webhook returns 202 accepted, then the rest of the pipeline continues asynchronously.',
+      ],
+      hypothesis:
+        'Booth networks are unreliable and scanners retry. Idempotency has to be keyed on the scan, and only a finished scan may be treated as a duplicate — otherwise a network blip silently drops a lead.',
+      rejected:
+        'Deduplicating by email. It looks correct until the same person returns on day two, which is the most interesting thing that can happen at an event.',
+      evidence: 'scan_id, event_id, raw scanner payload snapshot, received timestamp.',
+      failure: 'If intake fails, nothing else exists. Workflow 99 reports it as "no lead was recorded".',
+    },
+    {
+      id: 'identity',
+      number: 2,
+      title: 'Three identities are separated',
+      owner: '01 Intake',
+      question: 'Who is this person, at which event, on which visit?',
+      business:
+        'The same human can visit twice in one day, and can attend two different events this year. Those are three different questions, so Oak keeps three different keys.',
+      mechanics: [
+        'Person = normalized email. One CRM contact forever.',
+        'Encounter = event_id + email. Event-scoped state: tier, claim, booth status, overrides.',
+        'Delivery = scan_id. One row per physical scan, which is what idempotency and testing assert on.',
+        'A returning visitor creates a new delivery against an existing encounter.',
+      ],
+      hypothesis:
+        'Conflating these three is the most common CRM failure in event tooling. Keeping them apart is what lets Oak thread a second visit instead of either duplicating the person or overwriting the first visit.',
+      rejected:
+        'One row per person. It cannot express "this is their third visit and the tier went up", which is exactly the signal a rep wants.',
+      evidence: 'event_person_key, scan count, prior classification, previous Slack thread anchor.',
+      failure: 'Mixed identities produce duplicate contacts and lost booth history.',
+    },
+    {
+      id: 'policy',
+      number: 3,
+      title: 'One explicit policy version is loaded',
+      owner: '01 Intake + oak_policies',
+      question: 'By whose rules are we deciding, at this exact moment?',
+      business:
+        'The definition of a good lead changes during an event. Oak never decides by "current settings" — it decides by a named version, and stamps that version on the result.',
+      mechanics: [
+        'Exactly one policy row is active; readers pin the version they used.',
+        'The policy holds size thresholds, confidence floors, scoring weights, personas, urgency triggers, channels, and feature flags.',
+        'Changing policy means creating a new version and activating it, not editing the live document.',
+      ],
+      hypothesis:
+        'If a decision cannot name the rules that produced it, you cannot explain a card the next morning, and you cannot safely change the rules mid-event.',
+      rejected:
+        'Hard-coding thresholds in the workflow. Every ICP tweak would then be a deploy, and old decisions would become unexplainable.',
+      evidence: 'policy_version on every delivery, encounter, and CRM record.',
+      failure: 'Two active policies, or none, is treated as an error rather than a silent default.',
+    },
+    {
+      id: 'gates',
+      number: 4,
+      title: 'Deterministic gates decide the tier',
+      owner: '01 Intake',
+      question: 'What is this lead, before any model is involved?',
+      business:
+        'Routing is decided by rules in a fixed order, so the same badge always produces the same booth response.',
+      mechanics: [
+        'Competitor identity first: an active competitor domain or alias ends the decision.',
+        'Hard disqualifiers next: SaaS-only, single-cloud, clearly irrelevant persona.',
+        'Company size band.',
+        'Target persona match on job title.',
+        'Urgency triggers from booth notes: renewal window, breach, audit deadline.',
+        'Score is computed for explanation only; it never picks the channel.',
+      ],
+      hypothesis:
+        'Rules own routing and models explain it. A model that can change a channel cannot be regression-tested, and a booth team stops trusting a channel it cannot predict.',
+      rejected:
+        'Letting an LLM assign the tier. It demos well and fails quietly: the same lead gets different treatment on two scans, with no diff to review.',
+      evidence: 'decision_reasons in plain language plus a decision_trace of machine codes.',
+      failure: 'A gate error routes to review rather than guessing upward.',
+    },
+    {
+      id: 'size',
+      number: 5,
+      title: 'Headcount is resolved with graded trust',
+      owner: '04 Enrichment + final gates',
+      question: 'Do we actually know this company is 1,000+, or do we just have a number?',
+      business:
+        'A count the visitor states at the booth is first-party evidence and can qualify them. A number scraped from a page that merely shares the company name is not, and sends the lead to review instead.',
+      mechanics: [
+        'Precedence: HubSpot record, then booth-stated count, then the official company domain, then a domain-matched public result, then a name-only match.',
+        'Confidence: HubSpot 1.0, booth notes 0.9, official site 0.9, domain-matched search 0.9, name-only match 0.6.',
+        'Confidence of 0.9 or higher may promote, disqualify, award the size points, and write HubSpot.',
+        'Below 0.9 the number is shown as a sourced claim but routes as unknown.',
+      ],
+      hypothesis:
+        'The real failure mode is entity resolution, not arithmetic. Trust is therefore asymmetric: promoting a lead to a hot channel demands strong evidence, demoting to review demands none, and disqualifying demands strong evidence again so a wrong match cannot silently kill a real enterprise buyer.',
+      rejected:
+        'Treating any public number as fact. That is how a 28-person firm sharing a name with a 19,000-person firm ends up paging an executive to the booth.',
+      evidence: 'employee_resolution: value, source, confidence, evidence URL or booth quote, verification flag.',
+      failure: 'No count anywhere means unknown, which means review — never an optimistic guess.',
+    },
+    {
+      id: 'enrichment',
+      number: 6,
+      title: 'Public evidence must carry a citation',
+      owner: '04 Enrichment',
+      question: 'What can we say about this company that a rep could repeat out loud?',
+      business:
+        'Oak reads the company site and runs an identity-aligned search, then keeps only claims that come with a quote and a source link.',
+      mechanics: [
+        'Results are kept only when the host matches the resolved domain or the company name appears in the text; unaligned results are discarded and counted.',
+        'Every retained claim needs a quote and a URL, or it is rejected.',
+        'Unverified incident language — breach, ransomware, alleged — is stripped rather than shown.',
+        'Results are cached by company domain with a TTL, never by company name.',
+      ],
+      hypothesis:
+        'Unsourced enrichment becomes a rumor a rep repeats at a booth. If a claim cannot be cited, showing it costs more than omitting it.',
+      rejected:
+        'Free-text company summaries from a model. Fluent, unverifiable, and impossible to correct when wrong.',
+      evidence: 'Retained evidence with type, quote, source and URL, plus a count of discarded unaligned results.',
+      failure: 'Enrichment is best-effort; if it is unavailable the lead still routes on what is known.',
+    },
+    {
+      id: 'ai',
+      number: 7,
+      title: 'The model is used only where language is genuinely ambiguous',
+      owner: '05 AI Lead Reasoning',
+      question: 'Where can judgment help without taking over the decision?',
+      business:
+        'Two places: deciding whether an unusual job title is really a security buyer, and writing the opening question the rep should ask.',
+      mechanics: [
+        'Temperature 0, no tools, a URL allowlist, and a bounded prompt.',
+        'Any quote it uses must actually appear in the booth notes.',
+        'It cannot change a channel, a competitor identity, or a size band.',
+        'Prompt-injection text inside booth notes is quoted as evidence, never executed as instruction.',
+      ],
+      hypothesis:
+        'The model is worth having on language, not on policy. Constraining it to the two places language matters keeps the pipeline auditable while still making the card useful.',
+      rejected:
+        'A general "analyze this lead" prompt. It produces confident prose that nobody can diff, test, or correct.',
+      evidence: 'The resolved persona, the question text, and the booth quote it relied on.',
+      failure:
+        'If the model is unavailable the lead still routes; it just carries a generic opening question. Known gap: today it can still raise a tier, and it must not do so while size is unverified.',
+    },
+    {
+      id: 'crm',
+      number: 8,
+      title: 'Only durable facts are written to HubSpot',
+      owner: '02 HubSpot Sync',
+      question: 'What deserves to become permanent record?',
+      business:
+        'Oak adds booth context to the CRM and never overwrites what a human put there.',
+      mechanics: [
+        'Contact upserted by normalized email; company matched by exact domain.',
+        'A meeting and a note are created per new scan, so the narrative stays chronological.',
+        'Eighteen oak_* properties carry tier, score, persona, reasons, and booth state.',
+        'Owner, lifecycle stage, and deal stage are never touched.',
+        'Headcount is written only when confidence is high enough to be treated as fact.',
+      ],
+      hypothesis:
+        'Automation should add context and never erase a human\'s work. A low-confidence fact belongs in a note, where it is visible and disposable, not in a field other systems will trust.',
+      rejected:
+        'Writing every enriched value into standard fields. It pollutes reporting and is very hard to unwind after an event.',
+      evidence: 'Contact and company ids, the note body, and which properties were written.',
+      failure: 'A scan with no email skips CRM entirely and must still complete its delivery row.',
+    },
+    {
+      id: 'slack',
+      number: 9,
+      title: 'One card, routed by how loud it deserves to be',
+      owner: '03 Slack Alerts',
+      question: 'Who needs to know about this, and how urgently?',
+      business:
+        'Hot leads interrupt people. Review leads wait for a human to pick them up. Out-of-scope visits are recorded quietly, with no coaching and no buttons.',
+      mechanics: [
+        'Channel is chosen by classification; only Tier 1 uses a mention.',
+        'The card leads with the decision, then the evidence, then what to do next at the booth.',
+        'A returning visitor replies in the original thread; a tier increase escalates instead.',
+        'Out-of-scope cards are deliberately plain: they exist for the record, not for action.',
+      ],
+      hypothesis:
+        'Attention is the scarcest resource at a booth. Every unnecessary mention reduces the value of the next real one, so the system spends mentions only where it has strong evidence.',
+      rejected:
+        'Posting everything to one channel with a tier label. People filter it out by the second hour.',
+      evidence: 'Channel, message timestamp as an opaque string, and the thread anchor on the encounter.',
+      failure: 'A Slack failure is reported as "the rep was never told", which is a different loss than a CRM failure.',
+    },
+    {
+      id: 'human',
+      number: 10,
+      title: 'The human corrects the machine, cheaply',
+      owner: '06 Slack Actions',
+      question: 'How does the person at the booth fix or advance this?',
+      business:
+        'Claim it, ask why it scored that way, promote it after confirming size, reject it, add a note, snooze it, hand it to the owner, or flag a competitor — all without leaving Slack.',
+      mechanics: [
+        'Every interaction verifies a Slack HMAC signature over the raw body and rejects anything older than five minutes.',
+        'Claiming is conditional, so two reps cannot both own the same lead.',
+        'Promote to Tier 1 is the designed path out of review once headcount is confirmed.',
+        'Every action writes back to the encounter and, where relevant, to HubSpot.',
+      ],
+      hypothesis:
+        'The rep standing in front of the visitor knows more than the pipeline ever will. The system\'s job is to make their correction one tap and to record it as evidence, not to defend its own guess.',
+      rejected:
+        'Requiring a CRM login to fix a misrouted lead. It will not happen during a live event, so the correction is simply lost.',
+      evidence: 'Slack user id, action, before and after state, and the result of each side effect.',
+      failure: 'Known gap: side effects must continue on error so the thread always gets one honest reply.',
+    },
+    {
+      id: 'persistence',
+      number: 11,
+      title: 'A run is finished only when the delivery says so',
+      owner: '01 Intake + oak_deliveries',
+      question: 'How do we know this actually completed?',
+      business:
+        'The webhook\'s 202 means the work was accepted. Success is the delivery row reaching complete.',
+      mechanics: [
+        'Status moves from accepted to complete once the pipeline has done its work.',
+        'Tests and the payload console assert on the delivery row, never on the 202 body.',
+        'A completed scan_id is what makes a retry safe.',
+      ],
+      hypothesis:
+        'Accepting work and doing work are different events, and conflating them is how a pipeline appears healthy while quietly dropping leads.',
+      rejected:
+        'Treating HTTP 202 as proof. It only proves the request was received.',
+      evidence: 'Delivery status, completion timestamp, and the final classification snapshot.',
+      failure: 'Known gap: scans without an email currently stop short of complete.',
+    },
+    {
+      id: 'failure',
+      number: 12,
+      title: 'Failures are reported as consequences',
+      owner: '99 Failure Handler',
+      question: 'When something breaks, what did the business actually lose?',
+      business:
+        'An alert says which stage failed and what that means — no card was posted, or no CRM note was written — rather than just printing a stack trace.',
+      mechanics: [
+        'Every workflow links to one error handler.',
+        'Alerts name the stage, the scan, and the business consequence.',
+        'Operational alerts go to a RevOps channel, away from booth traffic.',
+      ],
+      hypothesis:
+        'During a live event nobody reads stack traces. An error is only actionable if it states the consequence and who is affected.',
+      rejected:
+        'Generic error notifications. They get muted on day one, which is the day you need them.',
+      evidence: 'Failed stage, scan id, execution reference, and the consequence sentence.',
+      failure: 'The handler itself is deliberately simple, so it keeps working when other things do not.',
+    },
+  ],
+
+  scenarios: [
+    {
+      id: 'apex',
+      title: 'A perfect buyer with no proof of size',
+      persona: 'Rachel Green — CISO, Apex Financial Services',
+      tension: 'Everything says Tier 1 except the one fact Oak refuses to assume.',
+      outcome: 'needs_review',
+      outcomeLabel: 'Needs review, presented as a possible Tier 1',
+      notes: 'SailPoint renews in four months. Wants to discuss migration risk.',
+      steps: [
+        ['capture', 'Scan accepted', 'New scan_id, first visit of the event. 202 returned in about two seconds.'],
+        ['identity', 'Encounter created', 'Person rachel@apexfinancial.example, encounter = event + person, delivery = this scan.'],
+        ['policy', 'Version pinned', 'oak-event-v5 is active; the decision will be stamped with it.'],
+        ['gates', 'Persona and urgency match', 'CISO is a target persona. "SailPoint renews in four months" is a Tier 1 urgency trigger.'],
+        ['size', 'No headcount can be established', 'HubSpot has no company record. Booth notes carry no count. Search returns only name-matched pages at 0.6 confidence. Size is unknown.'],
+        ['enrichment', 'Evidence kept with citations', 'Industry resolved as financial services from the official site. The 0.6 headcount claim is displayed as a claim, not used for routing.'],
+        ['ai', 'Title is unambiguous', 'No model call was needed for persona. It only drafts the opening question.'],
+        ['crm', 'Context written, headcount withheld', 'Contact and note created. numberofemployees is deliberately not written, because 0.6 is below the trust floor.'],
+        ['slack', 'Review card, no mention', 'Posted to #booth-review. The first line reads "Possible Tier 1 — confirm 1,000+ employees before treating as hot."'],
+        ['human', 'The rep holds the decision', 'One tap on Promote to Tier 1 after confirming size, or Not a fit if they are small.'],
+        ['persistence', 'Delivery complete', 'Status complete, classification needs_review, would-be tier_1 recorded.'],
+      ],
+      card: {
+        channel: 'booth-review',
+        mention: false,
+        header: 'REVIEW — Possible Tier 1',
+        lead: 'Confirm 1,000+ employees before treating as hot.',
+        facts: [
+          ['Person', 'Rachel Green, CISO'],
+          ['Company', 'Apex Financial Services'],
+          ['Score', '70/100 — persona 30, urgency 40, size 0'],
+          ['Size', 'Unknown — no source above 0.9 confidence'],
+        ],
+        next: 'Ask how many employees they have. 1,000+ → Promote to Tier 1. Under 500 → Not a fit.',
+        buttons: ['Claim', 'Why this score?', 'Promote to Tier 1', 'Not a fit', 'Add note'],
+      },
+      counterfactual:
+        'Without the confidence floor this lead would have gone to #booth-hot with an @here. If the name-matched page belonged to a different Apex, an executive would have been pulled to the booth for a 28-person prospect — and the next real Tier 1 mention would be trusted less.',
+    },
+    {
+      id: 'northstar',
+      title: 'The visitor tells you the number',
+      persona: 'Hiroshi Tanaka — VP Identity & Access Management, Northstar Bank',
+      tension: 'Same shape as Apex, one crucial difference: the count is first-party.',
+      outcome: 'tier_1',
+      outcomeLabel: 'Tier 1, mention sent',
+      notes: 'We have 2,000 employees. SailPoint renewal in five months; evaluating non-human identity governance.',
+      steps: [
+        ['capture', 'Scan accepted', 'New scan_id; 202 returned immediately.'],
+        ['identity', 'Encounter created', 'First visit for this person at this event.'],
+        ['policy', 'Version pinned', 'oak-event-v5.'],
+        ['gates', 'Persona and urgency match', 'IAM leadership is a target persona; a renewal window inside six months is a Tier 1 trigger.'],
+        ['size', 'Booth-stated count qualifies', '2,000 employees stated by the visitor. Booth notes sit at 0.9 confidence, so the size gate is satisfied and the 15 size points are awarded.'],
+        ['enrichment', 'Confirms rather than decides', 'Official site corroborates the industry. Nothing here was needed to reach the tier.'],
+        ['ai', 'Opening question only', 'Drafts a question grounded in a quote that exists in the booth notes.'],
+        ['crm', 'Full write', 'Contact, company, meeting, note, and the oak_* fields. Headcount is written because it is first-party.'],
+        ['slack', 'Hot card with a mention', '#booth-hot with @here, because the evidence justifies interrupting people.'],
+        ['human', 'Claim and meet', 'A rep claims it so nobody double-approaches, then marks met.'],
+        ['persistence', 'Delivery complete', 'Status complete, classification tier_1, policy version recorded.'],
+      ],
+      card: {
+        channel: 'booth-hot',
+        mention: true,
+        header: 'TIER 1 — @here',
+        lead: 'IAM leader with a renewal inside six months and confirmed enterprise size.',
+        facts: [
+          ['Person', 'Hiroshi Tanaka, VP IAM'],
+          ['Company', 'Northstar Bank — 2,000 employees (stated at booth)'],
+          ['Score', '85/100 — persona 30, size 15, urgency 40'],
+          ['Trigger', '"SailPoint renewal in five months"'],
+        ],
+        next: 'Get the renewal date and the evaluation owner. Offer the migration-risk conversation now.',
+        buttons: ['Claim', 'Why this score?', 'Add note', 'Send to owner', 'Meeting booked'],
+      },
+      counterfactual:
+        'This is the case that proves the rule is about evidence quality, not about distrusting the booth. The visitor said the number, so Oak uses it. Demanding a CRM record here would bury a real Tier 1 in the review queue.',
+    },
+    {
+      id: 'tiny',
+      title: 'A polite no, recorded quietly',
+      persona: 'David Stone — Founder, Tiny Cloud',
+      tension: 'Being out of scope is a real outcome that still deserves a record.',
+      outcome: 'out_of_scope',
+      outcomeLabel: 'Out of scope, no noise',
+      notes: 'Single-cloud SaaS team.',
+      steps: [
+        ['capture', 'Scan accepted', 'Normal intake; nothing special about the payload.'],
+        ['identity', 'Encounter created', 'Recorded like any other visitor.'],
+        ['policy', 'Version pinned', 'oak-event-v5.'],
+        ['gates', 'Disqualifier and size', 'Single-cloud SaaS is a stated disqualifier, and the company is far below the size floor.'],
+        ['size', '80 employees at high confidence', 'The official company domain states the count, so 0.9 confidence permits disqualification.'],
+        ['enrichment', 'Stops early', 'No point spending searches on a lead that is already out of scope.'],
+        ['ai', 'Not used', 'The rules were unambiguous.'],
+        ['crm', 'Still recorded', 'Contact and note are written so the visit exists and the reason is searchable later.'],
+        ['slack', 'Quiet card', '#booth-out-of-scope. No mention, no coaching, no action buttons.'],
+        ['human', 'Nothing required', 'Deliberately no call to action.'],
+        ['persistence', 'Delivery complete', 'Status complete, classification out_of_scope with the reason attached.'],
+      ],
+      card: {
+        channel: 'booth-out-of-scope',
+        mention: false,
+        header: 'OUT OF SCOPE',
+        lead: 'Recorded for completeness. No action needed.',
+        facts: [
+          ['Person', 'David Stone, Founder'],
+          ['Company', 'Tiny Cloud — 80 employees (official site)'],
+          ['Reason', 'Below the 500-employee minimum; single-cloud SaaS'],
+        ],
+        next: 'None. The visit is logged and excluded from outreach.',
+        buttons: [],
+      },
+      counterfactual:
+        'Deleting these visits would be easier, but then nobody can answer "who came to the booth and why did we not follow up". The quiet channel keeps the record without spending attention.',
+    },
+    {
+      id: 'veza',
+      title: 'A competitor walks up',
+      persona: 'Sarah Chen — Product Marketing, Veza',
+      tension: 'Competitor identity and incumbent tooling are different things and must not be confused.',
+      outcome: 'competitor_intel',
+      outcomeLabel: 'Competitive intel',
+      notes: 'Asked detailed questions about pricing and roadmap.',
+      steps: [
+        ['capture', 'Scan accepted', 'Standard intake.'],
+        ['identity', 'Encounter created', 'Recorded against this event.'],
+        ['policy', 'Version pinned', 'oak-event-v5 plus the active competitor list.'],
+        ['gates', 'Competitor identity wins first', 'veza.com matches an active competitor domain, so the decision ends before persona or size are considered.'],
+        ['size', 'Not consulted', 'Company size is irrelevant once identity is established.'],
+        ['enrichment', 'Skipped', 'No need to enrich a known competitor.'],
+        ['ai', 'Not used', 'Identity matching is deterministic.'],
+        ['crm', 'Marked and excluded', 'Recorded and flagged so they never enter a nurture sequence.'],
+        ['slack', 'Intel card', '#competitive-intel, no mention, framed as intelligence rather than a lead.'],
+        ['human', 'Correctable', 'If the match were wrong, False alarm returns the lead to review.'],
+        ['persistence', 'Delivery complete', 'Status complete, classification competitor_intel.'],
+      ],
+      card: {
+        channel: 'competitive-intel',
+        mention: false,
+        header: 'COMPETITOR',
+        lead: 'Veza employee visited the booth.',
+        facts: [
+          ['Person', 'Sarah Chen, Product Marketing'],
+          ['Match', 'veza.com — active competitor domain'],
+          ['Asked about', 'Pricing and roadmap'],
+        ],
+        next: 'Log what they asked. Do not pitch. Do not add to outreach.',
+        buttons: ['Flag for competitive intel', 'False alarm', 'Add note'],
+      },
+      counterfactual:
+        'A prospect replacing SailPoint is not a competitor — it is a buying signal, and one of the strongest. Keeping the closed competitor list separate from the incumbent-tools list is what stops Oak from throwing away its best leads.',
+    },
+    {
+      id: 'returning',
+      title: 'The same person comes back',
+      persona: 'Rachel Green, second visit — after checking her headcount',
+      tension: 'The lead changes tier mid-event. Oak must escalate without losing the history.',
+      outcome: 'tier_1',
+      outcomeLabel: 'Promoted to Tier 1 by a human',
+      notes: 'Confirmed 12,000 employees. Brought the IAM architect.',
+      steps: [
+        ['capture', 'New scan accepted', 'A different scan_id, so this is not a duplicate and is processed fully.'],
+        ['identity', 'Same encounter, second delivery', 'Matched on event + email. Scan count becomes two; the prior classification is remembered.'],
+        ['policy', 'Version pinned', 'Still oak-event-v5, so the two decisions are comparable.'],
+        ['gates', 'Re-evaluated with new information', 'Persona and urgency unchanged; the missing fact has now arrived.'],
+        ['size', 'Confirmed at the booth', '12,000 employees stated by the visitor. First-party evidence, so the size gate is now satisfied.'],
+        ['enrichment', 'Cache hit', 'Company evidence is reused from the domain-keyed cache rather than re-fetched.'],
+        ['ai', 'Not needed', 'Nothing ambiguous remains.'],
+        ['crm', 'New note, upgraded fields', 'A second note preserves the narrative; tier fields are updated rather than duplicated.'],
+        ['slack', 'Escalation, not a new root', 'The thread on the original review card is updated, and the tier increase escalates to the hot channel.'],
+        ['human', 'Promote to Tier 1', 'The rep taps Promote; the override is recorded with who did it and when.'],
+        ['persistence', 'Second delivery complete', 'Two deliveries, one encounter, a visible before and after.'],
+      ],
+      card: {
+        channel: 'booth-hot',
+        mention: true,
+        header: 'ESCALATED TO TIER 1 — @here',
+        lead: 'Returning visitor confirmed 12,000 employees. Was in review this morning.',
+        facts: [
+          ['Person', 'Rachel Green, CISO — visit 2'],
+          ['Company', 'Apex Financial Services — 12,000 employees (confirmed at booth)'],
+          ['Change', 'needs_review → tier_1, promoted by a rep'],
+          ['Trigger', 'SailPoint renewal in four months'],
+        ],
+        next: 'She brought the IAM architect. Get the evaluation timeline while both are standing here.',
+        buttons: ['Claim', 'Why this score?', 'Send to owner', 'Meeting booked'],
+      },
+      counterfactual:
+        'This is the payoff for separating person, encounter, and delivery in stage 2. Without it the second scan would either be silently dropped as a duplicate or would overwrite the morning\'s decision, and nobody could see that the lead improved.',
+    },
+  ],
+};
+
+</script>
+    <script>
+window.OAK_GRAPH = {
+  lanes: ['Capture', 'Decision', 'Systems', 'Humans'],
+  nodes: [
+    { id: 'scanner', lane: 'Capture', label: 'Booth scanner', detail: 'Posts one immutable scan_id.' },
+    { id: 'intake', lane: 'Decision', label: '01 Intake', detail: 'Auth, replay guard, policy, final tier.' },
+    { id: 'enrich', lane: 'Decision', label: '04 Enrichment', detail: 'Domain-safe, confidence-graded evidence.' },
+    { id: 'ai', lane: 'Decision', label: '05 Gemini', detail: 'Ambiguous persona and opening question only.' },
+    { id: 'crmread', lane: 'Systems', label: '02A CRM context', detail: 'Read-only contact, company, owner and deals.' },
+    { id: 'hubspot', lane: 'Systems', label: '02 HubSpot', detail: 'Contact/company upsert, meeting and note.' },
+    { id: 'slack', lane: 'Humans', label: '03 Slack card', detail: 'Route, evidence, coaching and actions.' },
+    { id: 'actions', lane: 'Humans', label: '06 Slack actions', detail: 'HMAC-authenticated human corrections.' },
+    { id: 'tables', lane: 'Systems', label: 'Oak Data Tables', detail: 'Policy, competitors, deliveries, encounters and cache.' },
+    { id: 'failure', lane: 'Systems', label: '99 Failure handler', detail: 'Stage-aware operational alerts.' },
+  ],
+  flows: [
+    {
+      id: 'scan',
+      label: 'New scan → booth action',
+      steps: [
+        ['scanner', 'intake', 'Authenticated scanner payload'],
+        ['intake', 'crmread', 'Known CRM context'],
+        ['intake', 'enrich', 'Company evidence needed'],
+        ['enrich', 'ai', 'Only ambiguous persona'],
+        ['intake', 'tables', 'Persist complete result'],
+        ['intake', 'hubspot', 'CRM side effects'],
+        ['intake', 'slack', 'One routed card'],
+      ],
+    },
+    {
+      id: 'review',
+      label: 'Unknown size → human confirmation',
+      steps: [
+        ['scanner', 'intake', 'CISO + urgency, no count'],
+        ['intake', 'enrich', 'Search by resolved domain'],
+        ['enrich', 'tables', 'Store confidence and would-be tier'],
+        ['intake', 'slack', 'Possible Tier 1 review card'],
+        ['slack', 'actions', 'Promote or Not a fit'],
+        ['actions', 'hubspot', 'Persist human decision'],
+      ],
+    },
+    {
+      id: 'return',
+      label: 'Returning visitor',
+      steps: [
+        ['scanner', 'intake', 'New scan_id, same encounter'],
+        ['intake', 'tables', 'Append delivery and scan count'],
+        ['intake', 'hubspot', 'New note'],
+        ['intake', 'slack', 'Thread or escalate on tier-up'],
+      ],
+    },
+  ],
+};
+
+</script>
+    <script>
+(function () {
+  'use strict';
+
+  const main = document.querySelector('#main');
+  const data = window.OAK_DATA;
+  const journey = window.OAK_JOURNEY;
+  const graph = window.OAK_GRAPH;
+  const state = {
+    health: null,
+    dashboard: null,
+    leads: [],
+    policy: null,
+    competitors: [],
+    view: localStorage.getItem('oak-explorer-view') || 'business',
+    flow: 'scan',
+    preview: null,
+    lastResult: null,
+  };
+
+  const esc = (value) =>
+    String(value == null ? '' : value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  const pretty = (value) => JSON.stringify(value, null, 2);
+  const label = (value) => String(value || '').replaceAll('_', ' ').replace(/\b\w/g, (x) => x.toUpperCase());
+  const date = (value) =>
+    value ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value)) : '—';
+  const api = async (path, options) => {
+    if (window.OAK_OFFLINE) return offlineApi(path, options);
+    const response = await fetch(path, options);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(body.error || `Request failed (${response.status})`);
+      error.details = body.details;
+      throw error;
+    }
+    return body;
+  };
+  const mutationHeaders = () => ({
+    'content-type': 'application/json',
+    'x-oak-admin-token': sessionStorage.getItem('oak-admin-token') || '',
+  });
+
+  async function offlineApi(path, options) {
+    const source = window.OAK_OFFLINE_STATE;
+    const url = new URL(path, 'https://offline.oak.local');
+    const method = options?.method || 'GET';
+    if (method !== 'GET') {
+      if (url.pathname === '/api/payloads/validate' || url.pathname === '/api/payloads/dry-run') {
+        const payload = JSON.parse(options.body || '{}');
+        const preview = offlinePreview(payload, source.policy.document);
+        return {
+          ok: true,
+          mode: url.pathname.endsWith('dry-run') ? 'dry-run' : 'validate',
+          normalized_payload: payload,
+          preview,
+          side_effects_executed: false,
+        };
+      }
+      throw new Error('Interviewer mode is read-only. Run the local server for administration or live sends.');
+    }
+    if (url.pathname === '/api/health') {
+      return { ok: true, mode: 'interviewer', gateway_configured: false, scanner_configured: false };
+    }
+    if (url.pathname === '/api/dashboard') {
+      const eventId = url.searchParams.get('event_id');
+      const rows = source.leads.filter((lead) => !eventId || lead.event_id === eventId);
+      const count = (key, value) => rows.filter((row) => row[key] === value).length;
+      const latencies = rows
+        .filter((row) => row.completed_at)
+        .map((row) => new Date(row.completed_at) - new Date(row.scanned_at))
+        .sort((a, b) => a - b);
+      return {
+        mode: 'interviewer',
+        generated_at: new Date().toISOString(),
+        event_ids: [...new Set(source.leads.map((x) => x.event_id))],
+        selected_event_id: eventId || 'all',
+        metrics: {
+          scans: rows.length,
+          complete_rate: rows.length ? Math.round((count('status', 'complete') / rows.length) * 100) : 0,
+          tier_1: count('classification', 'tier_1'),
+          matched: count('classification', 'matched'),
+          needs_review: count('classification', 'needs_review'),
+          competitor_intel: count('classification', 'competitor_intel'),
+          out_of_scope: count('classification', 'out_of_scope'),
+          claimed: rows.filter((x) => x.claimed_by).length,
+          median_latency_ms: latencies[Math.floor(latencies.length / 2)] || 0,
+          enrichment_complete: count('enrichment_status', 'complete'),
+        },
+        classification_counts: groupOffline(rows, 'classification'),
+        policy_versions: groupOffline(rows, 'policy_version'),
+        recent: rows.slice().sort((a, b) => b.scanned_at.localeCompare(a.scanned_at)).slice(0, 8),
+        workflow_health: source.workflowHealth,
+        alerts: [
+          { severity: 'critical', text: 'Workflow 07 public form must remain disabled or authenticated.' },
+          { severity: 'warning', text: 'Workflow 06 has unpublished draft improvements.' },
+          { severity: 'warning', text: 'This shareable file is a read-only interviewer demo.' },
+        ],
+      };
+    }
+    if (url.pathname === '/api/leads') return { items: source.leads, count: source.leads.length };
+    if (url.pathname.startsWith('/api/leads/')) {
+      const scanId = decodeURIComponent(url.pathname.slice('/api/leads/'.length));
+      const lead = source.leads.find((x) => x.scan_id === scanId);
+      if (!lead) throw new Error('Lead not found.');
+      return lead;
+    }
+    if (url.pathname === '/api/policy') return source.policy;
+    if (url.pathname === '/api/competitors') return { items: source.competitors };
+    if (url.pathname === '/api/workflows') return { items: source.workflowHealth };
+    throw new Error('This route is unavailable in interviewer mode.');
+  }
+
+  function offlinePreview(payload, policy) {
+    if (!payload.scan_id || !payload.event_id || !payload.company_name) {
+      throw new Error('scan_id, event_id, and company_name are required.');
+    }
+    const title = String(payload.job_title || '').toLowerCase();
+    const notes = String(payload.notes_from_booth || '').toLowerCase();
+    const persona = /\bciso\b|chief information security|identity|iam|security/.test(title);
+    const urgency = /renew|breach|audit|deadline|sailpoint/.test(notes);
+    const competitor = /\bveza\b/.test(
+      `${payload.email || ''} ${payload.company_name || ''} ${notes}`.toLowerCase()
+    );
+    const count = payload.employee_count_observed == null ? null : Number(payload.employee_count_observed);
+    const reviewMin = Number(policy.company_fit.review_employee_min);
+    const qualifiedMin = Number(policy.company_fit.qualified_employee_min);
+    const sizeBand =
+      count == null
+        ? 'unknown'
+        : count >= qualifiedMin
+          ? 'qualified_1000_plus'
+          : count >= reviewMin
+            ? 'review_500_999'
+            : 'disqualified_under_500';
+    let classification;
+    if (competitor) classification = 'competitor_intel';
+    else if (sizeBand === 'disqualified_under_500') classification = 'out_of_scope';
+    else if (sizeBand === 'unknown' || sizeBand === 'review_500_999') classification = 'needs_review';
+    else if (persona && urgency) classification = 'tier_1';
+    else if (persona) classification = 'matched';
+    else classification = 'needs_review';
+    const score =
+      (persona ? policy.scoring.persona_points : 0) +
+      (sizeBand === 'qualified_1000_plus' ? policy.scoring.company_size_points : 0) +
+      (urgency ? policy.scoring.urgency_points : 0);
+    return {
+      classification,
+      would_be_classification:
+        classification === 'needs_review' ? (persona && urgency ? 'tier_1' : persona ? 'matched' : null) : null,
+      company_size_band: sizeBand,
+      needs_headcount_verification: sizeBand === 'unknown',
+      score,
+      mutations: {
+        hubspot: Boolean(payload.email),
+        slack_channel: policy.notifications[classification]?.channel || null,
+        mention: classification === 'tier_1',
+      },
+      side_effects_executed: false,
+    };
+  }
+
+  function groupOffline(items, key) {
+    return Object.fromEntries(
+      [...new Set(items.map((item) => item[key]))].map((value) => [
+        value,
+        items.filter((item) => item[key] === value).length,
+      ])
+    );
+  }
+
+  async function boot() {
+    try {
+      if (window.OAK_OFFLINE) {
+        state.health = { mode: 'offline' };
+        document.querySelector('#connection-label').textContent = 'interviewer demo';
+        await route();
+        return;
+      }
+      state.health = await api('/api/health');
+      const button = document.querySelector('#connection-button');
+      button.classList.add('connected');
+      document.querySelector('#connection-label').textContent = `${state.health.mode} mode`;
+      await route();
+    } catch (error) {
+      renderError(error);
+    }
+  }
+
+  async function route() {
+    const hash = location.hash || '#/';
+    setActiveNav(hash);
+    main.innerHTML = '<div class="loading"><span></span>Loading view…</div>';
+    try {
+      if (hash === '#/' || hash === '#') return renderDashboard();
+      if (hash === '#/leads') return renderLeads();
+      if (hash.startsWith('#/leads/')) return renderLead(decodeURIComponent(hash.slice('#/leads/'.length)));
+      if (hash === '#/policy') return renderPolicy();
+      if (hash === '#/competitors') return renderCompetitors();
+      if (hash === '#/explorer') return renderExplorer();
+      if (hash === '#/flow') return renderStage(journey.stages[0].id);
+      if (hash.startsWith('#/flow/')) return renderStage(hash.slice('#/flow/'.length));
+      if (hash === '#/scenarios') return renderScenarios();
+      if (hash.startsWith('#/scenarios/')) return renderScenario(hash.slice('#/scenarios/'.length));
+      if (hash === '#/use-cases') return renderUseCases();
+      if (hash.startsWith('#/explorer/')) return renderUseCase(hash.slice('#/explorer/'.length));
+      if (hash === '#/map') return renderMap();
+      if (hash === '#/console') return renderConsole();
+      location.hash = '#/';
+    } catch (error) {
+      renderError(error);
+    }
+  }
+
+  function setActiveNav(hash) {
+    const explainerRoutes = ['explorer', 'flow', 'scenarios', 'use-cases', 'map'];
+    const raw = hash === '#/' ? 'dashboard' : hash.split('/')[1];
+    const key = explainerRoutes.includes(raw) ? 'explorer' : raw;
+    document.querySelectorAll('[data-nav]').forEach((node) => node.classList.toggle('active', node.dataset.nav === key));
+  }
+
+  async function renderDashboard(provided) {
+    state.dashboard = provided || (await api('/api/dashboard'));
+    const d = state.dashboard;
+    const metrics = [
+      ['Scans', d.metrics.scans, 'current selection'],
+      ['Complete', `${d.metrics.complete_rate}%`, 'delivery status'],
+      ['Tier 1', d.metrics.tier_1, '#booth-hot'],
+      ['Needs review', d.metrics.needs_review, 'human check'],
+      ['Claimed', d.metrics.claimed, 'encounters'],
+      ['Median latency', `${(d.metrics.median_latency_ms / 1000).toFixed(1)}s`, 'scan → complete'],
+    ];
+    const maxTier = Math.max(...Object.values(d.classification_counts), 1);
+    main.innerHTML = `
+      <section class="page-header">
+        <div><p class="eyebrow">Live-event operations</p><h1>Booth signal, without the noise.</h1>
+          <p>One view of deterministic routing, evidence quality, workflow health, and the human decisions that move a scan forward.</p></div>
+        <div class="header-actions">
+          <select id="event-filter" aria-label="Event">
+            <option value="">All events</option>
+            ${d.event_ids.map((x) => `<option ${d.selected_event_id === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}
+          </select>
+          <a class="button secondary" href="#/console">Test a payload</a>
+        </div>
+      </section>
+      <section class="metric-grid">
+        ${metrics
+          .map(
+            ([name, value, note], index) => `<article class="metric"><span class="metric-label">${esc(name)}</span>
+              <strong>${esc(value)}</strong><small>${esc(note)}</small><i class="metric-accent" style="transform:scaleX(${Math.max(.12, 1 - index * .12)})"></i></article>`
+          )
+          .join('')}
+      </section>
+      <section class="dashboard-grid">
+        <div class="stack">
+          <article class="panel"><header class="panel-header"><h2>Classification mix</h2><span class="pill">${esc(d.selected_event_id)}</span></header>
+            <div class="panel-body tier-bars">${data.classifications
+              .map((tier) => {
+                const count = d.classification_counts[tier.id] || 0;
+                return `<div class="bar-row ${tier.id}"><span>${esc(tier.label)}</span><div class="bar-track"><div class="bar-fill" style="width:${(count / maxTier) * 100}%"></div></div><b>${count}</b></div>`;
+              })
+              .join('')}</div></article>
+          <article class="panel"><header class="panel-header"><h2>Recent scans</h2><a href="#/leads" class="button small secondary">View all</a></header>
+            ${leadTable(d.recent)}</article>
+        </div>
+        <aside class="stack">
+          <article class="panel"><header class="panel-header"><h2>Operational alerts</h2><span class="pill warning">${d.alerts.length}</span></header>
+            <div class="panel-body"><ul class="alert-list">${d.alerts.map((a) => `<li class="alert" data-severity="${esc(a.severity)}">${esc(a.text)}</li>`).join('')}</ul></div></article>
+          <article class="panel"><header class="panel-header"><h2>Workflow health</h2><a href="#/map" class="button small secondary">Open map</a></header>
+            <div class="panel-body workflow-list">${d.workflow_health.slice(0, 7).map(workflowRow).join('')}</div>
+            <footer class="panel-footer">${d.workflow_health.filter((x) => x.health === 'healthy').length}/${d.workflow_health.length} healthy</footer></article>
+        </aside>
+      </section>`;
+  }
+
+  async function renderLeads() {
+    const result = await api('/api/leads');
+    state.leads = result.items;
+    main.innerHTML = `
+      <section class="page-header"><div><p class="eyebrow">Encounter ledger</p><h1>Every scan has a reason.</h1>
+        <p>Filter final delivery outcomes. Open a row to see the evidence, confidence, policy version, and human state behind the classification.</p></div></section>
+      <div class="filters"><input type="search" id="lead-search" placeholder="Search person, company, email, scan id" />
+        <select id="tier-filter"><option value="">All classifications</option>${data.classifications.map((x) => `<option value="${x.id}">${esc(x.label)}</option>`).join('')}</select>
+        <span class="muted" id="lead-count">${result.count} scans</span></div>
+      <article class="panel" id="lead-results">${leadTable(state.leads)}</article>`;
+  }
+
+  async function renderLead(scanId) {
+    const lead = await api(`/api/leads/${encodeURIComponent(scanId)}`);
+    main.innerHTML = `
+      <div class="header-actions"><a href="#/leads" class="button small secondary">← All leads</a></div>
+      <section class="detail-grid" style="margin-top:1rem">
+        <article class="panel">
+          <div class="detail-hero"><p class="eyebrow">${esc(lead.scan_id)}</p><span class="pill ${esc(lead.classification)}">${esc(label(lead.classification))}</span>
+            <h1>${esc(lead.name)}</h1><p class="company">${esc(lead.title)} · ${esc(lead.company)}</p></div>
+          <div class="fact-grid">
+            ${fact('Score', `${lead.score}/100`)}${fact('Size band', label(lead.company_size_band))}${fact('Status', label(lead.status))}
+            ${fact('Policy', lead.policy_version)}${fact('Slack route', `#${lead.channel}`)}${fact('Scanned', date(lead.scanned_at))}
+          </div>
+          <section class="editor-section"><h3>Deterministic reasons</h3><ol class="reason-list">${(lead.decision_reasons || []).map((x) => `<li>${esc(x)}</li>`).join('')}</ol></section>
+          <section class="editor-section"><h3>Sourced evidence</h3><div class="evidence-list">${(lead.evidence || [])
+            .map(
+              (e) => `<article class="evidence-card"><b>${esc(label(e.type))}</b>“${esc(e.quote)}”
+                <div class="evidence-meta"><span>${esc(label(e.source))}</span><span>${Math.round(Number(e.confidence || 0) * 100)}% confidence</span></div></article>`
+            )
+            .join('') || '<p class="muted">No evidence retained.</p>'}</div></section>
+        </article>
+        <aside class="stack sticky">
+          ${lead.would_be_classification ? `<article class="warning-box"><b>Possible ${esc(label(lead.would_be_classification))}</b><br/>Confirm 1,000+ employees before treating this lead as hot.</article>` : ''}
+          <article class="panel"><header class="panel-header"><h3>Encounter state</h3></header><div class="panel-body">
+            ${fact('Claimed by', lead.claimed_by || 'Unclaimed')}${fact('Booth status', label(lead.booth_status))}${fact('Enrichment', label(lead.enrichment_status))}
+          </div></article>
+          <article class="panel"><header class="panel-header"><h3>Identity model</h3></header><div class="panel-body muted">
+            <p><b>Person</b><br>${esc(lead.email || 'No email')}</p><p><b>Encounter</b><br>${esc(lead.event_id)} + person</p><p><b>Delivery</b><br><span class="mono">${esc(lead.scan_id)}</span></p>
+          </div></article>
+        </aside>
+      </section>`;
+  }
+
+  async function renderPolicy() {
+    state.policy = await api('/api/policy');
+    const p = state.policy;
+    const doc = p.document;
+    const confidence = doc.enrichment.employee_confidence;
+    main.innerHTML = `
+      <section class="page-header"><div><p class="eyebrow">Policy as data</p><h1>Change the rules, not the workflow.</h1>
+        <p>Edits create a new draft. Oak validates confidence and routing invariants, runs canonical regressions, and activates only after an explicit confirmation.</p></div>
+        <div class="header-actions"><span class="pill active">${esc(p.status)}</span><span class="mono">${esc(p.version)}</span></div></section>
+      <section class="editor-grid">
+        <form class="panel" id="policy-form">
+          <section class="editor-section"><h3>Version</h3><div class="field-grid">
+            <label>New version<input name="version" value="${esc(nextVersion(p.version))}" required /></label>
+            <label>Event id<input name="event_id" value="${esc(doc.event_id)}" /></label>
+          </div></section>
+          <section class="editor-section"><h3>Company-size gates</h3><div class="field-grid">
+            <label>Review band begins<input name="review_employee_min" type="number" value="${doc.company_fit.review_employee_min}" /></label>
+            <label>Qualified begins<input name="qualified_employee_min" type="number" value="${doc.company_fit.qualified_employee_min}" /></label>
+            <label>Trust threshold<input name="verification_threshold" type="number" min="0" max="1" step=".05" value="${doc.enrichment.employee_verification_required_below}" /></label>
+            <label>Cache TTL days<input name="cache_ttl_days" type="number" value="${doc.enrichment.cache_ttl_days}" /></label>
+          </div></section>
+          <section class="editor-section"><h3>Evidence confidence</h3><div class="field-grid">
+            ${Object.entries(confidence).map(([key, value]) => `<label>${esc(label(key))}<input name="confidence_${esc(key)}" type="number" min="0" max="1" step=".05" value="${value}" /></label>`).join('')}
+          </div></section>
+          <section class="editor-section"><h3>Scoring</h3><div class="field-grid">
+            ${['persona_points', 'company_size_points', 'industry_points', 'urgency_points'].map((key) => `<label>${esc(label(key))}<input name="${key}" type="number" value="${doc.scoring[key]}" /></label>`).join('')}
+          </div></section>
+          <section class="editor-section"><h3>Slack routes</h3><div class="field-grid">
+            ${data.classifications.map((tier) => `<label>${esc(tier.label)}<input name="channel_${tier.id}" value="${esc(doc.notifications[tier.id]?.channel || '')}" /></label>`).join('')}
+          </div></section>
+          <section class="editor-section"><h3>Feature flags</h3><div class="field-grid">
+            <label><span>Slack actions</span><select name="slack_actions_enabled"><option value="true" ${doc.feature_flags.slack_actions_enabled ? 'selected' : ''}>Enabled</option><option value="false" ${!doc.feature_flags.slack_actions_enabled ? 'selected' : ''}>Disabled</option></select></label>
+            <label><span>Public search</span><select name="public_search_enabled"><option value="true" ${doc.feature_flags.public_search_enabled ? 'selected' : ''}>Enabled</option><option value="false" ${!doc.feature_flags.public_search_enabled ? 'selected' : ''}>Disabled</option></select></label>
+          </div></section>
+        </form>
+        <aside class="stack sticky">
+          <article class="panel"><header class="panel-header"><h3>Activation gate</h3></header><div class="panel-body">
+            <div id="policy-validation" class="validation"><div class="validation-item">Current active policy loaded.</div></div>
+            <div class="console-actions"><button class="button" data-action="save-policy-draft" ${window.OAK_OFFLINE ? 'disabled title="Read-only interviewer mode"' : ''}>Save new draft</button></div>
+          </div></article>
+          <article class="warning-box"><b>Headcount contract</b><br/>Booth-stated counts are first-party evidence. Domain-matched or official evidence at ≥0.9 may qualify. Name-only search remains review-only.</article>
+          <article class="panel"><header class="panel-header"><h3>Source precedence</h3></header><div class="panel-body">
+            <ol class="reason-list">${doc.enrichment.employee_source_precedence.map((x) => `<li>${esc(label(x))}</li>`).join('')}</ol>
+          </div></article>
+        </aside>
+      </section>`;
+  }
+
+  async function renderCompetitors() {
+    const result = await api('/api/competitors');
+    state.competitors = result.items;
+    main.innerHTML = `
+      <section class="page-header"><div><p class="eyebrow">Closed competitor set</p><h1>Identity is not incumbency.</h1>
+        <p>Active domains and aliases route competitor intel. Products a prospect already uses belong in policy as incumbent tools and may create urgency.</p></div>
+        <button class="button" data-action="new-competitor" ${window.OAK_OFFLINE ? 'disabled title="Read-only interviewer mode"' : ''}>Add competitor</button></section>
+      <div class="competitor-grid">${state.competitors.map(competitorCard).join('')}</div>
+      <dialog id="competitor-dialog"><form method="dialog" class="dialog-card" id="competitor-form">
+        <header><div><p class="eyebrow">Competitor record</p><h2 id="competitor-dialog-title">Add competitor</h2></div><button value="cancel" class="icon-button">×</button></header>
+        <input name="id" type="hidden" />
+        <div class="field-grid">
+          <label>Name<input name="name" required /></label><label>Category<input name="category" value="identity_security" /></label>
+          <label>Domains (comma-separated)<input name="domains" placeholder="example.com" /></label><label>Aliases (comma-separated)<input name="aliases" /></label>
+          <label>Status<select name="status"><option value="active">Active</option><option value="pending">Pending</option></select></label>
+          <label>Routing<select name="active"><option value="true">Enabled</option><option value="false">Disabled</option></select></label>
+        </div>
+        <div class="dialog-actions"><button value="cancel" class="button secondary">Cancel</button><button value="save" class="button" data-action="save-competitor">Save</button></div>
+      </form></dialog>`;
+  }
+
+  function renderExplorer() {
+    main.innerHTML = `
+      <section class="page-header"><div><p class="eyebrow">How Oak works</p><h1>Follow one badge scan all the way through.</h1>
+        <p>Oak turns a badge scan into a routed, evidenced decision in about two seconds. This section explains the pipeline one stage at a time with the hypothesis behind each decision, then replays real visitors end to end so you can watch that reasoning produce an actual outcome.</p></div></section>
+      <section class="entry-grid">
+        <a class="entry-card" href="#/flow">
+          <span class="entry-index">Start here</span>
+          <h2>The pipeline, stage by stage</h2>
+          <p>Twelve stages from “a scan arrives” to “a failure is reported as a consequence”. Each states what happens, the hypothesis behind it, and the alternative we deliberately rejected.</p>
+          <footer><span class="pill">${journey.stages.length} stages</span><span class="muted">about 6 minutes</span></footer>
+        </a>
+        <a class="entry-card" href="#/scenarios">
+          <span class="entry-index">Then</span>
+          <h2>End-to-end scenarios</h2>
+          <p>Five visitors traced through every stage, including the Slack card each one produces and what a naive design would have done instead.</p>
+          <footer><span class="pill">${journey.scenarios.length} walkthroughs</span><span class="muted">about 5 minutes</span></footer>
+        </a>
+        <a class="entry-card" href="#/use-cases">
+          <span class="entry-index">Reference</span>
+          <h2>Capability catalog</h2>
+          <p>Per-capability detail behind the pipeline: ordered logic, evidence contracts, owning workflow, and the gaps still open.</p>
+          <footer><span class="pill">${data.useCases.length} use cases</span><span class="muted">reference</span></footer>
+        </a>
+      </section>
+      <section class="panel" style="margin-top:1rem"><header class="panel-header"><h2>The decision contract</h2><span class="muted">what every stage works toward</span></header>
+        <div class="data-table-wrap"><table class="data-table"><thead><tr><th>Outcome</th><th>Rule</th><th>Route</th><th>Treatment</th></tr></thead><tbody>
+          ${data.classifications.map((x) => `<tr><td><span class="pill ${x.id}">${esc(x.label)}</span></td><td>${esc(x.rule)}</td><td>${esc(x.channel)}</td><td>${esc(x.treatment)}</td></tr>`).join('')}
+        </tbody></table></div>
+        <footer class="panel-footer">Rules decide the outcome. The score explains it. The model never picks a channel.</footer></section>`;
+  }
+
+  function renderStage(stageId) {
+    const index = Math.max(journey.stages.findIndex((x) => x.id === stageId), 0);
+    const stage = journey.stages[index];
+    const previous = journey.stages[index - 1];
+    const next = journey.stages[index + 1];
+    const business = state.view === 'business';
+    main.innerHTML = `
+      <div class="header-actions"><a href="#/explorer" class="button small secondary">← How it works</a>
+        <div class="segmented"><button data-action="set-view" data-view="business" class="${business ? 'active' : ''}">Business</button><button data-action="set-view" data-view="technical" class="${!business ? 'active' : ''}">Technical</button></div>
+        <span class="muted">Stage ${stage.number} of ${journey.stages.length}</span></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${((index + 1) / journey.stages.length) * 100}%"></div></div>
+      <section class="stage-grid">
+        <nav class="panel stage-rail"><header class="panel-header"><h3>Pipeline</h3></header><div class="panel-body stage-list">
+          ${journey.stages
+            .map(
+              (item, i) =>
+                `<a class="stage-link ${item.id === stage.id ? 'current' : ''} ${i < index ? 'done' : ''}" href="#/flow/${esc(item.id)}"><span>${item.number}</span><div><b>${esc(item.title)}</b><small>${esc(item.owner)}</small></div></a>`
+            )
+            .join('')}
+        </div></nav>
+        <article class="stage-main">
+          <p class="eyebrow">Stage ${stage.number} · ${esc(stage.owner)}</p>
+          <h1>${esc(stage.title)}</h1>
+          <p class="stage-question">${esc(stage.question)}</p>
+          <section class="uc-block"><h2>What happens</h2><p>${esc(stage.business)}</p></section>
+          ${business ? '' : `<section class="uc-block"><h2>How it works</h2><ol>${stage.mechanics.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></section>`}
+          <section class="uc-block accent"><h2>Hypothesis</h2><p>${esc(stage.hypothesis)}</p></section>
+          <section class="uc-block"><h2>What we rejected, and why</h2><p>${esc(stage.rejected)}</p></section>
+          ${
+            business
+              ? ''
+              : `<section class="uc-block"><h2>Evidence produced</h2><p>${esc(stage.evidence)}</p></section>
+                 <section class="uc-block"><h2>When it fails</h2><p>${esc(stage.failure)}</p></section>`
+          }
+          <div class="pager">
+            ${previous ? `<a class="button secondary" href="#/flow/${esc(previous.id)}">← ${esc(previous.title)}</a>` : '<span></span>'}
+            ${next ? `<a class="button" href="#/flow/${esc(next.id)}">${esc(next.title)} →</a>` : '<a class="button" href="#/scenarios">See it end to end →</a>'}
+          </div>
+        </article>
+      </section>`;
+  }
+
+  function renderScenarios() {
+    main.innerHTML = `
+      <section class="page-header"><div><p class="eyebrow">End-to-end scenarios</p><h1>The same pipeline, five different visitors.</h1>
+        <p>Each walkthrough follows one badge scan through every stage, shows the Slack card it produces, and states what a naive design would have done instead.</p></div>
+        <a class="button secondary" href="#/flow">Review the stages</a></section>
+      <section class="scenario-grid">${journey.scenarios
+        .map(
+          (s) => `<a class="scenario-card" href="#/scenarios/${esc(s.id)}">
+            <span class="pill ${esc(s.outcome)}">${esc(s.outcomeLabel)}</span>
+            <h2>${esc(s.title)}</h2>
+            <p class="scenario-persona">${esc(s.persona)}</p>
+            <p>${esc(s.tension)}</p>
+            <footer><span class="muted">${s.steps.length} stages traced</span><span class="link-arrow">Walk it →</span></footer>
+          </a>`
+        )
+        .join('')}</section>`;
+  }
+
+  function renderScenario(id) {
+    const s = journey.scenarios.find((x) => x.id === id);
+    if (!s) return (location.hash = '#/scenarios');
+    const stageOf = (stageId) => journey.stages.find((x) => x.id === stageId) || { title: stageId, number: '·' };
+    main.innerHTML = `
+      <div class="header-actions"><a href="#/scenarios" class="button small secondary">← All scenarios</a></div>
+      <section class="page-header" style="margin-top:1rem"><div><p class="eyebrow">${esc(s.persona)}</p><h1>${esc(s.title)}</h1>
+        <p>${esc(s.tension)}</p><p class="booth-quote">Booth notes: “${esc(s.notes)}”</p></div>
+        <span class="pill ${esc(s.outcome)}">${esc(s.outcomeLabel)}</span></section>
+      <section class="detail-grid">
+        <article class="panel"><header class="panel-header"><h2>What each stage did</h2><span class="muted">${s.steps.length} stages</span></header>
+          <div class="panel-body trace">${s.steps
+            .map(([stageId, action, detail]) => {
+              const stage = stageOf(stageId);
+              return `<div class="trace-step"><div class="trace-marker">${esc(stage.number)}</div>
+                <div class="trace-body"><a class="trace-stage" href="#/flow/${esc(stageId)}">${esc(stage.title)}</a>
+                  <b>${esc(action)}</b><p>${esc(detail)}</p></div></div>`;
+            })
+            .join('')}</div></article>
+        <aside class="stack sticky">
+          <article class="slack-card ${s.card.mention ? 'hot' : ''}">
+            <header><span class="slack-channel">#${esc(s.card.channel)}</span>${s.card.mention ? '<span class="pill tier_1">@here</span>' : ''}</header>
+            <b class="slack-header">${esc(s.card.header)}</b>
+            <p class="slack-lead">${esc(s.card.lead)}</p>
+            <dl>${s.card.facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+            <p class="slack-next"><b>Next at the booth.</b> ${esc(s.card.next)}</p>
+            ${s.card.buttons.length ? `<div class="slack-buttons">${s.card.buttons.map((b) => `<span>${esc(b)}</span>`).join('')}</div>` : '<p class="muted slack-quiet">No action buttons. This card exists for the record.</p>'}
+          </article>
+          <article class="panel"><header class="panel-header"><h3>Why the design matters here</h3></header>
+            <div class="panel-body"><p class="muted">${esc(s.counterfactual)}</p></div></article>
+        </aside>
+      </section>`;
+  }
+
+  function renderUseCases() {
+    const business = state.view === 'business';
+    main.innerHTML = `
+      <section class="page-header"><div><p class="eyebrow">Capability reference</p><h1>The logic behind every route.</h1>
+        <p>Business view explains the operator experience and hypothesis. Technical view shows ordered gates, evidence contracts, owning workflows, and open gaps.</p></div>
+        <div class="header-actions"><a class="button secondary" href="#/flow">Pipeline</a><a class="button secondary" href="#/map">System map</a></div></section>
+      <div class="explorer-toolbar"><div class="segmented"><button data-action="set-view" data-view="business" class="${business ? 'active' : ''}">Business</button>
+        <button data-action="set-view" data-view="technical" class="${!business ? 'active' : ''}">Technical</button></div>
+        <input id="use-case-search" type="search" placeholder="Search use cases, hypotheses, workflows…" style="max-width:380px" /></div>
+      <section class="use-case-grid" id="use-case-grid">${data.useCases.map(useCaseCard).join('')}</section>
+      <p class="muted" style="margin-top:1rem">Looking for the narrative instead? Walk <a href="#/flow">the pipeline</a> or replay an <a href="#/scenarios">end-to-end scenario</a>.</p>`;
+  }
+
+  function renderUseCase(id) {
+    const uc = data.useCases.find((x) => x.id === id);
+    if (!uc) return (location.hash = '#/use-cases');
+    const business = state.view === 'business';
+    main.innerHTML = `
+      <article class="uc-detail">
+        <div class="header-actions"><a href="#/use-cases" class="button small secondary">← Catalog</a>
+          <div class="segmented"><button data-action="set-view" data-view="business" class="${business ? 'active' : ''}">Business</button><button data-action="set-view" data-view="technical" class="${!business ? 'active' : ''}">Technical</button></div></div>
+        <p class="eyebrow" style="margin-top:2rem!important">Use case ${esc(uc.number)} · ${esc(uc.owner)}</p>
+        <h1>${esc(uc.title)}</h1>
+        <div class="header-actions"><span class="pill ${esc(uc.status)}">${esc(uc.status)}</span>${uc.workflows.map((x) => `<span class="tag">${esc(x)}</span>`).join('')}</div>
+        <section class="uc-block"><h2>Hypothesis</h2><p>${esc(uc.hypothesis)}</p></section>
+        ${
+          business
+            ? `<section class="uc-block"><h2>What happens</h2><p>${esc(uc.business)}</p></section>
+               <section class="uc-block"><h2>Why this treatment</h2><p>${esc(uc.hypothesis)}</p></section>`
+            : `<section class="uc-block"><h2>Ordered logic</h2><ol>${uc.logic.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></section>
+               <section class="uc-block"><h2>Evidence contract</h2><p>${esc(uc.evidence)}</p></section>
+               <section class="uc-block"><h2>Gap to verify</h2><p>${esc(uc.gap)}</p></section>`
+        }
+      </article>`;
+  }
+
+  function renderMap() {
+    const flow = graph.flows.find((x) => x.id === state.flow) || graph.flows[0];
+    main.innerHTML = `
+      <section class="page-header"><div><p class="eyebrow">System map</p><h1>Follow the evidence.</h1>
+        <p>Each flow shows where deterministic state is created, where enrichment may add evidence, and where a human is allowed to override.</p></div>
+        <select id="flow-select">${graph.flows.map((x) => `<option value="${x.id}" ${x.id === flow.id ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select></section>
+      <section class="panel"><div class="panel-body map"><div class="map-lanes">${graph.lanes.map((x) => `<div class="lane-label">${esc(x)}</div>`).join('')}</div>
+        <div class="map-content">${graph.lanes.map((lane) => `<div class="map-lane">${graph.nodes.filter((x) => x.lane === lane).map((node) => `<article class="map-node"><b>${esc(node.label)}</b><small>${esc(node.detail)}</small></article>`).join('')}</div>`).join('')}</div>
+      </div></section>
+      <section class="dashboard-grid" style="margin-top:1rem"><article class="panel"><header class="panel-header"><h2>${esc(flow.label)}</h2></header><div class="panel-body flow-steps">
+        ${flow.steps.map(([from, to, text]) => `<div class="flow-step"><span><b>${esc(nodeLabel(from))} → ${esc(nodeLabel(to))}</b><br>${esc(text)}</span></div>`).join('')}</div></article>
+        <aside class="panel"><header class="panel-header"><h2>Non-negotiables</h2></header><div class="panel-body"><ul class="reason-list">
+          <li>Rules own tier, channel, competitor identity, size bands, and disqualifiers.</li><li>Scores explain; they do not route.</li><li>Claims require a source URL or booth quote.</li><li>Final success is a complete delivery, not a 202 response.</li>
+        </ul></div></aside></section>`;
+  }
+
+  function renderConsole() {
+    const first = data.fixtures.apex;
+    main.innerHTML = `
+      <section class="page-header"><div><p class="eyebrow">Dry-run first</p><h1>See the result before the side effects.</h1>
+        <p>Validation and dry-run are local and safe. Live send requires an admin key, an allowlisted <span class="mono">oak-ui-test-*</span> scan id, and the exact confirmation phrase.</p></div></section>
+      <section class="console-grid">
+        <div class="panel"><header class="panel-header"><h2>Scanner payload</h2><select id="fixture-select" style="max-width:320px">${Object.entries(data.fixtures).map(([key, x]) => `<option value="${key}">${esc(x.label)}</option>`).join('')}</select></header>
+          <div class="panel-body"><textarea id="payload-editor" class="json-editor" spellcheck="false">${esc(pretty(first.payload))}</textarea>
+            <div class="console-actions"><button class="button secondary" data-action="validate-payload">Validate</button><button class="button" data-action="dry-run">Dry run</button><button class="button danger" data-action="live-send" ${window.OAK_OFFLINE ? 'disabled title="Read-only interviewer mode"' : ''}>Send live…</button></div>
+            <pre class="result-box" id="console-result">No request yet.</pre></div></div>
+        <aside class="stack">
+          <article class="warning-box"><b>Safe-live boundary</b><br/>A 202 means accepted, not completed. After send, this console polls the delivery result. Workflow 07’s public relay is not used.</article>
+          <article class="preview-card" id="payload-preview">${renderPreview(null)}</article>
+          <article class="panel"><header class="panel-header"><h3>Canonical expectations</h3></header><div class="panel-body"><ul class="reason-list">
+            <li>Apex + CISO + renewal + no count → needs review.</li><li>Booth-stated 2,000 → Tier 1.</li><li>Known 800 → needs review.</li><li>Known 80 → out of scope.</li>
+          </ul></div></article>
+        </aside>
+      </section>`;
+  }
+
+  function leadTable(leads) {
+    return `<div class="data-table-wrap"><table class="data-table"><thead><tr><th>Visitor</th><th>Company</th><th>Classification</th><th>Score</th><th>Status</th><th>Scanned</th></tr></thead><tbody>
+      ${leads
+        .map(
+          (lead) => `<tr data-open-lead="${esc(lead.scan_id)}"><td class="name-cell"><b>${esc(lead.name)}</b><span>${esc(lead.title)}</span></td><td>${esc(lead.company)}</td>
+            <td><span class="pill ${esc(lead.classification)}">${esc(label(lead.classification))}</span>${lead.would_be_classification ? `<br><small class="muted">possible ${esc(label(lead.would_be_classification))}</small>` : ''}</td>
+            <td>${esc(lead.score)}</td><td>${esc(label(lead.status))}</td><td>${esc(date(lead.scanned_at))}</td></tr>`
+        )
+        .join('') || '<tr><td colspan="6" class="muted">No scans match these filters.</td></tr>'}
+      </tbody></table></div>`;
+  }
+
+  function workflowRow(w) {
+    return `<div class="workflow"><span class="workflow-step">${esc(w.step)}</span><div><b>${esc(w.name)}</b><small>${esc(w.state)}</small></div><span class="pill ${esc(w.health)}">${esc(w.health)}</span></div>`;
+  }
+
+  function fact(name, value) {
+    return `<div class="fact"><small>${esc(name)}</small><b>${esc(value)}</b></div>`;
+  }
+
+  function competitorCard(c) {
+    return `<article class="competitor-card"><header><div><h3>${esc(c.name)}</h3><span class="muted">${esc(label(c.category))}</span></div><span class="pill ${c.active ? 'active' : 'warning'}">${c.active ? esc(c.status) : 'disabled'}</span></header>
+      <div class="tag-list">${(c.domains || []).map((x) => `<span class="tag">${esc(x)}</span>`).join('')}${(c.aliases || []).map((x) => `<span class="tag">“${esc(x)}”</span>`).join('')}</div>
+      <div class="card-actions"><button class="button small secondary" data-action="edit-competitor" data-id="${esc(c.id)}" ${window.OAK_OFFLINE ? 'disabled' : ''}>Edit</button><button class="button small danger" data-action="delete-competitor" data-id="${esc(c.id)}" ${window.OAK_OFFLINE ? 'disabled' : ''}>Delete</button></div></article>`;
+  }
+
+  function useCaseCard(uc) {
+    const summary = state.view === 'business' ? uc.business : uc.logic[0];
+    return `<a class="use-case-card" href="#/explorer/${esc(uc.id)}" data-hay="${esc(`${uc.title} ${uc.hypothesis} ${uc.business} ${uc.logic.join(' ')} ${uc.workflows.join(' ')}`.toLowerCase())}">
+      <span class="uc-number">UC ${esc(uc.number)}</span><h2>${esc(uc.title)}</h2><p>${esc(summary)}</p>
+      <footer><span class="pill ${esc(uc.status)}">${esc(uc.status)}</span><span class="muted">${esc(uc.owner)}</span></footer></a>`;
+  }
+
+  function renderPreview(preview) {
+    if (!preview) return '<h3>Expected decision</h3><p class="muted">Validate or dry-run a payload to inspect the deterministic preview.</p>';
+    return `<h3>Expected decision</h3><span class="pill ${esc(preview.classification)}">${esc(label(preview.classification))}</span>
+      ${preview.would_be_classification ? `<p class="warning-box">Possible ${esc(label(preview.would_be_classification))} — confirm 1,000+.</p>` : ''}
+      <p><span class="score">${esc(preview.score)}</span><span class="muted"> / 100</span></p>
+      <div class="mutation-list"><div class="mutation"><span>Size band</span><b>${esc(label(preview.company_size_band))}</b></div>
+        <div class="mutation"><span>Slack</span><b>${esc(preview.mutations?.slack_channel ? `#${preview.mutations.slack_channel}` : 'none')}</b></div>
+        <div class="mutation"><span>@here</span><b>${preview.mutations?.mention ? 'yes' : 'no'}</b></div>
+        <div class="mutation"><span>HubSpot</span><b>${preview.mutations?.hubspot ? 'would sync' : 'skip'}</b></div></div>`;
+  }
+
+  function collectPolicy() {
+    const form = new FormData(document.querySelector('#policy-form'));
+    const clone = structuredClone(state.policy.document);
+    clone.event_id = form.get('event_id');
+    clone.company_fit.review_employee_min = Number(form.get('review_employee_min'));
+    clone.company_fit.qualified_employee_min = Number(form.get('qualified_employee_min'));
+    clone.enrichment.employee_verification_required_below = Number(form.get('verification_threshold'));
+    clone.enrichment.cache_ttl_days = Number(form.get('cache_ttl_days'));
+    for (const key of Object.keys(clone.enrichment.employee_confidence)) {
+      clone.enrichment.employee_confidence[key] = Number(form.get(`confidence_${key}`));
+    }
+    for (const key of ['persona_points', 'company_size_points', 'industry_points', 'urgency_points']) clone.scoring[key] = Number(form.get(key));
+    for (const tier of data.classifications) clone.notifications[tier.id].channel = form.get(`channel_${tier.id}`);
+    clone.feature_flags.slack_actions_enabled = form.get('slack_actions_enabled') === 'true';
+    clone.feature_flags.public_search_enabled = form.get('public_search_enabled') === 'true';
+    return { version: form.get('version'), document: clone };
+  }
+
+  async function savePolicyDraft() {
+    const payload = collectPolicy();
+    const result = await api('/api/policy/drafts', { method: 'POST', headers: mutationHeaders(), body: JSON.stringify(payload) });
+    const target = document.querySelector('#policy-validation');
+    target.innerHTML = [
+      ...(result.validation.errors || []).map((x) => `<div class="validation-item error">${esc(x)}</div>`),
+      ...(result.validation.warnings || []).map((x) => `<div class="validation-item warning">${esc(x)}</div>`),
+      ...result.regression.cases.map((x) => `<div class="validation-item ${x.passed ? '' : 'error'}">${esc(x.name)}: ${esc(x.actual)}</div>`),
+    ].join('');
+    target.insertAdjacentHTML(
+      'beforeend',
+      `<label>Activation confirmation<input id="activate-confirm" placeholder="ACTIVATE ${esc(result.version)}" /></label><button class="button" data-action="activate-policy" data-version="${esc(result.version)}">Activate ${esc(result.version)}</button>`
+    );
+    toast(`Draft ${result.version} saved; review regression before activation.`);
+  }
+
+  async function activatePolicy(version) {
+    const confirm = document.querySelector('#activate-confirm')?.value || '';
+    const result = await api(`/api/policy/${encodeURIComponent(version)}/activate`, {
+      method: 'POST',
+      headers: mutationHeaders(),
+      body: JSON.stringify({ confirm }),
+    });
+    toast(`${result.version} is now active.`);
+    await renderPolicy();
+  }
+
+  function openCompetitor(id) {
+    const competitor = state.competitors.find((x) => x.id === id);
+    const dialog = document.querySelector('#competitor-dialog');
+    const form = dialog.querySelector('form');
+    form.reset();
+    form.elements.id.value = competitor?.id || '';
+    form.elements.name.value = competitor?.name || '';
+    form.elements.category.value = competitor?.category || 'identity_security';
+    form.elements.domains.value = (competitor?.domains || []).join(', ');
+    form.elements.aliases.value = (competitor?.aliases || []).join(', ');
+    form.elements.status.value = competitor?.status || 'active';
+    form.elements.active.value = String(competitor?.active !== false);
+    document.querySelector('#competitor-dialog-title').textContent = competitor ? `Edit ${competitor.name}` : 'Add competitor';
+    dialog.showModal();
+  }
+
+  async function saveCompetitor() {
+    const form = document.querySelector('#competitor-form');
+    const values = new FormData(form);
+    const id = values.get('id');
+    const payload = {
+      name: values.get('name'),
+      category: values.get('category'),
+      domains: String(values.get('domains')).split(','),
+      aliases: String(values.get('aliases')).split(','),
+      status: values.get('status'),
+      active: values.get('active') === 'true',
+    };
+    await api(id ? `/api/competitors/${encodeURIComponent(id)}` : '/api/competitors', {
+      method: id ? 'PUT' : 'POST',
+      headers: mutationHeaders(),
+      body: JSON.stringify(payload),
+    });
+    toast(`${payload.name} saved.`);
+    await renderCompetitors();
+  }
+
+  async function deleteCompetitor(id) {
+    if (!confirm('Delete this competitor record? This is not the same as disabling routing.')) return;
+    await api(`/api/competitors/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: mutationHeaders(),
+      body: JSON.stringify({ confirm: 'DELETE COMPETITOR' }),
+    });
+    toast('Competitor deleted.');
+    await renderCompetitors();
+  }
+
+  function readPayloadEditor() {
+    try {
+      return JSON.parse(document.querySelector('#payload-editor').value);
+    } catch {
+      throw new Error('Payload editor contains invalid JSON.');
+    }
+  }
+
+  async function runPayload(mode) {
+    const payload = readPayloadEditor();
+    const result = await api(`/api/payloads/${mode}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    state.preview = result.preview;
+    document.querySelector('#payload-preview').innerHTML = renderPreview(result.preview);
+    document.querySelector('#console-result').textContent = pretty(result);
+    toast(mode === 'dry-run' ? 'Dry run complete; no side effects executed.' : 'Payload validated.');
+  }
+
+  async function liveSend() {
+    const payload = readPayloadEditor();
+    const confirmation = prompt(`This can mutate Slack and HubSpot in live mode.\n\nType SEND LIVE to send ${payload.scan_id}:`);
+    if (confirmation !== 'SEND LIVE') return;
+    const accepted = await api('/api/payloads/send', {
+      method: 'POST',
+      headers: mutationHeaders(),
+      body: JSON.stringify({ payload, confirm: confirmation }),
+    });
+    document.querySelector('#console-result').textContent = pretty(accepted);
+    toast('Payload accepted. Checking final delivery status…');
+    let final = null;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, attempt ? 1200 : 250));
+      final = await api(accepted.status_url);
+      if (final.found && final.status === 'complete') break;
+    }
+    document.querySelector('#console-result').textContent = pretty({ accepted, final });
+    if (final?.status === 'complete') {
+      document.querySelector('#payload-preview').innerHTML = renderPreview({
+        ...final.result,
+        mutations: {
+          slack_channel: final.result.channel,
+          mention: final.result.classification === 'tier_1',
+          hubspot: Boolean(final.result.email),
+        },
+      });
+      toast('Delivery reached complete.');
+    } else {
+      toast('Accepted, but no complete delivery was observed yet.', 'error');
+    }
+  }
+
+  function filterLeads() {
+    const q = document.querySelector('#lead-search').value.toLowerCase();
+    const tier = document.querySelector('#tier-filter').value;
+    const filtered = state.leads.filter((lead) => {
+      const hay = `${lead.name} ${lead.company} ${lead.email} ${lead.scan_id}`.toLowerCase();
+      return (!q || hay.includes(q)) && (!tier || lead.classification === tier);
+    });
+    document.querySelector('#lead-results').innerHTML = leadTable(filtered);
+    document.querySelector('#lead-count').textContent = `${filtered.length} scans`;
+  }
+
+  function filterUseCases() {
+    const query = document.querySelector('#use-case-search').value.toLowerCase();
+    document.querySelectorAll('.use-case-card').forEach((card) => {
+      card.hidden = query && !card.dataset.hay.includes(query);
+    });
+  }
+
+  function nextVersion(version) {
+    const match = String(version).match(/^(.*?)(\d+)$/);
+    return match ? `${match[1]}${Number(match[2]) + 1}` : `${version}-next`;
+  }
+
+  function nodeLabel(id) {
+    return graph.nodes.find((x) => x.id === id)?.label || id;
+  }
+
+  function toast(message, tone) {
+    const node = document.createElement('div');
+    node.className = `toast ${tone || ''}`;
+    node.textContent = message;
+    document.querySelector('#toast-region').append(node);
+    setTimeout(() => node.remove(), 4200);
+  }
+
+  function renderError(error) {
+    main.innerHTML = `<section class="page-header"><div><p class="eyebrow">Request failed</p><h1>Oak could not load this view.</h1><p>${esc(error.message)}</p></div></section>
+      ${error.details ? `<pre class="result-box">${esc(pretty(error.details))}</pre>` : ''}<button class="button secondary" data-action="retry">Retry</button>`;
+  }
+
+  document.addEventListener('click', async (event) => {
+    const lead = event.target.closest('[data-open-lead]');
+    if (lead) {
+      location.hash = `#/leads/${encodeURIComponent(lead.dataset.openLead)}`;
+      return;
+    }
+    const button = event.target.closest('[data-action]');
+    if (!button) return;
+    const action = button.dataset.action;
+    try {
+      if (action === 'settings') {
+        document.querySelector('#admin-token').value = sessionStorage.getItem('oak-admin-token') || '';
+        document.querySelector('#settings-dialog').showModal();
+      } else if (action === 'save-settings') {
+        event.preventDefault();
+        sessionStorage.setItem('oak-admin-token', document.querySelector('#admin-token').value);
+        document.querySelector('#settings-dialog').close();
+        toast('Admin key saved for this tab.');
+      } else if (action === 'retry') route();
+      else if (action === 'set-view') {
+        state.view = button.dataset.view;
+        localStorage.setItem('oak-explorer-view', state.view);
+        route();
+      } else if (action === 'save-policy-draft') await savePolicyDraft();
+      else if (action === 'activate-policy') await activatePolicy(button.dataset.version);
+      else if (action === 'new-competitor') openCompetitor();
+      else if (action === 'edit-competitor') openCompetitor(button.dataset.id);
+      else if (action === 'save-competitor') {
+        event.preventDefault();
+        await saveCompetitor();
+      } else if (action === 'delete-competitor') await deleteCompetitor(button.dataset.id);
+      else if (action === 'validate-payload') await runPayload('validate');
+      else if (action === 'dry-run') await runPayload('dry-run');
+      else if (action === 'live-send') await liveSend();
+    } catch (error) {
+      toast(error.message, 'error');
+      if (error.details && document.querySelector('#console-result')) document.querySelector('#console-result').textContent = pretty(error.details);
+      if (error.message.includes('admin key')) document.querySelector('#connection-button').click();
+    }
+  });
+
+  document.addEventListener('input', (event) => {
+    if (event.target.id === 'lead-search') filterLeads();
+    if (event.target.id === 'use-case-search') filterUseCases();
+  });
+  document.addEventListener('change', (event) => {
+    if (event.target.id === 'tier-filter') filterLeads();
+    if (event.target.id === 'event-filter') {
+      api(`/api/dashboard${event.target.value ? `?event_id=${encodeURIComponent(event.target.value)}` : ''}`)
+        .then((value) => {
+          state.dashboard = value;
+          renderDashboard(value);
+        })
+        .catch(renderError);
+    }
+    if (event.target.id === 'fixture-select') {
+      document.querySelector('#payload-editor').value = pretty(data.fixtures[event.target.value].payload);
+      document.querySelector('#payload-preview').innerHTML = renderPreview(null);
+      document.querySelector('#console-result').textContent = 'Fixture loaded. Validate or dry-run it.';
+    }
+    if (event.target.id === 'flow-select') {
+      state.flow = event.target.value;
+      renderMap();
+    }
+  });
+  window.addEventListener('hashchange', route);
+  window.addEventListener('keydown', (event) => {
+    if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+    if (event.key === '/') {
+      event.preventDefault();
+      document.querySelector('input[type="search"]')?.focus();
+      return;
+    }
+    if (!location.hash.startsWith('#/flow')) return;
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const current = location.hash.slice('#/flow/'.length) || journey.stages[0].id;
+    const index = journey.stages.findIndex((x) => x.id === current);
+    const target = journey.stages[index + (event.key === 'ArrowRight' ? 1 : -1)];
+    if (target) {
+      event.preventDefault();
+      location.hash = `#/flow/${target.id}`;
+    }
+  });
+
+  boot();
+})();
+
+</script>
+  </body>
+</html>
