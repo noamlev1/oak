@@ -1,0 +1,347 @@
+{
+  "id": "03",
+  "name": "Oak GTM - 03 Slack Alerts [sub-flow]",
+  "short": "Slack Alerts",
+  "lane": "write",
+  "one_breath": "03 turns a finished decision into a Slack card a rep can act on in ten seconds. 01 calls it once tier, CRM context and AI synthesis are settled, and 06 calls it again when a rep reclassifies a lead; it looks the channel up in the active policy, builds the card in a fixed order, threads a returning visitor under their first alert, attaches the buttons that tier is entitled to, and hands back a delivery receipt of what Slack accepted or rejected.",
+  "trigger": "Execute Workflow Trigger 'When Called by Sync' (passthrough); active version 3171f36c",
+  "input": "The full decision payload for one scan: classification, score and breakdown, routing, CRM context, enrichment and evidence, booth notes, opening question, listen-fors, repeat-scan fields, and (from 06 only) override_banner.",
+  "output": "One delivery receipt (delivered_count, failed_count, channel, threaded, broadcast, thread_anchor_recorded, owner_dm_requested, owner_mapped, deliveries[], warnings[]). Side effects: Slack posts (channel card, thread reply, owner DM) and an upsert of last_slack_channel and last_slack_ts on oak_encounters.",
+  "called_by": [
+    "01 Intake & Decision (Notify Slack)",
+    "06 Slack Actions (Repost Card via Slack Alerts)"
+  ],
+  "calls": [],
+  "node_count": 13,
+  "groups": [
+    {
+      "name": "Ungrouped",
+      "purpose": "The trigger that receives the decided lead.",
+      "nodes": [
+        {
+          "step": 1,
+          "name": "When Called by Sync",
+          "type": "Execute Workflow Trigger (passthrough)",
+          "what": "The entry point. It accepts whatever the caller sends, unchanged (inputSource: passthrough), so 03 has no declared input schema to drift out of date. Every later Code node reads the original lead back with $('When Called by Sync').first().json instead of trusting the item that happens to flow in, so no intermediate node can lose a field another node needs.",
+          "why": "03 is a sub-workflow with two callers (01 after a scan, 06 after a rep reclassifies). Passthrough means both can hand over the full decision object and the card builder sees exactly what was decided.",
+          "in": "The full decision payload from 01 Notify Slack (or the rebuilt payload from 06 Repost Card via Slack Alerts): classification, score, score_breakdown, routing, crm_context, company_enrichment, employee_resolution, company_size_band, person_evidence, company_evidence, notes_from_booth, opening_question, listen_for, urgency_evidence, persona, persona_source, decision_reasons, repeat fields (repeat_scan, scan_count, notification_mode, previous_slack_ts, previous_slack_channel, classification_changed, prior_classification, notes_changed, material_change, previous_notes_from_booth), injection_suspected, personal_email, data_quality, and from 06 only override_banner.",
+          "out": "The same object, one item.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "Nothing to fail here; the workflow's settings.errorWorkflow is 99, so any later unhandled error posts a 03 alert (\"HubSpot is up to date but nobody was notified\") to #oak-revops.",
+          "say_it": "03 takes the whole decided lead as-is and every step reads it back from the trigger by name, so nothing gets lost between steps.",
+          "next": [
+            "Load Routing Policy"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Routing Policy",
+      "purpose": "Reads the channel map from the active policy, builds the card, and attaches the buttons a classification is entitled to; none for out of scope.",
+      "nodes": [
+        {
+          "step": 2,
+          "name": "Load Routing Policy",
+          "type": "Data Table get (oak_policies)",
+          "what": "Reads the one row of oak_policies where status = active (limit 1, table referenced by name). That row's document_json holds the notifications block (channel and owner_dm per classification, plus owner_overrides) and the slack block (default_channel, owner_directory). Today the active row is oak-event-v5: tier_1 booth-hot with owner_dm true, matched booth-matched, needs_review booth-review, competitor_intel competitive-intel, out_of_scope booth-out-of-scope, ops_alerts oak-revops.",
+          "why": "This is what makes channels table-driven: moving Tier 1 to another channel is a Data Table edit, not a workflow deploy.",
+          "in": "No input fields; filter status = active.",
+          "out": "One policy row (version, status, document_json string).",
+          "decides": "Which policy row is in force.",
+          "code": null,
+          "branches": [],
+          "on_failure": "alwaysOutputData plus onError continueRegularOutput: if the read fails or finds nothing the flow still continues with an empty item, and Resolve Slack Targets falls back to the routing 01 already resolved, then to slack.default_channel, then to the hard default booth-review.",
+          "say_it": "Channels live in the active policy row, so changing where a tier posts is a data edit, not a redeploy.",
+          "next": [
+            "Resolve Slack Targets"
+          ]
+        },
+        {
+          "step": 3,
+          "name": "Resolve Slack Targets",
+          "type": "Code",
+          "what": "The heart of 03, in three jobs. (1) Targets: channel precedence is routing.channel from 01, then notifications[classification].channel, then slack.default_channel, then booth-review; out_of_scope deliberately gets an empty channel here. Owner DM is requested when routing or the policy says owner_dm true and the lead is not out of scope; the HubSpot owner id is mapped to a Slack user through notifications.owner_overrides or slack.owner_directory, and both maps are empty {} in oak-event-v5, so every Tier 1 owner DM is currently skipped with a warning. (2) Threading: a repeat is threaded only when 01 set notification_mode repeat_thread or repeat_escalation AND a previous ts and channel exist; reply_broadcast is set to the same value so the reply also shows in the channel. When threaded, the channel target is swapped for previous_slack_channel. (3) The card, in fixed order, each section a divider plus bold title plus body: header (tier emoji and label, name, and the one blocker: '- confirm company size' or '- size below ICP, needs a call', capped at 150 chars), Returning visitor line, @here lines, Prospect information, Company information, Companies matching this name (up to 3 labelled name-only candidates), personal email warning, Booth notes verbatim (plus injection warning and Booth notes last time), Why this lead with the Score line and 'Decided by', Do at the booth (not for out of scope), links row (Open HubSpot, Company site), Missing from the scan.",
+          "why": "One node owns routing, threading and rendering so the card and the plan cannot disagree. Every user-supplied string passes through esc() (& < > become entities), so a booth note cannot inject <!channel> or break the block JSON.",
+          "in": "The lead from When Called by Sync and document_json from Load Routing Policy.",
+          "out": "One item per target (channel and/or dm), each carrying the whole lead plus delivery_kind (channel_new, channel_thread or dm), target {kind,target,role}, plan {mode, channel, owner_dm, owner_mapped, use_thread, thread_ts, thread_channel, reply_broadcast, target_count}, slack_blocks (JSON string), slack_text (fallback) and routing_warnings. With no target at all: one item with delivery_kind 'none' and a skip_reason.",
+          "decides": "Channel, whether to DM the owner, whether to thread, and every line of the card. It decides nothing about tier or score.",
+          "code": "const configuredChannel=clean(routing.channel||(notif[cls]||{}).channel||sl.default_channel||'booth-review');\nconst channel=cls==='out_of_scope'?'':configuredChannel;\nconst useThread=Boolean(prevTs&&prevCh&&(mode==='repeat_thread'||mode==='repeat_escalation'));\nif(cls==='tier_1')blocks.push({type:'context',elements:[{type:'mrkdwn',text:'<!here> *Hot lead at the booth now* - whoever is free, take it.'}]});\nif(repeatScan&&s.material_change===true&&cls!=='tier_1'&&cls!=='out_of_scope')blocks.push(/* one <!here> for a changed returning visitor */);",
+          "branches": [],
+          "on_failure": "No onError setting: a throw fails the execution and 99 reports a 03 failure. The code is defensive (policy JSON parse in try/catch, every field defaulted), so in practice the risky calls are Slack's, downstream.",
+          "say_it": "Resolve Slack Targets picks the channel from the policy, decides whether to thread a returning visitor, and renders a card where every line names its source.",
+          "next": [
+            "Enforce Out-of-Scope Delivery"
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Enforce Out-of-Scope Delivery",
+          "type": "Code (run once for each item)",
+          "what": "The quiet route. Anything that is not out_of_scope passes through untouched. For out_of_scope it sets the channel to routing.channel or, if routing is absent, the hard default booth-out-of-scope; deletes every block of type actions (buttons and the links row) and any section containing '*Do at the booth*'; sets target_count 1, clears skip_reason and makes it a channel_new post (or channel_thread for a threaded repeat).",
+          "why": "Resolve Slack Targets already leaves coaching and links off an out-of-scope card; this is a belt-and-braces guard so no future edit can leak a call to action onto the audit channel. Result: out-of-scope visits get a record, not a ping. Note for a 06 'Not a fit' repost: 06 deletes routing, so the channel here is the hard-coded 'booth-out-of-scope' (which matches the policy today), not a policy lookup.",
+          "in": "Each item from Resolve Slack Targets.",
+          "out": "Same items; for out_of_scope a rewritten delivery_kind, target {kind:'channel', target:<channel>, role:'classification_channel'}, plan.channel and stripped slack_blocks.",
+          "decides": "Out of scope is posted, quietly, with no buttons and no coaching.",
+          "code": "const channel=String((x.routing||{}).channel||'booth-out-of-scope').replace(/^#/,'');\nparsed.blocks=(parsed.blocks||[]).filter(function(b){if(b.type==='actions')return false;return !(b.type==='section'&&/\\*Do at the booth\\*/.test(String(((b.text||{}).text)||'')));});",
+          "branches": [],
+          "on_failure": "No onError setting; a throw would fail the run and alert via 99. The JSON.parse of slack_blocks is wrapped in try/catch.",
+          "say_it": "Out-of-scope leads still get a card for the audit trail, but this node guarantees it has no mention, no coaching and no buttons.",
+          "next": [
+            "Attach Core Action Buttons"
+          ]
+        },
+        {
+          "step": 5,
+          "name": "Attach Core Action Buttons",
+          "type": "Code (run once for each item)",
+          "what": "First, if 06 passed override_banner, it inserts that one context line (block_id oak_override_banner) directly under the header, e.g. '*Moved from Needs review to Tier 1* by @rep - confirmed renewal.'. Out of scope returns here with the banner only. For everything else it removes any old action rows and, only when the n8n variable OAK_SLACK_ACTIONS_ENABLED is 'true', adds rows by classification. competitor_intel: oak_core_actions = Why this score? | Flag for competitive intel | False alarm. needs_review: core = Claim | Why this score?; triage row oak_triage_actions = Promote to Tier 1 | Matched | Not a fit; status = Mark met | Meeting booked; more = Add note | Send to owner | Snooze. matched: core = Claim | Why; status = Mark met | Meeting booked | Not a fit; more = Add note | Send to owner | Snooze | Promote to Tier 1. tier_1: same as matched without Promote. Claim appears only when crm_context.hubspot_contact_id exists. Each button value is JSON {event_person_key, scan_id, hubspot_contact_id, classification} (Mark met and Meeting booked add status). Finally it de-duplicates action_ids with a __2 suffix.",
+          "why": "Buttons are what closes the loop in Slack, and which buttons a card gets depends on what question that card asks. The triage row exists because a review card asks only 'where does this lead belong'. The de-dup exists because Slack rejects the whole message with invalid_blocks if two elements share an action_id; with today's layouts no card actually repeats an id, so this is a defensive guard, and 06 routes by longest prefix so a suffixed id still works.",
+          "in": "Each item from Enforce Out-of-Scope Delivery; $vars.OAK_SLACK_ACTIONS_ENABLED.",
+          "out": "Same items with rewritten slack_blocks plus slack_actions_enabled and slack_duplicate_action_ids_fixed.",
+          "decides": "Which buttons each tier gets, and the override banner.",
+          "code": "const triage=cls==='needs_review';add('oak_core_actions',[contactId?btn('oak_claim','Claim',null,'primary'):null,btn('oak_why_score','Why this score?')]);\nif(triage)add('oak_triage_actions',[btn('oak_promote_tier1','Promote to Tier 1',null,'primary'),btn('oak_mark_matched','Matched'),btn('oak_downgrade','Not a fit',null,'danger')]);\nadd('oak_status_actions',[btn('oak_booth_status_met','Mark met',{status:'met'}),btn('oak_booth_status_meeting_booked','Meeting booked',{status:'meeting_booked'}),triage?null:btn('oak_downgrade','Not a fit',null,'danger')]);\nadd('oak_more_actions',[btn('oak_add_note','Add note'),btn('oak_send_owner','Send to owner'),btn('oak_snooze','Snooze'),(cls!=='tier_1'&&!triage)?btn('oak_promote_tier1','Promote to Tier 1'):null]);",
+          "branches": [],
+          "on_failure": "No onError setting. If OAK_SLACK_ACTIONS_ENABLED is not exactly 'true' (case-insensitive) the card is still posted, just with no buttons.",
+          "say_it": "Button layout is by tier: a review card gets a triage row of Promote to Tier 1, Matched and Not a fit, a competitor card gets intel buttons, and out of scope gets none.",
+          "next": [
+            "Route Delivery"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Deliver and Record",
+      "purpose": "Posts a new alert, a thread reply or an owner DM, anchors the thread only after Slack confirms, and returns a receipt of what actually happened.",
+      "nodes": [
+        {
+          "step": 6,
+          "name": "Route Delivery",
+          "type": "Switch",
+          "what": "Routes each item on $json.delivery_kind. A Tier 1 first scan with a mapped owner produces two items, so one goes to the channel and one to the DM in the same run.",
+          "why": "Each delivery kind needs a different Slack call: a root post by channel name, a thread reply by channel id and ts, or a DM by user id.",
+          "in": "delivery_kind on each item.",
+          "out": "The same item on one of four outputs.",
+          "decides": "Which Slack call to make.",
+          "code": null,
+          "branches": [
+            {
+              "label": "New channel alert (channel_new)",
+              "goes_to": "Post New Alert",
+              "meaning": "First alert for this person, or a 06 repost: post a new root card."
+            },
+            {
+              "label": "Thread reply (channel_thread)",
+              "goes_to": "Reply in Thread",
+              "meaning": "Returning visitor with a stored anchor: reply under the first alert, broadcast to the channel."
+            },
+            {
+              "label": "Direct message (dm)",
+              "goes_to": "Send Direct Message",
+              "meaning": "Owner DM for a tier that asks for one and a mapped owner."
+            },
+            {
+              "label": "Fallback: No delivery",
+              "goes_to": "Record No Delivery",
+              "meaning": "delivery_kind 'none'. With the current code this is effectively unreachable, because every non-out-of-scope class resolves a channel (default booth-review) and out of scope is rewritten to channel_new; it stays as an explicit outcome."
+            }
+          ],
+          "on_failure": "No onError setting; a Switch on a string does not fail in practice.",
+          "say_it": "Route Delivery sends each target to the right Slack call: new root card, thread reply, or owner DM.",
+          "next": [
+            "Post New Alert",
+            "Reply in Thread",
+            "Send Direct Message",
+            "Record No Delivery"
+          ]
+        },
+        {
+          "step": 7,
+          "name": "Post New Alert",
+          "type": "Slack (post message, channel by name)",
+          "what": "Posts the block card to the channel named in target.target (for example booth-hot), with mrkdwn on, link unfurling off and no n8n footer link. Uses the Slack app credential 'Slack account 2' (slackApi), because Slack delivers button clicks to the app that posted the message, so the same app must post the card and receive the interaction in 06.",
+          "why": "The actual alert. Posting by name keeps the policy human-readable.",
+          "in": "target.target (channel name) and slack_blocks.",
+          "out": "Slack's response: ok, channel (id), message.ts, or an error field on failure.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail with maxTries 3 and 2000 ms between tries, then onError continueRegularOutput with alwaysOutputData, so a Slack outage or not_in_channel does not kill the run; the error is carried forward and becomes a warning in the receipt.",
+          "say_it": "Posting soft-fails on purpose, but only because the receipt records the failure and the 07 harness fails a test when nothing was delivered.",
+          "next": [
+            "Slack Post Succeeded?"
+          ]
+        },
+        {
+          "step": 8,
+          "name": "Slack Post Succeeded?",
+          "type": "IF",
+          "what": "True only when Slack answered ok: true AND returned a message timestamp.",
+          "why": "A thread anchor must only be written after Slack confirms the root message; otherwise a failed alert would leave the next scan replying to a message that does not exist.",
+          "in": "Post New Alert output.",
+          "out": "The Slack response on the true or false output.",
+          "decides": "Whether to record the thread anchor.",
+          "code": "$json.ok === true && Boolean($json.message?.ts || $json.message_timestamp)",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Record Thread Anchor",
+              "meaning": "Slack accepted the root card; store its channel and ts."
+            },
+            {
+              "label": "false",
+              "goes_to": "Build Delivery Receipt",
+              "meaning": "Slack refused (or soft-failed); skip the anchor and go straight to the receipt."
+            }
+          ],
+          "on_failure": "No onError setting; the expression cannot throw.",
+          "say_it": "The anchor for threading is written only after Slack confirms the post, so a failed alert can never orphan later replies.",
+          "next": [
+            "Record Thread Anchor",
+            "Build Delivery Receipt"
+          ]
+        },
+        {
+          "step": 9,
+          "name": "Record Thread Anchor",
+          "type": "Data Table upsert (oak_encounters)",
+          "what": "Upserts the oak_encounters row matched on event_person_key and sets last_slack_channel = $json.channel (the channel ID Slack returned), last_slack_ts = $json.message.ts and updated_at. The next scan of the same person reads these in 01 and replies in this thread. A 06 repost also runs through here, so after a reclassification the anchor moves to the new card in the new channel.",
+          "why": "Threading a returning visitor needs to know where the first alert lives.",
+          "in": "event_person_key from When Called by Sync; channel and message.ts from Slack's response.",
+          "out": "The upserted row.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "alwaysOutputData plus onError continueRegularOutput: a table failure does not stop the receipt, it only means the next scan cannot thread (the receipt's thread_anchor_recorded will be false).",
+          "say_it": "Record Thread Anchor stores the Slack channel and ts of the root card, which is how a second scan of the same badge replies in the same thread.",
+          "next": [
+            "Build Delivery Receipt"
+          ]
+        },
+        {
+          "step": 10,
+          "name": "Reply in Thread",
+          "type": "Slack (post message, channel by id, thread reply)",
+          "what": "Posts the full card into plan.thread_channel under plan.thread_ts with reply_broadcast = plan.reply_broadcast (true when threaded), so the reply also appears in the channel. It does not move the anchor, so every repeat stays under the first alert.",
+          "why": "A returning visitor is not a new lead, but must not vanish into a thread either. Note the trade-off: a repeat that escalated (for example Matched to Tier 1) replies in the original channel's thread rather than posting a new root card in #booth-hot.",
+          "in": "plan.thread_channel, plan.thread_ts, plan.reply_broadcast, slack_blocks.",
+          "out": "Slack's response or an error item.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 3, 2000 ms apart, then continueRegularOutput with alwaysOutputData; a failure becomes a receipt warning.",
+          "say_it": "Returning visitors are threaded under their first alert and broadcast back to the channel, so a repeat is visible but not a new lead.",
+          "next": [
+            "Build Delivery Receipt"
+          ]
+        },
+        {
+          "step": 11,
+          "name": "Send Direct Message",
+          "type": "Slack (post message to user by id)",
+          "what": "DMs the same card to the Slack user mapped from the HubSpot owner (target.target is a Slack user id).",
+          "why": "Tier 1 policy asks for an owner DM so the account owner hears about their contact at the booth. In oak-event-v5 owner_overrides and owner_directory are both {}, so this node does not currently run; the receipt carries 'Owner DM skipped: HubSpot owner X is not mapped to Slack.' The 06 Send to owner button does not depend on this map (it bridges by owner email).",
+          "in": "target.target and slack_blocks.",
+          "out": "Slack's response or an error item.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "retryOnFail maxTries 3, 2000 ms apart, continueRegularOutput with alwaysOutputData.",
+          "say_it": "The owner DM is table-driven too, and it is honest: if the owner is not mapped, the receipt says so instead of silently skipping.",
+          "next": [
+            "Build Delivery Receipt"
+          ]
+        },
+        {
+          "step": 12,
+          "name": "Record No Delivery",
+          "type": "Code",
+          "what": "Turns a 'none' item into an explicit outcome: delivered false, delivery_kind 'none', reason = skip_reason or 'No Slack audience resolved for this classification.'",
+          "why": "Kept so 'nothing to deliver' is recorded, not silent. With the current code it is effectively unreachable (see Route Delivery), which makes it a defensive branch.",
+          "in": "Items with delivery_kind 'none'.",
+          "out": "{delivered:false, delivery_kind:'none', reason}.",
+          "decides": null,
+          "code": "return $input.all().map(i=>({json:{delivered:false,delivery_kind:'none',reason:i.json.skip_reason||'No Slack audience resolved for this classification.'}}));",
+          "branches": [],
+          "on_failure": "No onError setting; trivial code.",
+          "say_it": "Even the no-delivery case is an explicit recorded outcome, never silence.",
+          "next": [
+            "Build Delivery Receipt"
+          ]
+        },
+        {
+          "step": 13,
+          "name": "Build Delivery Receipt",
+          "type": "Code",
+          "what": "Every branch lands here. It reads all three Slack nodes by name (grab() returns [] for a node that did not run), maps each response to {kind, ok, channel, ts, error}, and builds one receipt: scan_id, event_person_key, classification, score, notification_mode, channel, owner_dm_requested, owner_mapped, opening_question_source, ai_status, delivered_count, failed_count, thread_anchor_recorded, threaded, broadcast, deliveries[], warnings[], completed_at. Warnings start with the routing warnings (CRM, enrichment, AI, owner DM skipped) and add 'Slack delivery failed (<kind>): <error>' per failure, plus 'Slack targets were resolved but nothing was delivered; check the Slack credential.' when applicable. It reads the plan from Attach Core Action Buttons, not Resolve Slack Targets, because the out-of-scope node rewrites the channel in between.",
+          "why": "This receipt is 03's return value: 01 writes it to oak_deliveries.slack_json, 06 reads delivered_count and channel for its thread reply, and 07 asserts delivered_count > 0 and failed_count === 0. An earlier version read the plan too early and recorded channel null for every out-of-scope card that had in fact been posted. Because it reads every Slack node by name, if it runs twice (channel branch and DM branch) the last run still reports both.",
+          "in": "Outputs of Post New Alert, Reply in Thread, Send Direct Message, Record Thread Anchor (by name); plan from Attach Core Action Buttons; routing_warnings from Resolve Slack Targets.",
+          "out": "One receipt item, which is what the caller (01 or 06) receives.",
+          "decides": "ok is true only when Slack said ok and there is no error; the anchor counts only if a channel_new post succeeded with a ts and Record Thread Anchor ran.",
+          "code": "const map=(rows,kind)=>rows.map(m=>({kind,ok:m.ok===true&&!m.error,channel:m.channel||null,ts:(m.message&&m.message.ts)||m.message_timestamp||null,error:m.error?String(m.error):null}));\nconst anchored=deliveries.some(d=>d.kind==='channel_new'&&d.ok&&d.ts)&&grab('Record Thread Anchor').length>0;\nfor(const f of failed)warnings.push('Slack delivery failed ('+f.kind+'): '+(f.error||'unknown error'));",
+          "branches": [],
+          "on_failure": "No onError setting; every node read is wrapped in try/catch, so it degrades to an empty receipt rather than throwing.",
+          "say_it": "03 hands back a delivery receipt of exactly what Slack accepted or rejected, which is stored with the scan and asserted by the test harness.",
+          "next": []
+        }
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Channels live in the policy table",
+      "why": "notifications[classification].channel in the active oak_policies row decides the channel. Changing it is a Data Table edit and the next scan follows it. The @here rules are the exception: they are code in Resolve Slack Targets (the policy has a mention_tiers list that 03 does not read)."
+    },
+    {
+      "title": "03 renders a decision, it never makes one",
+      "why": "Tier, score and classification arrive settled from 01, 04 and 05. 03 only decides channel lookup, mention, card order, threading and buttons, so a model can never name a channel or add a mention."
+    },
+    {
+      "title": "Every line names its source",
+      "why": "Badge scan, HubSpot, their website, public source, or AI. A rep can tell what to trust without asking, and any public claim carries its URL."
+    },
+    {
+      "title": "Soft-fail Slack, but record everything",
+      "why": "A Slack outage must not lose a lead, so the Slack nodes retry 3 times and continue on error. That is only safe because the receipt records every failure, 01 stores it, and 07 fails a test when nothing was delivered."
+    },
+    {
+      "title": "Anchor only after Slack confirms",
+      "why": "Slack Post Succeeded? gates Record Thread Anchor, so a failed root post can never leave later scans replying into nothing."
+    },
+    {
+      "title": "One card builder for every path",
+      "why": "06 reclassification replays the stored decision through this same workflow, so a reposted card always gets the right channel, layout and buttons for its new tier."
+    }
+  ],
+  "questions": [
+    {
+      "q": "How do you change where Tier 1 leads go?",
+      "a": "Edit notifications.tier_1.channel in the active oak_policies row. 01 resolves routing from that row and 03 falls back to it (routing.channel, then notifications[cls].channel, then slack.default_channel, then booth-review). No workflow edit. The @here mention is the exception: it is hard-coded for tier_1 in Resolve Slack Targets."
+    },
+    {
+      "q": "How does a returning visitor show up in Slack?",
+      "a": "01 sets notification_mode to repeat_thread or repeat_escalation and passes previous_slack_ts and previous_slack_channel from oak_encounters. 03 threads only when all three are present, replies with reply_broadcast on, and opens the card with 'Returning visitor - scan #N' and what changed, including 'Nothing has changed since the first visit' so a silent repeat never looks like a bug. A material change on a matched, needs_review or competitor card earns one @here."
+    },
+    {
+      "q": "A returning visitor moved from Matched to Tier 1. Where does the second card go?",
+      "a": "Into the original #booth-matched thread, broadcast to that channel, because when an anchor exists the channel target is replaced by previous_slack_channel. It gets the @here and 'Tier changed from matched to tier 1'. That is a deliberate one-conversation-per-person trade-off; if pushed, the improvement is to post a new root card when repeat_escalation changes the channel and link the old thread."
+    },
+    {
+      "q": "What happens if Slack is down or the app is not in the channel?",
+      "a": "Each Slack node retries 3 times, 2 seconds apart, then continues on error. Build Delivery Receipt turns the error into a warning such as 'Slack delivery failed (channel_new): not_in_channel', 01 writes the receipt to oak_deliveries.slack_json, and 07 fails the test because delivered_count is 0. HubSpot was already written, so the lead is not lost."
+    },
+    {
+      "q": "Why does an out-of-scope visit get a card at all?",
+      "a": "It deserves a record, not a ping. Enforce Out-of-Scope Delivery sends it to booth-out-of-scope with the decision reasons verbatim and strips every actions block and any Do at the booth section, and Attach Core Action Buttons returns before adding buttons. RevOps gets an audit trail of who was filtered out and why."
+    },
+    {
+      "q": "How much of the card did the AI write?",
+      "a": "Two slots: the opening question and the listen-fors, both produced in 05 under guardrails, plus a note in Why this lead when AI resolved an ambiguous title. Everything else is rule output or quoted evidence with a URL. The model can change which policy row is read (by resolving an ambiguous title to a persona) but it can never write the row or pick a channel."
+    },
+    {
+      "q": "Why is the Tier 1 owner DM not arriving?",
+      "a": "Because notifications.owner_overrides and slack.owner_directory are both empty in oak-event-v5, so the HubSpot owner id maps to no Slack user. The receipt says 'Owner DM skipped: HubSpot owner X is not mapped to Slack.' Filling that map in the policy row turns it on. The 06 Send to owner button already works because it resolves the owner by email."
+    }
+  ]
+}
