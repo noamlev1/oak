@@ -1,6 +1,6 @@
 # 04 - Company & Person Enrichment [sub-flow]
 
-Workflow id `K9MaVwjIoBmZ0oS9` · 20 nodes · error workflow is 99 · read from the deployed version `9742a40a`.
+Workflow id `K9MaVwjIoBmZ0oS9` · 20 nodes · error workflow is 99 · read from the deployed workflow on 2026-09-28.
 
 ## In one breath
 

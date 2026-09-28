@@ -1,6 +1,6 @@
 # 06 - Slack Actions
 
-Workflow id `VsKr9HAqOrtOlxZC` · error workflow is 99 · read from the deployed version `87d50258`.
+Workflow id `VsKr9HAqOrtOlxZC` · error workflow is 99 · read from the deployed workflow on 2026-09-28.
 
 ## In one breath
 

@@ -1,6 +1,6 @@
 # 05 - AI Lead Reasoning [sub-flow]
 
-Workflow id `McoAVyLN6lxqmLeO` · 7 nodes · error workflow is 99 · read from the deployed version `d1bb7ad6`.
+Workflow id `McoAVyLN6lxqmLeO` · 7 nodes · error workflow is 99 · read from the deployed workflow on 2026-09-28.
 
 ## In one breath
 

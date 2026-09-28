@@ -1,6 +1,6 @@
 # 03 - Slack Alerts [sub-flow]
 
-Workflow id `gyCxnkoGkh3OJpz5` · 14 nodes · error workflow is 99 · read from the deployed version `441bda85`.
+Workflow id `gyCxnkoGkh3OJpz5` · 14 nodes · error workflow is 99 · read from the deployed workflow on 2026-09-28.
 
 ## In one breath
 

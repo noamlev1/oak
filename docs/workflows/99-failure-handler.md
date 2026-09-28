@@ -1,6 +1,6 @@
 # 99 - Failure Handler
 
-Workflow id `N4JW7CO6qjdLi6mq` · 3 working nodes plus a sticky · read from the deployed version `61065589`.
+Workflow id `N4JW7CO6qjdLi6mq` · 3 working nodes plus a sticky · read from the deployed workflow on 2026-09-28.
 
 ## In one breath
 
