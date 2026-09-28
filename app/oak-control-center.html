@@ -55,6 +55,7 @@
   --k-error: #ff716d;
   --k-store: #c3a2ff;
   --k-ext: #9fa9a3;
+  --trail: #b9ef4a;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
   background: var(--bg);
@@ -108,6 +109,7 @@
   --k-error: #d23f38;
   --k-store: #7d5bd0;
   --k-ext: #7b847e;
+  --trail: #6fa814;
   color-scheme: light;
 }
 @media (prefers-color-scheme: light) {
@@ -159,6 +161,7 @@
     --k-error: #d23f38;
     --k-store: #7d5bd0;
     --k-ext: #7b847e;
+    --trail: #6fa814;
     color-scheme: light;
   }
 }
@@ -202,6 +205,8 @@ nav a:hover, nav a.active { color: var(--text); background: var(--panel-2); }
 
 .button { border: 1px solid var(--green); border-radius: 6px; background: var(--green); color: #10120f; padding: .65rem .9rem; font-weight: 700; cursor: pointer; }
 .button:hover { filter: brightness(1.05); }
+a.button { display: inline-flex; align-items: center; text-decoration: none; }
+.header-actions select { width: auto; min-width: 180px; }
 .button.secondary { background: transparent; color: var(--text); border-color: var(--line); }
 .button.danger { background: transparent; border-color: var(--red); color: var(--red); }
 .button.small { padding: .38rem .58rem; font-size: .73rem; }
@@ -336,7 +341,8 @@ label { display: grid; gap: .4rem; color: var(--muted); font-size: .72rem; font-
 .stage-link.done span { border-color: var(--green-2); color: var(--accent-text); }
 .stage-link.current { background: var(--panel-2); color: var(--text); }
 .stage-link.current span { border-color: var(--green); background: var(--green); color: #111; font-weight: 700; }
-.stage-main { max-width: 820px; }
+.stage-main { max-width: 820px; min-width: 0; }
+.stage-rail { min-width: 0; display: block; overflow: auto; }
 .stage-main h1 { margin: .4rem 0 .8rem; font: 400 clamp(2rem, 4vw, 3.4rem)/1 Georgia, serif; letter-spacing: -.035em; }
 .stage-question { margin: 0 0 1.5rem; padding-left: 1rem; border-left: 2px solid var(--green); color: var(--quote); font-size: 1.05rem; line-height: 1.5; }
 .uc-block.accent { border-left-color: var(--green); background: rgba(185, 239, 74, .05); }
@@ -447,7 +453,9 @@ label.check input { width: 16px; height: 16px; flex: none; accent-color: var(--g
 .chip i.active { background: var(--green-2); } .chip i.all { background: conic-gradient(var(--green), var(--blue), var(--orange), var(--purple), var(--green)); }
 .chip.link { background: transparent; color: var(--accent-text); border-style: dashed; }
 
-.map-panel { border: 1px solid var(--line); border-radius: 12px; background: var(--panel-glass); overflow: hidden; }
+.page-header.compact { margin-bottom: 1.3rem; }
+.page-header.compact h1 { font-size: clamp(2rem, 3.3vw, 3.3rem); }
+.map-panel { scroll-margin-top: 84px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-glass); overflow: hidden; }
 .map-controls { display: flex; align-items: center; justify-content: space-between; gap: .6rem 1rem; flex-wrap: wrap; padding: .75rem 1rem; border-bottom: 1px solid var(--line-soft); }
 .map-heading { display: grid; gap: .2rem; min-width: 0; }
 .map-heading b { font: 400 1.15rem/1.2 Georgia, serif; }
@@ -476,7 +484,7 @@ label.check input { width: 16px; height: 16px; flex: none; accent-color: var(--g
 .node .box { fill: var(--node-fill); stroke: var(--line); stroke-width: 1.2; transition: stroke .3s, fill .3s, stroke-width .3s; }
 .node .mark { fill: currentColor; }
 .node .pulse { fill: none; stroke: var(--green); stroke-width: 2; opacity: 0; pointer-events: none; }
-.node .n-title { fill: var(--text); font-size: 12.5px; font-weight: 600; }
+.node .n-title { fill: var(--text); font-size: 12px; font-weight: 600; }
 .node .n-sub { fill: var(--muted); font-size: 10.5px; }
 .node .n-tag { fill: var(--orange-text); font-size: 8.5px; font-weight: 700; letter-spacing: .08em; }
 .node .err-dot { fill: var(--red); opacity: .75; }
@@ -506,10 +514,10 @@ label.check input { width: 16px; height: 16px; flex: none; accent-color: var(--g
 .edge.k-webhook .wire { stroke-dasharray: 5 4; }
 .ah { fill: var(--wire); }
 .ah-done { fill: var(--green-2); }
-.ah-cur { fill: var(--green); }
+.ah-cur { fill: var(--trail); }
 .edge-label { fill: var(--muted); font-size: 10.5px; paint-order: stroke; stroke: var(--map-bg); stroke-width: 4px; stroke-linejoin: round; }
 .edge.done .wire { stroke: var(--green-2); stroke-width: 2; }
-.edge.cur .wire { stroke: var(--green); stroke-width: 2.4; stroke-dasharray: 7 5; animation: wire-run .9s linear infinite; }
+.edge.cur .wire { stroke: var(--trail); stroke-width: 2.4; stroke-dasharray: 7 5; animation: wire-run .9s linear infinite; }
 .edge.cur .edge-label, .edge.done .edge-label { fill: var(--accent-text); font-weight: 700; }
 .edge.skip .wire { stroke-dasharray: 2 4; opacity: .5; }
 .edge.off { opacity: .22; }
@@ -519,21 +527,24 @@ label.check input { width: 16px; height: 16px; flex: none; accent-color: var(--g
 .node.on .box { stroke: var(--line-strong); }
 .node.done .box { stroke: var(--green-2); stroke-width: 1.6; }
 .node.touch .box { stroke: var(--green); stroke-dasharray: 3 3; stroke-width: 1.8; }
-.node.cur .box { stroke: var(--green); stroke-width: 2.2; fill: var(--node-cur); }
+.node.cur .box { stroke: var(--trail); stroke-width: 2.2; fill: var(--node-cur); }
 .node.cur .pulse { animation: node-pulse 1.8s ease-out infinite; }
 .node.bar.cur .pulse { animation: none; }
 .node.skip { opacity: .7; }
 .node.skip .box { stroke: var(--muted); stroke-dasharray: 5 4; fill: transparent; }
 .node.skip .n-title, .node.skip .n-sub { fill: var(--muted); }
 @keyframes node-pulse { 0% { opacity: .7; stroke-width: 2; } 100% { opacity: 0; stroke-width: 16; } }
+.failure-mode .node.cur .box { stroke: var(--red); fill: color-mix(in srgb, var(--node-fill) 88%, var(--red)); }
+.failure-mode .node.cur .pulse { stroke: var(--red); }
+.failure-mode .node.done .box { stroke: var(--red); }
 .map-svg.mini .err-wire { fill: none; stroke: var(--red); stroke-width: 1.5; stroke-dasharray: 3 4; opacity: .8; }
 
-.trail { fill: none; stroke: var(--green); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.trail { fill: none; stroke: var(--trail); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .trail.done { stroke-width: 2.6; opacity: .5; }
 .trail.err { stroke: var(--red); stroke-width: 2; stroke-dasharray: 4 4; opacity: .85; }
 .token { pointer-events: none; transition: opacity .2s; }
-.token-core { fill: var(--green); stroke: var(--token-ring); stroke-width: 2.5; }
-.token-halo { fill: var(--green); opacity: .3; transform-box: fill-box; transform-origin: center; animation: halo 1.4s ease-out infinite; }
+.token-core { fill: var(--trail); stroke: var(--token-ring); stroke-width: 2.5; }
+.token-halo { fill: var(--trail); opacity: .3; transform-box: fill-box; transform-origin: center; animation: halo 1.4s ease-out infinite; }
 .token.err .token-core, .token.err .token-halo { fill: var(--red); }
 @keyframes halo { 0% { transform: scale(.5); opacity: .5; } 100% { transform: scale(1.5); opacity: 0; } }
 
@@ -607,6 +618,7 @@ label.check input { width: 16px; height: 16px; flex: none; accent-color: var(--g
   .fact-grid { grid-template-columns: 1fr; }
   .field-grid { grid-template-columns: 1fr; }
   .offline-banner { top: 0; position: relative; }
+  .map-panel { scroll-margin-top: 120px; }
   .flow-group-label { width: 100%; }
   .map-controls { align-items: flex-start; }
   .map-buttons { width: 100%; }
@@ -1547,9 +1559,9 @@ window.OAK_GRAPH = {
     { id: '01-05', kind: 'call', pts: [[910, 156], [910, 204]] },
     { id: '01-02', kind: 'call', pts: [[1062, 156], [1062, 332]] },
     { id: '01-03', kind: 'call', pts: [[1226, 156], [1226, 332]] },
-    { id: '03-slack', kind: 'post', pts: [[1226, 396], [1226, 468]], label: 'posts card', lx: 1234, ly: 436, anchor: 'start' },
+    { id: '03-slack', kind: 'post', pts: [[1226, 396], [1226, 468]], label: 'posts card', lx: 1218, ly: 437, anchor: 'end' },
     { id: 'slack-06', kind: 'webhook', pts: [[1160, 498], [1128, 498]] },
-    { id: '06-03', kind: 'call', pts: [[1062, 468], [1062, 448], [1190, 448], [1190, 396]], label: 'reclassify: repost', lx: 1126, ly: 442, anchor: 'middle' },
+    { id: '06-03', kind: 'call', pts: [[1062, 468], [1062, 448], [1190, 448], [1190, 396]], label: 'reclassify: repost', lx: 1054, ly: 457, anchor: 'end' },
     { id: '00-tables', kind: 'call', pts: [[202, 626], [262, 626]] },
     { id: 'app-08', kind: 'webhook', pts: [[682, 626], [622, 626]] },
     { id: '08-tables', kind: 'call', pts: [[472, 626], [412, 626]] },
@@ -1758,7 +1770,7 @@ window.OAK_GRAPH = {
     conn.reason = reason || 'The n8n API is unavailable.';
     state.health = { ok: true, mode: 'offline' };
     renderConnection();
-    if (announce && wasLive) toast(`Lost the n8n API (${conn.reason}) Showing offline demo data.`, 'error');
+    if (announce && wasLive) toast(`Lost the connection to n8n: ${conn.reason} Showing offline demo data now.`, 'error');
   }
 
   function renderConnection() {
@@ -2445,7 +2457,7 @@ window.OAK_GRAPH = {
         title: '05 is skipped',
         happened: T('ai').detail || `${label(f.intake)} never reaches the model.`,
         decided: `${label(f.intake)} never reaches the model, and the final gate that follows 05 is skipped too: the intake decision stands.`,
-        moves: [toTrack('p05')], ticks: ['p05'], skip: ['wf05', 'gate', '01-05'], tags: { wf05: 'SKIPPED' },
+        moves: [toTrack('p05')], skip: ['wf05', 'p05', 'gate', '01-05'], tags: { wf05: 'SKIPPED' },
       });
     } else {
       add({
@@ -2481,7 +2493,7 @@ window.OAK_GRAPH = {
         title: '02 is skipped: no email',
         happened: 'The badge carried no valid email, so there is no contact to upsert.',
         decided: 'The run continues without HubSpot and still reaches complete.',
-        moves: [toTrack('p02')], ticks: ['p02'], skip: ['wf02', '01-02'], tags: { wf02: 'NO EMAIL: SKIPPED' },
+        moves: [toTrack('p02')], skip: ['wf02', 'p02', '01-02'], tags: { wf02: 'NO EMAIL: SKIPPED' },
       });
     }
     add({
@@ -2851,6 +2863,7 @@ window.OAK_GRAPH = {
     if (chLabel) chLabel.textContent = channel || 'posts card';
     svg.classList.toggle('has-focus', Boolean(trace));
     svg.classList.toggle('show-err', errWires);
+    svg.classList.toggle('failure-mode', Boolean(trace && trace.id === 'failure'));
   }
 
   function tokenEl() {
@@ -2970,6 +2983,7 @@ window.OAK_GRAPH = {
     renderPathList();
     renderDetail();
     const step = trace.steps[player.i];
+    if (step && step.moves && step.moves.length) followPoint(moveEnd(step.moves[0]));
     const arrived = () => {
       if (!player.playing) return;
       if (player.i >= trace.steps.length - 1) {
@@ -2993,6 +3007,18 @@ window.OAK_GRAPH = {
       const end = tokenPointAt(player.i);
       placeToken(end, Boolean(end));
       arrived();
+    }
+  }
+
+  /* On a narrow screen the map scrolls sideways; keep the token in view. */
+  function followPoint(point) {
+    const scroller = main.querySelector('.map-panel .map-scroll');
+    const svg = $svg();
+    if (!scroller || !svg || scroller.scrollWidth <= scroller.clientWidth + 4) return;
+    const x = (point[0] / graph.viewBox.w) * svg.getBoundingClientRect().width;
+    const left = scroller.scrollLeft;
+    if (x < left + 40 || x > left + scroller.clientWidth - 40) {
+      scroller.scrollTo({ left: Math.max(0, x - scroller.clientWidth / 2), behavior: reducedMotion() ? 'auto' : 'smooth' });
     }
   }
 
@@ -3197,7 +3223,7 @@ window.OAK_GRAPH = {
     const business = state.view === 'business';
     const chip = (id, text, dot) => `<button class="chip" data-flow="${esc(id)}" aria-pressed="false"><i class="${esc(dot || '')}"></i>${esc(text)}</button>`;
     main.innerHTML = `
-      <section class="page-header"><div><p class="eyebrow">How Oak works</p><h1>Watch one badge scan travel through the system.</h1>
+      <section class="page-header compact"><div><p class="eyebrow">How Oak works</p><h1>Watch one badge scan travel through the system.</h1>
         <p>Ten n8n workflows plus the 08 Control API, in five lanes. Pick a visitor and press Play: the token follows the path that visitor really takes, and each stage lights up with what happened there and what it decided.</p></div>
         <div class="header-actions"><div class="segmented"><button data-action="set-view" data-view="business" class="${business ? 'active' : ''}">Business</button><button data-action="set-view" data-view="technical" class="${!business ? 'active' : ''}">Technical</button></div>
           <a class="button secondary" href="#/flow">Stage by stage</a></div></section>
@@ -3264,6 +3290,7 @@ window.OAK_GRAPH = {
         <footer class="panel-footer">Rules decide the outcome. The score explains it. The model never picks a channel.</footer></section>`;
     mountTrace(trace);
     if (leadError) toast(`Could not trace that lead: ${leadError.message}`, 'error');
+    if (trace) main.querySelector('.map-panel').scrollIntoView({ block: 'start' });
     if (trace) {
       if (reducedMotion()) setStep(0, false);
       else play();
@@ -3279,7 +3306,10 @@ window.OAK_GRAPH = {
     const trace = id ? traceById(id) : null;
     if (id && !trace) return;
     history.replaceState(null, '', id ? `#/map/${id}` : '#/explorer');
+    lastHash = location.hash;
     mountTrace(trace);
+    const panel = main.querySelector('.map-panel');
+    if (trace && panel && panel.getBoundingClientRect().top > 120) panel.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
     if (trace) play();
   }
 
