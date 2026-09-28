@@ -120,6 +120,8 @@ A competitor card is about their product, not one contact, and nobody pursues an
 
 **17. `Search Relevant Person`** (Brave, 3 results) - `"Full Name" Company Title identity security governance LinkedIn`. Soft-fails.
 
+**Recent news (`Search Company News`, Brave, same n8n Cloud search credits).** Runs right after `Search Company Web`, only for leads that get a company search at all (never out of scope). It searches the exact company name, news only, past year. `Extract Search Signals` keeps at most two items that are on the company's own domain or name the full company, drops incident claims ("breach", "alleged", "data leak" ...) exactly as `Sanitize Public Evidence` does, and stores them as `recent_news` with date and link. They are put first in the evidence so 05 can use them in the opening question, and 03 shows them as a "Recent news" line. They never feed headcount, industry or the classification. The company search itself asks for news too, but with its identity-heavy query Brave almost never returns any, which is why news has its own query.
+
 **18. `Attach Person Evidence`** (Code) - keeps a result only when it carries the visitor's **first name and surname as whole words** and either the **email or company domain** or a **distinctive company word**, max three. Generic words that many companies share (services, group, financial, technologies, security ...) do not count: "Rachel Green - TEAM Services Group" used to pass for Apex Financial Services on the word "services". Otherwise status is `no_identity_aligned_result` and no person claim is made.
 
 **19. `Sanitize Public Evidence`** (Code) - the last node, so its output is what 01 receives. Drops any company evidence with no quote, no URL, or incident language:
