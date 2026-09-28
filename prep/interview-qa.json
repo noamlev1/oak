@@ -238,8 +238,8 @@
   "category": "Task requirements",
   "difficulty": "core",
   "q": "The ICP lists three Tier 1 triggers. How do you detect each?",
-  "a": "All three are read from the booth notes with rules, and each is quoted into the evidence. A renewal needs both a renewal phrase with N months, where N is at most 6, and a named incumbent from the policy's seven, SailPoint, Saviynt, Omada, One Identity, Okta Identity Governance, Entra ID Governance or Ping; a renewal with no named tool is logged as unverified and does not trigger. A breach is 'identity breach', 'security breach' or 'breached'. An audit deadline is 'audit' within 30 characters of deadline, due or active, or SOX near those words.",
-  "if_pushed": "Why any incumbent and not only SailPoint? The brief gives SailPoint as the example of legacy IGA; a Saviynt renewal in 4 months is the same buying moment. There is a test for it.",
+  "a": "All three are read from the booth notes with rules, and each is quoted into the evidence. A renewal needs both a renewal phrase with a number of months, at most 6, and a named incumbent from the policy's seven: SailPoint, Saviynt, Omada, One Identity, Okta Identity Governance, Entra ID Governance or Ping. A renewal with no named tool is logged as unverified and does not trigger. The breach and audit rules look for breach language and for 'audit' near deadline, due or active, or SOX near those words. I started with exact phrases and widened them: breach in any form except 'breach of contract', renew, renews and renewing, and months written as words from one to twelve.",
+  "if_pushed": "Why any incumbent and not only SailPoint? The brief gives SailPoint as the example of legacy IGA, and a Saviynt renewal in 4 months is the same buying moment. There is a test for it.",
   "cite": "01 > Evaluate ICP Policy (urgency); oak_test_payloads row 16"
  },
  {
@@ -358,6 +358,15 @@
   "a": "No, they answer different questions about different fields. The competitor table is matched against the visitor's company and email domain: someone from sailpoint.com is competitor intel. The incumbent list is matched against the booth notes: a bank that runs SailPoint and renews in five months is Oak's best buying moment. Keeping them separate is what lets Rachel be Tier 1 while a SailPoint employee goes to #competitive-intel.",
   "if_pushed": "Are all 17 competitors right? I kept the list wide on purpose; a missed competitor costs more than a false positive, and False alarm on the card corrects a false positive in one tap.",
   "cite": "oak_competitors; policy incumbent_tools; 01 > Evaluate ICP Policy"
+ },
+ {
+  "id": "dec-13",
+  "category": "Decisions and trade-offs",
+  "difficulty": "deep",
+  "q": "Your Tier 1 triggers are keyword rules. People say 'breach' a hundred different ways. Isn't that brittle?",
+  "a": "Yes, rules will always miss some phrasing, and that was a deliberate trade-off. Routing decisions are rules because they are predictable, auditable, instant and free, and they cannot hallucinate: when a rep asks why a lead is Tier 1, the answer is one quoted sentence from the notes. I widened the rules to cover the common forms, including negation, so 'we've never had a breach' or 'we hadn't been breached' does not trigger, and the renewal rule accepts renew, renews, renewing and months written as words. The cost is coverage of unusual wording like 'we got hit by ransomware'. The next step I would build is a hybrid: the rules stay the first pass, and the AI can propose a trigger the rules missed, but only by quoting the exact sentence from the notes, which my AI step already enforces with a verbatim-quote check. An AI-found trigger would send the lead to review, not straight to Tier 1, so a human confirms it.",
+  "if_pushed": "Why not let the AI decide Tier 1 directly? Because a wrong Tier 1 pulls a rep off another conversation mid-event and pings the owner, so a false positive is expensive and visible. Routing the AI's finding through review keeps the speed while a human owns the call, and every AI suggestion traces to a quoted sentence.",
+  "cite": "01 > Evaluate ICP Policy (breach and renewal rules with the negation guard); 05 > Guard AI Output (verbatim-quote check)"
  },
  {
   "id": "ai-01",
@@ -850,7 +859,7 @@
   "category": "Weaknesses and what I would change",
   "difficulty": "core",
   "q": "What if the notes say 'we have never had a security breach'?",
-  "a": "In the original rule, that fired the breach trigger: it was a plain match on 'identity breach', 'security breach' or 'breached' with no negation handling, so a CISO saying they had never been breached would be Tier 1. I found it testing the trigger phrases against realistic notes. The fix adds a negation check, no, never or not shortly before the phrase, plus a test case. The card also quotes the notes, so a rep would see the sentence, but Tier 1 should not depend on the rep catching it.",
+  "a": "In the original rule, that fired the breach trigger. It was a plain match on 'identity breach', 'security breach' or 'breached' with no negation handling, so a CISO saying they had never been breached would be Tier 1. I found it by testing the trigger phrases against realistic notes. The fix adds a negation guard, so 'we've never had a breach' or 'we hadn't been breached' does not trigger, and I widened the rule to breach in any form except 'breach of contract'. The card also quotes the notes, but Tier 1 should not depend on the rep catching the sentence.",
   "if_pushed": "Why not let the AI judge the trigger? Then Tier 1 would depend on the model. A negation rule is cheap, testable and deterministic.",
   "cite": "01 > Evaluate ICP Policy (identity_breach regex)"
  },
