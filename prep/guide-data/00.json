@@ -1,0 +1,511 @@
+{
+  "id": "00",
+  "name": "Oak GTM - 00 Setup & Seed",
+  "short": "Setup & Seed",
+  "lane": "ops",
+  "one_breath": "00 builds everything the engine needs before the first scan: six oak_* Data Tables, the single active oak-event-v5 policy row, 17 competitor identities, the 20-scenario test suite, the missing oak_* HubSpot contact properties and the six Slack channels the policy names. Nothing calls it and it calls nothing; you run it by hand from the editor, it is safe to rerun, and it ends with a readiness report of what was created, what already existed and what still needs a human.",
+  "trigger": "Manual Trigger 'Run Setup'. Draft only: activeVersionId is null by design and it is never published; it runs from the editor.",
+  "input": "None. All seed data (policy document, competitor rows, test payloads, property definitions) is written in the Code nodes.",
+  "output": "One report item from Report Setup Result: ok, policy_version, tables, competitors_seeded, test_payloads_seeded, rerunnable, hubspot_properties (schema_read, already_present, created, missing_after_setup, ready), slack_channels (requested, created, already_existed, failed, detail, ready), crm_tagging_ready, alerting_ready, warnings, next. Side effects: creates tables if missing, upserts the policy, competitor and test rows, marks other policy versions superseded, creates missing HubSpot contact properties, creates Slack channels.",
+  "called_by": [
+    "Nobody. Run by hand from the n8n editor on a fresh import (or to reset seed data)."
+  ],
+  "calls": [],
+  "node_count": 24,
+  "groups": [
+    {
+      "name": "Ungrouped",
+      "purpose": "The manual entry point.",
+      "nodes": [
+        {
+          "step": 1,
+          "name": "Run Setup",
+          "type": "Manual Trigger",
+          "what": "Manual trigger. Clicking 'Execute workflow' in the editor emits one empty item that starts the chain. There is no webhook or schedule, so setup only runs when a person decides to run it.",
+          "why": "Provisioning should be a deliberate act, never something a scan or a timer can fire.",
+          "in": "Nothing.",
+          "out": "One empty item.",
+          "decides": null,
+          "code": null,
+          "branches": [],
+          "on_failure": "A manual trigger does not fail. 00 has no error workflow configured in its settings, so failures show in the editor run rather than in #oak-revops.",
+          "say_it": "00 runs only by hand, from the draft, and is never published.",
+          "next": [
+            "Create oak_policies"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Create Portable Storage",
+      "purpose": "Creates the six oak_* Data Tables by name, or reuses them. No other workflow creates a table, so this must run before the first scan.",
+      "nodes": [
+        {
+          "step": 2,
+          "name": "Create oak_policies",
+          "type": "Data Table (create table)",
+          "what": "Data Table node, resource table, operation create, table name 'oak_policies', option createIfNotExists true. Columns: version, status, document_json, activated_at (date). If a table with that name already exists it is reused as-is and the run moves on.",
+          "why": "This is where the ICP lives. 01, 04 and 05 all load the row with status = active; without the table nothing can classify.",
+          "in": "The single item from Run Setup.",
+          "out": "The table's metadata as one item, which just triggers the next node.",
+          "decides": null,
+          "code": "tableName: 'oak_policies'  options: { createIfNotExists: true }",
+          "branches": [],
+          "on_failure": "No retry or continue-on-error: if the table cannot be created the setup run stops here with an error, which is what you want on a fresh import. Idempotence is by name only; an existing table with different columns is never migrated.",
+          "say_it": "Create-if-not-exists makes this step safe to rerun: the first run builds oak_policies, every later run reuses it.",
+          "next": [
+            "Create oak_competitors"
+          ]
+        },
+        {
+          "step": 3,
+          "name": "Create oak_competitors",
+          "type": "Data Table (create table)",
+          "what": "Data Table node, resource table, operation create, table name 'oak_competitors', option createIfNotExists true. Columns: name, domains_json, aliases_json, category, active (boolean), verification_status, source_note, updated_at (date). If a table with that name already exists it is reused as-is and the run moves on.",
+          "why": "The competitor register 01's Load Competitors reads. Keeping it a table means adding a competitor is a row, not a deploy.",
+          "in": "The single item from the previous create step (only used as a trigger to run once).",
+          "out": "The table's metadata as one item, which just triggers the next node.",
+          "decides": null,
+          "code": "tableName: 'oak_competitors'  options: { createIfNotExists: true }",
+          "branches": [],
+          "on_failure": "No retry or continue-on-error: if the table cannot be created the setup run stops here with an error, which is what you want on a fresh import. Idempotence is by name only; an existing table with different columns is never migrated.",
+          "say_it": "Create-if-not-exists makes this step safe to rerun: the first run builds oak_competitors, every later run reuses it.",
+          "next": [
+            "Create oak_deliveries"
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Create oak_deliveries",
+          "type": "Data Table (create table)",
+          "what": "Data Table node, resource table, operation create, table name 'oak_deliveries', option createIfNotExists true. Columns: scan_id, event_id, event_person_key, email, full_name, job_title, company_name, company_domain, scanned_at (date), notes_from_booth, notes_hash, classification, score (number), policy_version, status, raw_json, slack_json, created_at (date). If a table with that name already exists it is reused as-is and the run moves on.",
+          "why": "The per-scan ledger. 01 uses it for replay protection (status complete means duplicate) and stores the final payload in raw_json and the Slack receipt in slack_json.",
+          "in": "The single item from the previous create step (only used as a trigger to run once).",
+          "out": "The table's metadata as one item, which just triggers the next node.",
+          "decides": null,
+          "code": "tableName: 'oak_deliveries'  options: { createIfNotExists: true }",
+          "branches": [],
+          "on_failure": "No retry or continue-on-error: if the table cannot be created the setup run stops here with an error, which is what you want on a fresh import. Idempotence is by name only; an existing table with different columns is never migrated.",
+          "say_it": "Create-if-not-exists makes this step safe to rerun: the first run builds oak_deliveries, every later run reuses it.",
+          "next": [
+            "Create oak_encounters"
+          ]
+        },
+        {
+          "step": 5,
+          "name": "Create oak_encounters",
+          "type": "Data Table (create table)",
+          "what": "Data Table node, resource table, operation create, table name 'oak_encounters', option createIfNotExists true. Columns: event_person_key, event_id, email, full_name, job_title, company_name, company_domain, notes_from_booth, scan_count (number), scan_history_json, first_scanned_at, last_scanned_at, last_notes_hash, last_classification, last_score, last_slack_channel, last_slack_ts, claimed_by_slack_id, claimed_by_name, claimed_at, last_score_breakdown, last_decision_reasons, last_rule_summary, hubspot_contact_id, source_json, person_evidence_json, company_evidence_json, crm_context_json, last_payload_json, booth_status, exclude_from_outreach (boolean), override_classification, competitor_override, competitive_intel (boolean), downgrade_reason, follow_up_at, last_action, last_action_by, last_action_at, updated_at. If a table with that name already exists it is reused as-is and the run moves on.",
+          "why": "One durable row per person per event. It powers returning-visitor detection and threading in 01/03, and holds the rep-action fields 06 writes (override_classification is what 01's final gate reads back).",
+          "in": "The single item from the previous create step (only used as a trigger to run once).",
+          "out": "The table's metadata as one item, which just triggers the next node.",
+          "decides": null,
+          "code": "tableName: 'oak_encounters'  options: { createIfNotExists: true }",
+          "branches": [],
+          "on_failure": "No retry or continue-on-error: if the table cannot be created the setup run stops here with an error, which is what you want on a fresh import. Idempotence is by name only; an existing table with different columns is never migrated.",
+          "say_it": "Create-if-not-exists makes this step safe to rerun: the first run builds oak_encounters, every later run reuses it.",
+          "next": [
+            "Create oak_enrichment_cache"
+          ]
+        },
+        {
+          "step": 6,
+          "name": "Create oak_enrichment_cache",
+          "type": "Data Table (create table)",
+          "what": "Data Table node, resource table, operation create, table name 'oak_enrichment_cache', option createIfNotExists true. Columns: company_domain, company_name, enriched_at (date), expires_at (date), source, payload_json, evidence_json, status. If a table with that name already exists it is reused as-is and the run moves on.",
+          "why": "Company facts keyed on domain with a 30-day TTL, so two people from one company pay for enrichment once.",
+          "in": "The single item from the previous create step (only used as a trigger to run once).",
+          "out": "The table's metadata as one item, which just triggers the next node.",
+          "decides": null,
+          "code": "tableName: 'oak_enrichment_cache'  options: { createIfNotExists: true }",
+          "branches": [],
+          "on_failure": "No retry or continue-on-error: if the table cannot be created the setup run stops here with an error, which is what you want on a fresh import. Idempotence is by name only; an existing table with different columns is never migrated.",
+          "say_it": "Create-if-not-exists makes this step safe to rerun: the first run builds oak_enrichment_cache, every later run reuses it.",
+          "next": [
+            "Create oak_test_payloads"
+          ]
+        },
+        {
+          "step": 7,
+          "name": "Create oak_test_payloads",
+          "type": "Data Table (create table)",
+          "what": "Data Table node, resource table, operation create, table name 'oak_test_payloads', option createIfNotExists true. Columns: suite, label, enabled (boolean), sort_order (number), payload_json, expect_json, notes. If a table with that name already exists it is reused as-is and the run moves on.",
+          "why": "The test suite 07 replays through the live webhook; seeding it means an import is testable immediately.",
+          "in": "The single item from the previous create step (only used as a trigger to run once).",
+          "out": "The table's metadata as one item, which just triggers the next node.",
+          "decides": null,
+          "code": "tableName: 'oak_test_payloads'  options: { createIfNotExists: true }",
+          "branches": [],
+          "on_failure": "No retry or continue-on-error: if the table cannot be created the setup run stops here with an error, which is what you want on a fresh import. Idempotence is by name only; an existing table with different columns is never migrated.",
+          "say_it": "Create-if-not-exists makes this step safe to rerun: the first run builds oak_test_payloads, every later run reuses it.",
+          "next": [
+            "Build Default Policy"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Validate and Seed Policy Data",
+      "purpose": "Seeds one active policy with a quiet out-of-scope route, competitor identities and the 20-scenario test suite, then reports what was written.",
+      "nodes": [
+        {
+          "step": 8,
+          "name": "Build Default Policy",
+          "type": "Code",
+          "what": "Builds the whole oak-event-v5 policy document in code and emits one row: version, status 'active', document_json (the stringified policy) and activated_at now. The document holds company_fit (qualified_employee_min 1000, review_employee_min 500, disqualified_employee_max 499, target industries financial_services, fintech, technology, healthcare, disqualifiers saas-only and single-cloud, nine personal email domains), personas ciso / iam / compliance at 30 points each plus other at 0, 24 relevance_signals (relevance_signals_are_scored false), competitors (17 confirmed_names, 7 possible_keywords for homepage text, 10 possible_name_tokens for company names), 7 incumbent_tools all with renewal_trigger true, urgency.renewal_max_months 6, scoring 30 / 15 / 15 / 40 max 100, notifications, slack.private_channels ['competitive-intel'], enrichment settings (30-day TTL, employee confidence hubspot 1, booth notes 0.9, official site 0.85, domain-matched search 0.7), llm (gemini, temperature 0, prompt_version oak-persona-v5, minimum_confidence 0.7), security (header x-oak-webhook-secret) and competitor_dont_say. executeOnce is on.",
+          "why": "The code is the permanent, versioned source of the ICP; the table row is the live-edit surface. Rerunning restores the canonical policy.",
+          "in": "Nothing from the input item (it only triggers the run).",
+          "out": "One item: { version:'oak-event-v5', status:'active', document_json, activated_at }.",
+          "decides": "Every threshold, persona, trigger, channel and weight the engine uses.",
+          "code": "company_fit:{qualified_employee_min:1000,review_employee_min:500,disqualified_employee_max:499,...}\nurgency:{renewal_max_months:6,breach_score:40,audit_deadline_score:40}\nscoring:{persona_points:30,company_size_points:15,industry_points:15,urgency_points:40,max:100,...}\nnotifications:{tier_1:{channel:'booth-hot',owner_dm:true},matched:{channel:'booth-matched',owner_dm:false},needs_review:{channel:'booth-review',owner_dm:false},competitor_intel:{channel:'competitive-intel',owner_dm:false},out_of_scope:{channel:'',owner_dm:false},ops_alerts:{channel:'oak-revops',owner_dm:false},mention_tiers:['tier_1'],owner_overrides:{}}",
+          "branches": [],
+          "on_failure": "No error settings; a syntax error stops the setup run. Note: the live active row also carries a crm block (create_company_if_missing, write_enrichment_to_company) that this seed does not contain; nothing in 00, 01, 02, 02A or 04 reads it, but a rerun would remove it.",
+          "say_it": "The entire ICP, from personas to channels to the 30/15/15/40 weights, is one JSON document seeded here and read by every workflow at run time.",
+          "next": [
+            "Enable Out-of-Scope Route"
+          ]
+        },
+        {
+          "step": 9,
+          "name": "Enable Out-of-Scope Route",
+          "type": "Code",
+          "what": "Parses document_json (throwing 'Default policy JSON is invalid.' if it cannot) and sets notifications.out_of_scope to { channel:'booth-out-of-scope', owner_dm:false }, then re-stringifies it on the same row.",
+          "why": "Keeps the quiet out-of-scope audit route in policy data instead of hard-coded routing, and fails the setup loudly if the seed JSON is broken.",
+          "in": "The row from Build Default Policy ($input.first().json).",
+          "out": "The same row with the patched document_json.",
+          "decides": "The out_of_scope channel: booth-out-of-scope, no owner DM.",
+          "code": "try{p=JSON.parse(row.document_json||'{}');}catch(e){throw new Error('Default policy JSON is invalid.');}\np.notifications.out_of_scope={channel:'booth-out-of-scope',owner_dm:false};",
+          "branches": [],
+          "on_failure": "Throws on invalid JSON, which stops the setup run on purpose. Plan Slack Channels later reads this node's output, not the table.",
+          "say_it": "Out-of-scope leads are still logged to a quiet channel, and that route is policy data, not a hard-coded branch.",
+          "next": [
+            "Seed Active Policy"
+          ]
+        },
+        {
+          "step": 10,
+          "name": "Seed Active Policy",
+          "type": "Data Table upsert",
+          "what": "Upserts oak_policies (table selected by name) matching on version = $json.version, writing version, status, document_json and activated_at. On a fresh table it inserts; on a rerun it overwrites the oak-event-v5 row.",
+          "why": "Upsert on version means rerunning never creates a second v5 row.",
+          "in": "The patched row from Enable Out-of-Scope Route.",
+          "out": "The upserted row.",
+          "decides": null,
+          "code": "filters: version = {{ $json.version }}\nvalue: { version, status, document_json, activated_at }",
+          "branches": [],
+          "on_failure": "No error settings: a failed write stops the setup run. A rerun intentionally overwrites any hand edits made to the v5 row.",
+          "say_it": "The policy is upserted on its version string, so setup is rerunnable without duplicating the ICP.",
+          "next": [
+            "Retire Superseded Policies"
+          ]
+        },
+        {
+          "step": 11,
+          "name": "Retire Superseded Policies",
+          "type": "Data Table update",
+          "what": "Updates oak_policies where version is not equal to the literal 'oak-event-v5' and sets status 'superseded'.",
+          "why": "Guarantees exactly one active policy row, which 01's 'status = active, limit 1' lookup depends on.",
+          "in": "Runs once per incoming item; its filter is a hard-coded literal, not the incoming version.",
+          "out": "The updated rows, or one empty item if none matched.",
+          "decides": "That every other policy version is superseded.",
+          "code": "filters: version neq 'oak-event-v5'\nvalue: { status: 'superseded' }",
+          "branches": [],
+          "on_failure": "onError continueRegularOutput and alwaysOutputData: a failure or zero matching rows still emits an item so the chain continues. The version is hard-coded here, so a version bump in Build Default Policy must be mirrored in this filter.",
+          "say_it": "Retiring every other version is what makes 'the active policy' unambiguous.",
+          "next": [
+            "Build Competitor Seed"
+          ]
+        },
+        {
+          "step": 12,
+          "name": "Build Competitor Seed",
+          "type": "Code",
+          "what": "Defines 17 competitor rows: Veza, SailPoint, Saviynt, Omada Identity, One Identity, Okta Identity Governance, Microsoft Entra ID Governance, Ping Identity, CyberArk, BeyondTrust, Delinea, Astrix Security, Oasis Security, Silverfort, Aembit, Token Security, Clutch Security. Each has domains (empty for Okta and Microsoft, whose corporate domains are too broad), aliases, category (identity_security, iga, pam, nhi_ai_identity), active true, verification_status (task_defined for Veza, user_confirmed_overlap for the rest) and a source note. It throws on any duplicate domain or alias. executeOnce is on.",
+          "why": "A duplicate alias would make two competitors match the same badge; throwing here keeps that bug out of the booth.",
+          "in": "Nothing from the input (executeOnce, so however many items Retire returned it runs once).",
+          "out": "17 items: name, domains_json, aliases_json, category, active, verification_status, source_note, updated_at.",
+          "decides": "The competitor register.",
+          "code": "for(const r of rows){for(const d of r.domains){const n=d.toLowerCase();if(ds.has(n))throw new Error('Duplicate domain: '+n);ds.add(n);}for(const a of r.aliases){const n=a.toLowerCase();if(as.has(n))throw new Error('Duplicate alias: '+n);as.add(n);}}",
+          "branches": [],
+          "on_failure": "Throws on duplicates, stopping setup on purpose. executeOnce matters because Retire Superseded Policies can emit several items.",
+          "say_it": "The competitor list is validated for duplicate domains and aliases before it is written, so a bad seed fails at setup, not at the booth.",
+          "next": [
+            "Seed Competitors"
+          ]
+        },
+        {
+          "step": 13,
+          "name": "Seed Competitors",
+          "type": "Data Table upsert",
+          "what": "Upserts each of the 17 rows into oak_competitors matching on name.",
+          "why": "Upsert on name makes reruns update rows (for example a corrected domain) instead of duplicating them.",
+          "in": "17 items from Build Competitor Seed.",
+          "out": "17 upserted rows.",
+          "decides": null,
+          "code": "filters: name = {{ $json.name }}",
+          "branches": [],
+          "on_failure": "No error settings; a failed write stops setup. Rows added by hand under a new name are left alone.",
+          "say_it": "Competitors are upserted by name, so the register is additive and rerunnable.",
+          "next": [
+            "Build Test Payload Seed"
+          ]
+        },
+        {
+          "step": 14,
+          "name": "Build Test Payload Seed",
+          "type": "Code",
+          "what": "Defines 20 test scenarios for 07, each with suite, label, enabled, sort_order, payload_json, expect_json and notes. Only sort_order 1 to 4 (the four task leads: Rachel/tier_1, Hiroshi/matched, David/out_of_scope, Sarah/competitor_intel) are enabled. The rest cover a returning visitor, personal email, an invalid scan, an ambiguous title, a two-person cache pair, the 500-999 band, prompt injection, the compliance persona, Tier 1 by audit deadline, breach and Saviynt renewal, an unlisted competitor by name, a small identity vendor, no email, and booth notes outranking the website. It throws on a duplicate sort_order, a missing suite or label, or invalid payload/expect JSON. executeOnce is on.",
+          "why": "Shipping the suite with the export means a fresh import can prove itself, and the validation stops a malformed test from producing a false FAIL later.",
+          "in": "Nothing from the input (executeOnce; Seed Competitors emits 17 items).",
+          "out": "20 items.",
+          "decides": "Which scenarios the default harness run executes (the four enabled ones).",
+          "code": "if(seen.has(r.sort_order))throw new Error('Duplicate sort_order: '+r.sort_order);\ntry{JSON.parse(r.payload_json);}catch(e){throw new Error('Invalid payload_json on test row '+r.sort_order);}",
+          "branches": [],
+          "on_failure": "Throws on bad seed data, stopping setup on purpose.",
+          "say_it": "The 20 test scenarios travel with the export, and only the four brief leads are on by default.",
+          "next": [
+            "Seed Test Payloads"
+          ]
+        },
+        {
+          "step": 15,
+          "name": "Seed Test Payloads",
+          "type": "Data Table upsert",
+          "what": "Upserts the 20 rows into oak_test_payloads matching on sort_order.",
+          "why": "sort_order is stable, unique and numeric, so a label that drifted is corrected rather than duplicated.",
+          "in": "20 items from Build Test Payload Seed.",
+          "out": "20 upserted rows.",
+          "decides": null,
+          "code": "filters: sort_order = {{ $json.sort_order }}",
+          "branches": [],
+          "on_failure": "No error settings; a failure stops setup. A rerun resets every row's enabled flag to the seeded default, which is intentional.",
+          "say_it": "Tests are upserted on sort_order, so rerunning setup resets the suite to exactly the four brief leads.",
+          "next": [
+            "Setup Complete"
+          ]
+        },
+        {
+          "step": 16,
+          "name": "Setup Complete",
+          "type": "Code",
+          "what": "Starts the report: ok true, policy_version 'oak-event-v5', the six table names, competitors_seeded and test_payloads_seeded (item counts from the two seed nodes) and rerunnable true.",
+          "why": "Collapses 20 items back to one, so the HubSpot stage runs once, and records what the storage stage wrote.",
+          "in": "Item counts from Seed Competitors and Seed Test Payloads.",
+          "out": "One item: { ok, policy_version, tables, competitors_seeded, test_payloads_seeded, rerunnable }.",
+          "decides": null,
+          "code": "competitors_seeded:$('Seed Competitors').all().length,test_payloads_seeded:$('Seed Test Payloads').all().length",
+          "branches": [],
+          "on_failure": "No error settings; it only counts items.",
+          "say_it": "Setup Complete is the checkpoint between the storage stage and the external provisioning stage.",
+          "next": [
+            "List HubSpot Contact Properties"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Provision HubSpot and Slack",
+      "purpose": "Provisions only retained Oak properties and every policy channel, including the quiet out-of-scope log.",
+      "nodes": [
+        {
+          "step": 17,
+          "name": "List HubSpot Contact Properties",
+          "type": "HTTP Request",
+          "what": "GET https://api.hubapi.com/crm/v3/properties/contacts with the HubSpot OAuth2 credential, returning every contact property the portal already has.",
+          "why": "Reading the schema first is what makes property provisioning idempotent: only missing properties are created.",
+          "in": "The Setup Complete item (only as a trigger).",
+          "out": "results[] of property definitions.",
+          "decides": null,
+          "code": "GET https://api.hubapi.com/crm/v3/properties/contacts",
+          "branches": [],
+          "on_failure": "retryOnFail 3 tries at 1500 ms, continueRegularOutput, alwaysOutputData. On failure the planner records lookup_error and, seeing no existing properties, treats all 18 as missing.",
+          "say_it": "Setup reads the HubSpot schema before touching it, so it only ever creates what is missing.",
+          "next": [
+            "Plan Oak Properties Raw"
+          ]
+        },
+        {
+          "step": 18,
+          "name": "Plan Oak Properties Raw",
+          "type": "Code",
+          "what": "Defines 20 oak_* contact properties with label, type, fieldType and description, and keeps only those whose name the portal does not have, assigning groupName 'contactinformation'. oak_competitor_status is an enumeration/select with exactly none, possible, confirmed; oak_exclude_from_outreach is a bool/booleancheckbox; oak_lead_score and oak_scan_count are numbers; the rest are text or textarea.",
+          "why": "Provisioning oak_competitor_status as an enumeration means a fresh portal enforces the same three values as the live one, which is also why 02 must send a bare enum value.",
+          "in": "List HubSpot Contact Properties.",
+          "out": "schema_read, lookup_error, already_present, missing_count, missing_names, inputs (the definitions to create).",
+          "decides": "Which properties are missing.",
+          "code": "const missing=defs.filter(d=>!existing.has(d.name)).map(d=>Object.assign({},d,{groupName:'contactinformation'}));",
+          "branches": [],
+          "on_failure": "No error settings; reading the schema response is wrapped in try/catch, so a failed GET becomes lookup_error rather than an exception.",
+          "say_it": "The property plan is a diff between what Oak needs and what the portal already has.",
+          "next": [
+            "Plan Oak Properties"
+          ]
+        },
+        {
+          "step": 19,
+          "name": "Plan Oak Properties",
+          "type": "Code",
+          "what": "Filters out the two retired properties, oak_score_breakdown and oak_rule_summary, recomputes missing_count and missing_names, and records retired_properties.",
+          "why": "02 writes all Oak properties in one all-or-nothing PATCH; fewer properties means fewer ways for it to fail, and 02 folds the two retired values into oak_decision_reasons.",
+          "in": "Plan Oak Properties Raw.",
+          "out": "The same plan with at most 18 inputs and an updated missing_count.",
+          "decides": "The final set of properties to create (at most 18).",
+          "code": "const retired=['oak_score_breakdown','oak_rule_summary'];const inputs=(p.inputs||[]).filter(x=>!retired.includes(x.name));",
+          "branches": [],
+          "on_failure": "No error settings; pure data shaping.",
+          "say_it": "Two audit fields were retired on purpose and folded into the decision reasons, which leaves 18 Oak properties.",
+          "next": [
+            "Properties Missing?"
+          ]
+        },
+        {
+          "step": 20,
+          "name": "Properties Missing?",
+          "type": "IF",
+          "what": "IF node, one condition: missing_count (number) is greater than 0, strict type validation.",
+          "why": "Skips the create call entirely when the portal is already provisioned, which is the normal rerun case.",
+          "in": "missing_count from Plan Oak Properties.",
+          "out": "The plan item on one of two outputs.",
+          "decides": "Whether any HubSpot properties need creating.",
+          "code": "leftValue: {{ $json.missing_count }}  operator: number gt  rightValue: 0",
+          "branches": [
+            {
+              "label": "true",
+              "goes_to": "Create Oak Properties",
+              "meaning": "At least one oak_* property is missing, so batch-create them."
+            },
+            {
+              "label": "false",
+              "goes_to": "Plan Slack Channels",
+              "meaning": "All properties exist; go straight to Slack provisioning."
+            }
+          ],
+          "on_failure": "An IF on a number does not realistically fail.",
+          "say_it": "On a rerun the portal is already provisioned, so this IF skips the HubSpot write entirely.",
+          "next": [
+            "Create Oak Properties",
+            "Plan Slack Channels"
+          ]
+        },
+        {
+          "step": 21,
+          "name": "Create Oak Properties",
+          "type": "HTTP Request",
+          "what": "POST https://api.hubapi.com/crm/v3/properties/contacts/batch/create with inputs = the planned definitions; any definition with type 'bool' gets options Yes ('true') and No ('false') added.",
+          "why": "HubSpot requires explicit options for a boolean checkbox; one batch call creates every missing property.",
+          "in": "$('Plan Oak Properties').first().json.inputs.",
+          "out": "results[] of created properties, or an error item.",
+          "decides": null,
+          "code": "inputs: $('Plan Oak Properties').first().json.inputs.map(d => d.type === 'bool' ? { ...d, options: [{ label: 'Yes', value: 'true', displayOrder: 0, hidden: false }, { label: 'No', value: 'false', displayOrder: 1, hidden: false }] } : d)",
+          "branches": [],
+          "on_failure": "retryOnFail 2 tries at 2000 ms, continueRegularOutput, alwaysOutputData. A missing crm.schemas.contacts.write scope becomes a warning in the final report rather than stopping the run.",
+          "say_it": "All missing Oak properties are created in one batch call, and a scope problem becomes a named warning instead of a crash.",
+          "next": [
+            "Plan Slack Channels"
+          ]
+        },
+        {
+          "step": 22,
+          "name": "Plan Slack Channels",
+          "type": "Code",
+          "what": "Parses the policy document from Enable Out-of-Scope Route, walks notifications, skips any entry without a channel (mention_tiers and owner_overrides), strips '#', lowercases and dedupes names, and marks a channel private if it is in slack.private_channels. Result: booth-hot, booth-matched, booth-review, competitive-intel (private), booth-out-of-scope, oak-revops. If nothing is found it falls back to booth-review.",
+          "why": "Deriving channels from the same document the router reads means Slack and routing cannot drift apart.",
+          "in": "$('Enable Out-of-Scope Route').first().json.document_json (the seed, not the live table row).",
+          "out": "One item per channel: channel_name, tier, visibility (public | private).",
+          "decides": "Which channels to create and which one is private.",
+          "code": "rows.push({json:{channel_name:name,tier:key,visibility:privateList.indexOf(name)>=0?'private':'public'}});",
+          "branches": [],
+          "on_failure": "No error settings; JSON parsing is in try/catch and falls back to a single booth-review channel.",
+          "say_it": "The Slack channel list is computed from the policy's routing block, so the workspace always matches the rules.",
+          "next": [
+            "Create Slack Channel"
+          ]
+        },
+        {
+          "step": 23,
+          "name": "Create Slack Channel",
+          "type": "Slack (channel create)",
+          "what": "Slack node, resource channel (create), once per planned channel, using the Slack OAuth2 credential (slackOAuth2Api 'Slack account'), with the channel name and visibility from the plan.",
+          "why": "Posting fails if a channel does not exist, so setup creates all six up front.",
+          "in": "channel_name and visibility per item.",
+          "out": "One result per channel: the channel (id) or an error item.",
+          "decides": null,
+          "code": "channelId: {{ $json.channel_name }}  channelVisibility: {{ $json.visibility }}",
+          "branches": [],
+          "on_failure": "retryOnFail 2 tries at 1500 ms, continueRegularOutput, alwaysOutputData. name_taken on a rerun is expected and counted as already provisioned. It does not join channels it did not create, so if a card never appears, check the app is a member.",
+          "say_it": "Channel creation treats name_taken as success, which is what makes the Slack stage rerunnable.",
+          "next": [
+            "Report Setup Result"
+          ]
+        },
+        {
+          "step": 24,
+          "name": "Report Setup Result",
+          "type": "Code",
+          "what": "Builds the final readiness report. For HubSpot: which properties already existed, which were created, which are still missing, and ready when missing_count is 0 or every missing one was created. For Slack: each channel matched by index to its result as created, already_exists (name_taken) or failed. It adds warnings naming the fix (crm.schemas.contacts.write; channels:manage and groups:write) and next steps (map HubSpot owners to Slack ids in slack.owner_directory for DMs; activate 01 and point the scanner at its webhook).",
+          "why": "A setup run should end with a plain answer to 'is it ready, and if not what exactly do I fix'.",
+          "in": "Setup Complete, Plan Oak Properties, Create Oak Properties (if it ran), Plan Slack Channels, Create Slack Channel.",
+          "out": "The full report: ...Setup Complete fields, hubspot_properties, slack_channels, crm_tagging_ready, alerting_ready, warnings, next.",
+          "decides": "crm_tagging_ready and alerting_ready.",
+          "code": "const propsReady=plan.missing_count===0||created.length===plan.missing_count;\nconst taken=/name_taken/i.test(err);\nstate:r.id?'created':(taken?'already_exists':'failed')",
+          "branches": [],
+          "on_failure": "No error settings; every upstream read is guarded, and Create Oak Properties being skipped is handled by try/catch.",
+          "say_it": "Setup ends with a readiness report that names the missing scope instead of just saying it failed.",
+          "next": []
+        }
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "title": "The ICP is data, not code",
+      "why": "Personas, title patterns, the 500 and 1,000 bands, triggers, channels, competitor terms and scoring weights live in one oak_policies row that every workflow reads at run time. A live tweak is a row edit; a permanent change is an edit in Build Default Policy plus a rerun."
+    },
+    {
+      "title": "Idempotent by design",
+      "why": "Tables are create-if-not-exists, rows are upserts on stable keys (version, name, sort_order), HubSpot properties are created only if missing, and Slack's name_taken counts as success. It is safe to rerun mid-event by someone unsure of the state."
+    },
+    {
+      "title": "Exactly one active policy",
+      "why": "Upsert on version plus 'mark every other version superseded' means 01's 'status = active, limit 1' lookup can never pick the wrong row."
+    },
+    {
+      "title": "Fail loudly at setup, not at the booth",
+      "why": "A duplicate competitor domain or alias, a duplicate test sort_order, or invalid JSON throws here, so a bad seed stops the setup run instead of misrouting a scan later."
+    },
+    {
+      "title": "Channels come from the policy",
+      "why": "Plan Slack Channels derives channel names from the policy's notifications block, so the Slack workspace and the routing rules cannot drift apart."
+    },
+    {
+      "title": "The test suite ships with the export",
+      "why": "All 20 scenarios are seeded into oak_test_payloads, but only the four task leads are enabled, so a default 07 harness run is exactly the brief."
+    }
+  ],
+  "questions": [
+    {
+      "q": "Why is setup a separate workflow, and why is it never published?",
+      "a": "It is one-time provisioning with a manual trigger; nothing calls it, so there is no reason for it to be active, and it runs from the draft. Keeping it separate means the hot path in 01 never carries setup logic."
+    },
+    {
+      "q": "How would you change the ICP for the next event?",
+      "a": "For a live change, edit document_json on the active oak_policies row; the next scan reads it with no deploy. For a permanent change, edit Build Default Policy and rerun 00, which upserts the version as active and marks every other version superseded. If you bump the version string, Retire Superseded Policies also has 'oak-event-v5' hard-coded in its filter and must be edited too."
+    },
+    {
+      "q": "What happens if you run it twice?",
+      "a": "Nothing doubles. Tables are reused, policy, competitors and tests are upserted on version, name and sort_order, only missing HubSpot properties are created, and Slack returns name_taken, which the report counts as already provisioned. The deliberate overwrites are the active policy row (hand edits to v5 are lost) and the test rows' enabled flags (reset to the default four)."
+    },
+    {
+      "q": "Why 18 HubSpot properties and not 20?",
+      "a": "Plan Oak Properties Raw defines 20, and Plan Oak Properties removes oak_score_breakdown and oak_rule_summary. 02 writes all Oak properties in one all-or-nothing PATCH, so their content is prepended to oak_decision_reasons instead; nothing is lost and there are fewer ways for the PATCH to fail."
+    },
+    {
+      "q": "Why are all 17 competitors active?",
+      "a": "A missed competitor at the booth costs more than a false positive. False positives are handled by the False alarm button on the competitor card, and verification_status records how each row was established. Okta Identity Governance and Microsoft Entra ID Governance have no domains because okta.com and microsoft.com are too broad; they match on name and alias only."
+    },
+    {
+      "q": "How do you know setup worked?",
+      "a": "Report Setup Result returns crm_tagging_ready and alerting_ready plus explicit warnings naming the missing scope (crm.schemas.contacts.write for properties, channels:manage and groups:write for Slack) and the next steps."
+    }
+  ]
+}
