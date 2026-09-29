@@ -55,7 +55,7 @@ Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `
    - **Possible competitor by name.** If no confirmed competitor, whole-word match of the company name against `policy.competitors.possible_name_tokens` ("identity security", "identity governance", "access governance", "identity platform", "privileged access", "non-human identity", "machine identity", "identity fabric", "identity management", "access management").
    - **Persona.** Walks the policy personas in order `ciso`, `iam`, `compliance`; the first whose `title_patterns` appears as a substring of the lowercased job title wins. Otherwise `other`.
    - **Relevance signals.** Policy `relevance_signals` (identity, iam, iga, access review, sailpoint, non-human identities, service accounts, api keys, ai agents, sox, audit, compliance, ...) found in title or notes. Recorded as evidence; never scored (`relevance_signals_are_scored: false`).
-   - **Headcount from notes.** Regex `(\d[\d,]{1,8})\s*(employees|people|staff|seats|users)`. Size band: `>= 1000` is `qualified_1000_plus`, `>= 500` is `review_500_999`, below is `disqualified_under_500`, nothing found is `unknown`.
+   - **Headcount from notes.** Regex `(\d[\d,]{1,8})\s*(employees|people|staff|seats|users)`. Size band: `>= 1000` is `qualified_1000_plus`, `>= 500` is `review_500_999` (a band name only; it no longer sends a lead to review), below is `disqualified_under_500`, nothing found is `unknown`.
    - **Disqualifiers.** Policy `company_fit.disqualifiers` = `saas-only`, `single-cloud`, substring match in the notes.
    - **Incumbent tools.** Whole-word match in the notes against the 7 active policy incumbents (SailPoint/IdentityIQ, Saviynt, Omada, One Identity, Okta Identity Governance, Microsoft Entra ID Governance, Ping Identity), all `renewal_trigger: true`.
    - **Tier 1 triggers (urgency)**, each quoted from the notes:
@@ -68,7 +68,6 @@ Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `
      if(competitor){classification='competitor_intel';}
      else if(possibleNameHit){classification='needs_review';}
      else if(outBySize||dqHits.length){classification='out_of_scope';}
-     else if(targetPersona&&reviewBySize){classification='needs_review';}
      else if(targetPersona){classification=urgency.length?'tier_1':'matched';}
      else if(relevanceSignals.length){classification='needs_review';}
      // else stays 'out_of_scope'
@@ -79,13 +78,12 @@ Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `
      | 1 | Domain or name matches `oak_competitors` | `competitor_intel` | `competitor` |
      | 2 | Company name carries a possible-competitor token | `needs_review` | unchanged (`irrelevant`) |
      | 3 | Known under 500 employees, or `saas-only` / `single-cloud` in notes | `out_of_scope` | `matched_but_disqualified` or `irrelevant` |
-     | 4 | Target persona AND 500-999 employees | `needs_review` | `matched_fit_review` |
-     | 5 | Target persona AND a Tier 1 trigger | `tier_1` | `matched` |
-     | 6 | Target persona, no trigger | `matched` | `matched` |
-     | 7 | No persona, but identity/compliance context | `needs_review` | `ambiguous` |
-     | 8 | Nothing relevant | `out_of_scope` | `irrelevant` |
+     | 4 | Target persona AND a Tier 1 trigger | `tier_1` | `matched` |
+     | 5 | Target persona, no trigger | `matched` | `matched` |
+     | 6 | No persona, but identity/compliance context | `needs_review` | `ambiguous` |
+     | 7 | Nothing relevant | `out_of_scope` | `irrelevant` |
 
-     Order matters: rule 2 sits above the size rule because mistaking a competitor for a small bad fit is the expensive mistake. Unknown headcount never demotes anyone.
+     Order matters: rule 2 sits above the size rule because mistaking a competitor for a small bad fit is the expensive mistake. Unknown headcount never demotes anyone. A known 500-999 company is not a rule of its own: a target persona there is `tier_1` or `matched` exactly like an unknown size, but earns no company-size points (those are for 1,000+ only). The rule summary gets the suffix " (500–999 employees)", e.g. "Tier 1: CISO + SailPoint renewal ≤ 6 months (500–999 employees)", and the reason says "<N> employees is above Oak’s 500 floor but below the 1,000+ ICP: the tier stands on persona and trigger, with no company-size points."
    - **Score** (provisional): persona 30 if a target persona, company size 15 only if the notes put it at 1,000+, urgency 40 if any Tier 1 trigger was found, industry 0 (industry is resolved later by 04/05). Capped at `scoring.max` 100. The score explains the decision; it does not route it. The tier comes from the cascade, not from the number.
    - **Reasons and trace.** Every rule that fired adds a readable sentence to `decision_reasons` and a `{code, detail, source}` entry to `decision_trace` (codes like `competitor_identity`, `company_under_500`, `persona_rule`, `incumbent_renewal`, `company_size_unverified`). `rule_summary` is the one-liner, e.g. "Tier 1: CISO + SailPoint renewal <= 6 months".
    - **Routing** from `policy.notifications[classification]`: channel, `owner_dm`, and `mention` if the tier is in `mention_tiers` (`tier_1` only).
@@ -124,7 +122,7 @@ Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `
 
 20. **Read CRM Context** (Execute Workflow 02A, wait). Read-only HubSpot lookup: contact, company, owner, relationship, open deals. Adds `crm_context`.
 
-21. **Enrich Company** (Execute Workflow 04, wait). Free homepage read always; paid Brave search skipped for `out_of_scope`; person search skipped for competitors. 04 also settles headcount (order: HubSpot 1.0, booth notes 0.9, official site 0.85, domain-matched search 0.7), recomputes the size band, can flag a possible competitor (to `needs_review`), can downgrade on size or disqualifier, adds size and industry points (never for `out_of_scope` / `competitor_intel`), and applies a rep override for leads that will not reach the final gate. For competitor and out-of-scope leads, 04 has the last deterministic word.
+21. **Enrich Company** (Execute Workflow 04, wait). Free homepage read always; paid Brave search skipped for `out_of_scope`; person search skipped for competitors. 04 also settles headcount (order: HubSpot 1.0, booth notes 0.9, official site 0.85, domain-matched search 0.7), recomputes the size band, can flag a possible competitor (to `needs_review`), sends a target persona to `needs_review` when the booth notes say under 500 but HubSpot says 500+, can downgrade on size or disqualifier, adds size and industry points (never for `out_of_scope` / `competitor_intel`), and applies a rep override for leads that will not reach the final gate. For competitor and out-of-scope leads, 04 has the last deterministic word.
 
 22. **Needs AI Synthesis?** (IF `persona_reasoning_required`).
     - True (`tier_1`, `matched`, `needs_review` as classified in step 9): go to AI.
@@ -140,7 +138,6 @@ Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `
     if(x.competitor_status==='confirmed'&&x.competitor){ classification='competitor_intel'; ... }
     else if(x.company_size_band==='disqualified_under_500'&&!possibleCompetitor){ classification='out_of_scope'; ... }
     else if(siteDisq.length&&!possibleCompetitor&&classification!=='out_of_scope'&&classification!=='competitor_intel'){ classification='out_of_scope'; ... }
-    else if(x.company_size_band==='review_500_999'&&classification!=='out_of_scope'){ classification='needs_review'; ... }
     else if(possibleCompetitor&&classification!=='needs_review'){ classification='needs_review'; ... }
     else if(classification==='out_of_scope'){ route('out_of_scope', ...) }
     else { route(classification, ...) }
@@ -149,10 +146,10 @@ Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `
     - Confirmed competitor: `competitor_intel`, no mention.
     - Size band (as resolved by 04) under 500: `out_of_scope`, unless the lead is a possible competitor, which stays with a human in `needs_review` as it does in 04.
     - SaaS-only or single-cloud found on the company's own site (`company_enrichment.disqualifier_signals`), when 05 has lifted the lead off 04's `out_of_scope`: back to `out_of_scope` with 04's reason "Public evidence indicates ...", rule "Out of scope: <disqualifier>", trace `environment_disqualifier_final_gate`. A possible competitor is exempt, as in 04.
-    - 500-999: `needs_review`, with reason "Final deterministic gate kept the lead in review because 500-999 employees is below the qualified 1,000+ threshold."
     - Possible competitor (`competitor_status == 'possible'`) that 05 moved to `matched`, `tier_1` or `out_of_scope` after resolving an ambiguous title: back to `needs_review`, rule "Review: possible competitor", trace `possible_competitor_final_gate`. The model resolves a persona; it does not clear a competitor flag.
     - Otherwise the tier stands and is routed from the policy (`tier_1` to `booth-hot` with mention, `matched` to `booth-matched`, `needs_review` to `booth-review`).
     - Unknown headcount with a target persona: the tier stands, a reason is added, and the rule summary gets "(headcount to confirm)". `unknown_size_requires_review: false` is recorded explicitly.
+    - 500-999 (as resolved by 04): no branch of its own. A Tier 1 or Matched rule summary gets the suffix " (500–999 employees)"; the tier stands.
     - Removes any reason that starts "null employees".
     - **AI second look (policy `llm.ai_trigger_review`, off by default).** If 05 handed over an `ai_trigger_candidate` and the lead is still `matched` with no rule urgency (current or carried from an earlier scan), no confirmed or possible competitor flag and no rep override: `needs_review`, rule "Review: possible Tier 1 trigger found by AI", trace `ai_trigger_review`, and a reason quoting the sentence and telling the rep to confirm it, then use Promote to Tier 1. It never makes a Tier 1 and leaves every other branch alone; a rule-found `tier_1` stays `tier_1`. With the flag off 05 never emits the key, so this block never runs.
 
@@ -221,7 +218,7 @@ Workflow `9SzVHK4vdv7Z3UMH` - "Oak GTM - 01 Intake & Decision". Active version `
 The webhook hands the body to Normalize Scan, which cleans fields, infers the company domain from a work email, builds the person key and checks the secret. It then passes auth, validation and the replay check, loads the active policy and competitors, and Evaluate ICP Policy classifies with a first-match-wins ladder. It detects a returning visitor, writes the encounter and ledger rows, and replies 202 with the provisional decision. Then it calls 02A, 04 and 05, runs the final gate, writes HubSpot through 02 if there is an email, marks the ledger complete and posts to Slack through 03.
 
 **What is the classification order and why that order?**
-Competitor first, then possible competitor by name, then hard disqualifiers (known under 500, SaaS-only, single-cloud), then persona at 500-999 to review, then persona plus trigger to Tier 1, persona alone to matched, identity context without a persona to review, and everything else out of scope. Competitor sits on top because a competitor with a CISO title must never land in #booth-hot. The possible-competitor token sits above the size rule because calling a small competitor "too small" is the costly mistake.
+Competitor first, then possible competitor by name, then hard disqualifiers (known under 500, SaaS-only, single-cloud), then persona plus trigger to Tier 1, persona alone to matched, identity context without a persona to review, and everything else out of scope. Competitor sits on top because a competitor with a CISO title must never land in #booth-hot. The possible-competitor token sits above the size rule because calling a small competitor "too small" is the costly mistake.
 
 **How is the score computed and does it drive routing?**
 Persona 30, company size 15 (only at 1,000+), industry 15 (only when enrichment resolves a target industry), Tier 1 urgency 40; total 100, weights from `policy.scoring`. 01 awards persona, size-from-notes and urgency; 04 and 05 add size and industry later. The score does not route anything - the cascade does - so Rachel is Tier 1 at 70 because persona plus a quoted renewal trigger is the rule, not because 70 crossed a threshold.
@@ -230,7 +227,7 @@ Persona 30, company size 15 (only at 1,000+), industry 15 (only when enrichment 
 Four things. It is only called for `tier_1`, `matched` and `needs_review`, and only changes a tier when the persona is `ambiguous`. It needs 0.7 confidence and cannot invent urgency - Tier 1 requires a trigger the regex already quoted from the notes. And Enforce Final Deterministic Gates runs after it and re-applies competitor, size band and rep override from a freshly loaded policy. The opt-in second look for missed triggers (`llm.ai_trigger_review`) cannot promote at all: the gate can only move a `matched` lead to `needs_review`, and a rep presses Promote.
 
 **The rules missed a trigger worded unusually. What then?**
-By default, nothing: the lead stays `matched`, because a regex that misses is cheaper than a model that invents. Switch on `llm.ai_trigger_review` in the policy and 05 also looks for a renewal, breach or audit sentence the rules missed. If the sentence is verbatim in the notes, not negated and above the 0.7 floor, the gate sends the lead to `needs_review` with the quote on the card, the same hand-off an unconfirmed company size gets, and the rep confirms it and presses Promote to Tier 1.
+By default, nothing: the lead stays `matched`, because a regex that misses is cheaper than a model that invents. Switch on `llm.ai_trigger_review` in the policy and 05 also looks for a renewal, breach or audit sentence the rules missed. If the sentence is verbatim in the notes, not negated and above the 0.7 floor, the gate sends the lead to `needs_review` with the quote on the card, the same hand-off a possible competitor gets, and the rep confirms it and presses Promote to Tier 1.
 
 **What is the difference between a duplicate and a returning visitor?**
 A duplicate is the same `scan_id` whose ledger row already reached `complete`; it gets 200 `duplicate_ignored` and nothing else happens. A returning visitor is the same `event_person_key` (event plus email) with a new `scan_id`; `scan_count` goes up, the mode is `repeat_thread` (reply in the first card's thread) or `repeat_escalation` if the tier changed, and the card shows what they said last time.

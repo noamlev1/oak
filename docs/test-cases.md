@@ -57,7 +57,7 @@ Every row of the `oak_test_payloads` Data Table (`G6sBwk6wTFKmidiZ`), grouped by
 | 6 | `evt_9906` | Personal email, no company | Personal email with no company: no domain inferred, company search skipped, work-email warning on the card. | persona `iam` |
 | 7 | `evt_9907` | Invalid - no identity at all | No usable identity at all is rejected with 400 invalid and nothing is stored. | Rejected: HTTP 400 invalid, no oak_deliveries row |
 | 8 | `evt_9908` | Ambiguous title - AI resolves persona | An unmatched title goes to review as ambiguous and Gemini proposes the persona. | Accepted, pipeline completes, Slack delivered (no verdict asserted) |
-| 11 | `evt_9911` | 500-999 employees - the review band | 750 employees sits in the 500 to 999 band, so a matched persona still goes to a human. | `needs_review` / persona `iam` / #booth-review |
+| 11 | `evt_9911` | 500-999 employees - no size points | 750 employees is above the 500 floor but below 1,000, so a matched persona stays matched with no company-size points. | `matched` / persona `iam` / #booth-matched |
 | 19 | `evt_9919` | No email - ledger must still complete | No email: the HubSpot contact write is skipped but the ledger still reaches complete. | `matched` / persona `ciso` / #booth-matched |
 | 32 | `evt_9932` | Personal email with a real company name | A Gmail address is never the company domain, but it is not a disqualifier. | `matched` / persona `ciso` / #booth-matched |
 | 33 | `evt_9933` | Email domain differs from the company name | Email domain and badge company can disagree without changing the decision. | `matched` / persona `ciso` / #booth-matched |
@@ -79,8 +79,8 @@ Every row of the `oak_test_payloads` Data Table (`G6sBwk6wTFKmidiZ`), grouped by
 | # | scan_id | Case | What it proves | Expected outcome |
 |---|---|---|---|---|
 | 40 | `evt_9940` | Exactly 499 employees | 499 employees is below the 500 floor: out of scope even with an IAM persona. | `out_of_scope` / persona `iam` / #booth-out-of-scope |
-| 41 | `evt_9941` | Exactly 500 employees | 500 employees is the first value of the review band. | `needs_review` / persona `iam` / #booth-review |
-| 42 | `evt_9942` | Exactly 999 employees | 999 employees is the last value of the review band. | `needs_review` / persona `iam` / #booth-review |
+| 41 | `evt_9941` | Exactly 500 employees | 500 employees meets the 500 floor: matched, with no company-size points. | `matched` / persona `iam` / #booth-matched |
+| 42 | `evt_9942` | Exactly 999 employees | 999 employees is still below 1,000: matched, with no company-size points. | `matched` / persona `iam` / #booth-matched |
 | 43 | `evt_9943` | Exactly 1,000 employees | 1,000 employees meets the qualified threshold (comma format parsed). | `matched` / persona `iam` / #booth-matched |
 | 44 | `evt_9944` | Disqualifier - SaaS-only | The saas-only disqualifier beats a CISO at a 5,000-person company. | `out_of_scope` / persona `ciso` / #booth-out-of-scope |
 | 45 | `evt_9945` | Disqualifier - single-cloud beats a Tier 1 renewal | The single-cloud disqualifier beats a CISO with a SailPoint renewal inside six months. | `out_of_scope` / persona `ciso` / #booth-out-of-scope |
@@ -103,7 +103,7 @@ Every row of the `oak_test_payloads` Data Table (`G6sBwk6wTFKmidiZ`), grouped by
 | # | scan_id | Case | What it proves | Expected outcome |
 |---|---|---|---|---|
 | 17 | `evt_9917` | Unlisted competitor caught by company name | A company name with an identity-vendor token is flagged as a possible competitor. The final gate exempts a possible competitor from the size rule, so it stays with a human. | `needs_review` / #booth-review |
-| 18 | `evt_9918` | Small identity vendor - homepage language only | A small identity vendor is still homepage-checked for competitor language; outcome depends on their site. | Accepted, pipeline completes, Slack delivered (no verdict asserted) |
+| 18 | `evt_9918` | Small identity vendor - AI vendor check | ConductorOne ("under 200 people") is out of scope at the scan, but its site uses identity language, so 04's AI vendor check reads it as an identity security vendor and sends it to a human. Depends on Gemini and on what the site says. | `needs_review` (possible competitor) / #booth-review |
 | 51 | `evt_9951` | Competitor by email domain, unrelated company name | A competitor email domain wins even when the badge names an unrelated company. | `competitor_intel` / persona `other` / #competitive-intel |
 | 52 | `evt_9952` | Competitor by alias in company name, personal email | A whole-word competitor alias in the company name wins with a personal email and no domain. | `competitor_intel` / persona `other` / #competitive-intel |
 | 53 | `evt_9953` | Possible-competitor token outranks a Tier 1 trigger | A possible-competitor token in the company name beats a CISO with a live renewal. | `needs_review` / persona `ciso` / #booth-review |
