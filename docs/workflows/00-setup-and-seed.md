@@ -39,11 +39,11 @@ Workflow `PeoS0NF1f7FHzEID` - "Oak GTM - 00 Setup & Seed". Draft only, never pub
    - `incumbent_tools`: SailPoint, Saviynt, Omada Identity, One Identity, Okta Identity Governance, Microsoft Entra ID Governance, Ping Identity - all active, all `renewal_trigger: true`.
    - `urgency.renewal_max_months` 6.
    - `scoring`: persona 30, company size 15, industry 15, urgency 40, max 100.
-   - `notifications`: `tier_1` `booth-hot` (owner DM), `matched` `booth-matched`, `needs_review` `booth-review`, `competitor_intel` `competitive-intel`, `ops_alerts` `oak-revops`, `mention_tiers` `['tier_1']`. `out_of_scope` starts with an empty channel here.
+   - `notifications`: `tier_1` `booth-hot` (owner DM), `matched` `booth-matched`, `needs_review` `booth-review`, `competitor_intel` `competitive-intel`, `ops_alerts` `oak-revops`, `mention_tiers` `['tier_1']`. `out_of_scope` `booth-out-of-scope` (no owner DM): the quiet audit route, so reps can see what the rules filtered out.
    - `slack.private_channels` `['competitive-intel']`, `enrichment` (30-day cache TTL, search switches, employee confidence: HubSpot 1, booth notes 0.9, official site 0.85, domain-matched search 0.7), `llm` (gemini, temperature 0, `oak-persona-v5`, `minimum_confidence` 0.7), `security` (header `x-oak-webhook-secret`), `competitor_dont_say`.
    - Emits one row: `version`, `status: active`, `document_json`, `activated_at` now.
 
-9. **Enable Out-of-Scope Route** (Code). Parses the document (throws if it is invalid JSON) and sets `notifications.out_of_scope` to `{channel:'booth-out-of-scope', owner_dm:false}`. Keeps the quiet out-of-scope audit route in policy data rather than hard-coded routing.
+9. *(Removed.)* An earlier **Enable Out-of-Scope Route** step patched `notifications.out_of_scope` after the policy was built. It now lives in `Build Default Policy` itself, so the whole policy is defined in one place; the seeded document is byte-identical.
 
 10. **Seed Active Policy** (upsert `oak_policies` on `version`). Writes the row as `active`. Rerunning overwrites hand edits to that version's row - that is intended: the code is the permanent source, the row is the live-edit surface.
 
@@ -71,7 +71,7 @@ Workflow `PeoS0NF1f7FHzEID` - "Oak GTM - 00 Setup & Seed". Draft only, never pub
     - True: **Create Oak Properties** (HTTP `POST /crm/v3/properties/contacts/batch/create`, adds Yes/No options to the boolean; continue on error), then on to Slack.
     - False: straight to Slack.
 
-21. **Plan Slack Channels** (Code). Reads the channel names from the policy's `notifications` block (after the out-of-scope patch), dedupes them, and marks `competitive-intel` private. Result: `booth-hot`, `booth-matched`, `booth-review`, `competitive-intel` (private), `booth-out-of-scope`, `oak-revops`. The workspace always matches the routing rules because both come from the same document.
+21. **Plan Slack Channels** (Code). Reads the channel names from the policy's `notifications` block , dedupes them, and marks `competitive-intel` private. Result: `booth-hot`, `booth-matched`, `booth-review`, `competitive-intel` (private), `booth-out-of-scope`, `oak-revops`. The workspace always matches the routing rules because both come from the same document.
 
 22. **Create Slack Channel** (Slack channel create, one call per channel; continue on error). `name_taken` on a rerun counts as already provisioned. It does not join existing channels.
 
